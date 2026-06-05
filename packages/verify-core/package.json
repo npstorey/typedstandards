@@ -1,0 +1,64 @@
+{
+  "name": "@typedstandards/verify-core",
+  "version": "0.1.0",
+  "description": "Portable, browser-safe verification core for Typed Standards evidence packages — the §9.2 check suite, single-sourced so it verifies identically on a server and in the browser.",
+  "license": "MIT",
+  "author": "Nathan Storey",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --test --experimental-strip-types \"src/**/*.test.ts\"",
+    "prepublishOnly": "npm run clean && npm run build"
+  },
+  "dependencies": {
+    "@noble/curves": "^2.2.0",
+    "@noble/hashes": "^2.2.0",
+    "canonicalize": "^3.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/npstorey/typedstandards.git",
+    "directory": "packages/verify-core"
+  },
+  "homepage": "https://github.com/npstorey/typedstandards/tree/main/packages/verify-core#readme",
+  "bugs": {
+    "url": "https://github.com/npstorey/typedstandards/issues"
+  },
+  "keywords": [
+    "typed-standards",
+    "evidence",
+    "verification",
+    "provenance",
+    "ed25519",
+    "rfc8785",
+    "jcs",
+    "browser"
+  ]
+}

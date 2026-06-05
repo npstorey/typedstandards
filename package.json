@@ -1,0 +1,27 @@
+{
+  "name": "typedstandards",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Typed Standards — the standard, its reference verification core, and typedstandards.org.",
+  "license": "MIT",
+  "author": "Nathan Storey",
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "build:verify-core": "npm run build --workspace @typedstandards/verify-core",
+    "test:verify-core": "npm run test --workspace @typedstandards/verify-core"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/npstorey/typedstandards.git"
+  }
+}
