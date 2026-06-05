@@ -1,0 +1,55 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #0a0a0a;
+  --muted: #5b5b5b;
+  --border: #e4e4e7;
+  --surface: #fafafa;
+  --surface-2: #f4f4f5;
+  --accent: #1452ff;
+  --accent-ink: #0a2a9c;
+
+  /* Trust-signal tiers. The verdict UI (Phase C) ports the <TrustSignal>
+     vocabulary from @typedstandards/verify-core; these tokens are defined now so
+     that port drops in without a palette change. verified = green, normal = calm
+     grey, attention = amber (unconfirmed, not proven-bad), alarm = red. */
+  --trust-verified: #008a02;
+  --trust-normal: #5b5b5b;
+  --trust-attention: #b8860b;
+  --trust-alarm: #d61f26;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-trust-verified: var(--trust-verified);
+  --color-trust-normal: var(--trust-normal);
+  --color-trust-attention: var(--trust-attention);
+  --color-trust-alarm: var(--trust-alarm);
+  --font-sans: var(--font-noto-sans);
+  --font-display: var(--font-space-grotesk);
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: light;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
