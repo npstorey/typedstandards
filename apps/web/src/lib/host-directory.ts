@@ -35,7 +35,12 @@ import {
   type TrustSignalDescriptor,
   type ResolvedTrustSignal,
   toResolvedSignal,
-} from './trust-signal';
+  // Explicit `.ts` extension (allowed by tsconfig `allowImportingTsExtensions`)
+  // so the runtime import chain resolves under `node --test --experimental-strip-
+  // types` for host-directory.test.ts. trust-signal's own imports are type-only,
+  // so this is the chain's only runtime relative import. (The verify-core import
+  // below is type-only and strips away entirely.)
+} from './trust-signal.ts';
 import type { KeyTrustResult, FetchLike } from '@typedstandards/verify-core';
 
 // --- Directory shape ------------------------------------------------------
@@ -199,10 +204,10 @@ export interface HostRecognition {
   status: HostRecognitionStatus;
   /** The registry origin extracted from the commitment, when one was declared. */
   origin?: string;
-  /** The matched directory entry — set only when the origin is listed AND the
-   *  recognition meaningfully attributes the package to that host (i.e. NOT for
-   *  the `unknown_key`/disavowed case, where naming the publisher would imply a
-   *  recognition the registry itself refuses). */
+  /** The matched directory entry — set ONLY for `known_publisher`, the one earned
+   *  state. Every non-green outcome leaves this unset so the UI literally cannot
+   *  render the curated brand (or its profile link) for an unconfirmed signer; the
+   *  copy in those states refers to the raw declared origin instead. */
   publisher?: HostDirectoryEntry;
   /** The trust signal (tier + glance label + detail) for this recognition,
    *  reusing the shared #110 trust-signal tiers. */
@@ -292,7 +297,9 @@ export function resolveHostRecognition(
 
   // (a) holds but the named registry actively DISAVOWS the key: a kid was present,
   // looked up in that registry, and not found. This is the impersonation signal —
-  // treat as an unknown publisher (do not attribute it to the recognized host).
+  // treat as an unknown publisher. Deliberately refer ONLY to the raw declared
+  // origin, never the curated display-name: the green badge is the one earned place
+  // for the brand, so a disavowed signer must not borrow "Civic AI Tools".
   if (keyTrust?.status === 'unknown_key') {
     return {
       status: 'unknown_publisher',
@@ -301,7 +308,7 @@ export function resolveHostRecognition(
         descriptor(
           'normal',
           'Unknown publisher',
-          `This package points to ${entry.displayName}'s registry origin (${origin}), but its signing key is not in that registry — the registry it names does not vouch for this signer. It is treated as an unknown publisher.`,
+          `This package points to the registry origin ${origin}, but its signing key is not in that registry — the registry it names does not vouch for this signer. It is treated as an unknown publisher.`,
         ),
       ),
     };
@@ -311,15 +318,18 @@ export function resolveHostRecognition(
   // look up, an unreachable registry, or a rotated-out key. The host origin is
   // recognized but the key is not registry-confirmed, so the green badge is
   // withheld — the same calm "verified, with caveats" reading as the crypto side.
+  // The origin IS listed, but we deliberately do NOT expose the curated entry
+  // (no `publisher`, only the raw origin in the copy): the display-name is earned
+  // only when the key is confirmed, so a lookalike that reaches this state by
+  // omitting its kid cannot borrow the brand.
   return {
     status: 'host_recognized_key_unconfirmed',
     origin,
-    publisher: entry,
     signal: toResolvedSignal(
       descriptor(
         'attention',
         'Host recognized — signing key not registry-confirmed',
-        `This package points to the registry origin listed for ${entry.displayName} (${origin}), but its signing key could not be confirmed against that registry (see the key-trust check below). The publisher identity is recognized but not affirmed.`,
+        `This package's registry origin (${origin}) is listed in the host directory, but its signing key could not be confirmed against that registry (see the key-trust check below) — so the publisher is recognized by origin but not affirmed.`,
       ),
     ),
   };
