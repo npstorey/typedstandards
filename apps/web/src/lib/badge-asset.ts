@@ -103,9 +103,13 @@ export function buildEmbedHtml(origin: string, input: string, theme: BadgeTheme 
 </a>`;
 }
 
-/** The copy-paste Markdown embed (linked image). */
+/** The copy-paste Markdown embed (linked image). The deep-link href is wrapped in
+ *  angle brackets (`](<...>)`) — CommonMark's destination-in-`<>` form — so a `)`
+ *  in the URL (rare, but legal in a hosted commitment URL) does not prematurely
+ *  close the link. The href is already `encodeURIComponent`-encoded, so it contains
+ *  no `<`/`>`/spaces that would break the angle-bracket form. */
 export function buildEmbedMarkdown(origin: string, input: string, theme: BadgeTheme = 'light'): string {
   const href = buildVerifyHref(origin, input);
   const src = badgeAssetUrl(origin, theme);
-  return `[![${BADGE_ALT}](${src})](${href})`;
+  return `[![${BADGE_ALT}](${src})](<${href}>)`;
 }
