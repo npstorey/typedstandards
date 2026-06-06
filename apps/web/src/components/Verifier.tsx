@@ -10,8 +10,10 @@ import {
   buildCheckRows,
   rollupVerdict,
   buildPreview,
+  resolveHostRecognition,
   VerifyFlowError,
   type CheckRow as CheckRowData,
+  type HostRecognition,
   type InputMode,
   type PagePreview as PreviewData,
   type ResolveStep,
@@ -20,6 +22,7 @@ import {
 } from "@/lib/verify-flow";
 import { CheckRow } from "./CheckRow";
 import { VerdictBanner } from "./VerdictBanner";
+import { RecognitionBanner } from "./RecognitionBanner";
 import { PagePreview } from "./PagePreview";
 
 type Phase = "idle" | "resolving" | "verifying" | "revealing" | "done" | "error";
@@ -39,6 +42,7 @@ export function Verifier({
   const [rows, setRows] = useState<CheckRowData[]>([]);
   const [revealCount, setRevealCount] = useState(0);
   const [verdict, setVerdict] = useState<Verdict | null>(null);
+  const [recognition, setRecognition] = useState<HostRecognition | null>(null);
   const [preview, setPreview] = useState<PreviewData | null>(null);
   const [resolved, setResolved] = useState<ResolvedInput | null>(null);
   const [shareHash, setShareHash] = useState<string | null>(null);
@@ -59,6 +63,7 @@ export function Verifier({
     setRows([]);
     setRevealCount(0);
     setVerdict(null);
+    setRecognition(null);
     setPreview(null);
     setResolved(null);
     setShareHash(null);
@@ -80,6 +85,12 @@ export function Verifier({
       const builtRows = buildCheckRows(result, vinput, resolvedInput.commitment);
       setRows(builtRows);
       setVerdict(rollupVerdict(result));
+      // The second, independent dimension (Phase D): host recognition. Resolved
+      // from the declared registry origin + the directory + the SAME key-trust
+      // result, kept orthogonal to the cryptographic verdict above.
+      setRecognition(
+        resolveHostRecognition(resolvedInput.commitment, result.keyTrust, resolvedInput.directory),
+      );
       setPreview(buildPreview(resolvedInput.pkg, resolvedInput.commitment));
 
       setPhase("revealing");
@@ -199,7 +210,12 @@ export function Verifier({
             </div>
           ) : (
             <>
-              {phase === "done" && verdict && <VerdictBanner verdict={verdict} />}
+              {phase === "done" && verdict && (
+                <div className="space-y-3">
+                  <VerdictBanner verdict={verdict} />
+                  {recognition && <RecognitionBanner recognition={recognition} />}
+                </div>
+              )}
 
               {running && (
                 <p className="text-sm text-muted" aria-live="polite">
@@ -264,11 +280,15 @@ function ResolutionSteps({ steps }: { steps: ResolveStep[] }) {
 }
 
 function IndependenceNote({ resolved }: { resolved: ResolvedInput }) {
+  const hasDirectory = resolved.directory !== "unavailable";
   if (resolved.fullyOffline) {
     return (
       <p className="text-xs leading-relaxed text-muted">
         <strong className="text-foreground">Fully offline.</strong> Every proof was
-        read from your bundle and verified in your browser — nothing was fetched.
+        read from your bundle and verified in your browser — nothing was fetched.{" "}
+        {hasDirectory
+          ? "Publisher recognition used the host-directory snapshot bundled with it."
+          : "Your bundle carried no host-directory snapshot, so publisher recognition was skipped."}
       </p>
     );
   }
@@ -280,8 +300,10 @@ function IndependenceNote({ resolved }: { resolved: ResolvedInput }) {
     <p className="text-xs leading-relaxed text-muted">
       <strong className="text-foreground">Verified in your browser.</strong> The
       checks ran client-side here — but the package and proofs were fetched from{" "}
-      <span className="font-mono">{host}</span>. To verify with zero trust in the
-      host, download and verify an offline bundle.
+      <span className="font-mono">{host}</span>. Publisher recognition was a
+      separate lookup in typedstandards.org&apos;s curated host directory,
+      independent of that host. To verify with zero trust in the host, download and
+      verify an offline bundle.
     </p>
   );
 }
