@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import verifyCorePkg from "@typedstandards/verify-core/package.json";
 import { Verifier } from "@/components/Verifier";
 
@@ -52,6 +53,13 @@ export default async function VerifyPage({
         hash-parity for the Rekor transparency log. Disclosure ≠ validation: this
         surfaces integrity, identity, timestamp, and transparency — not whether the
         content is correct.
+      </p>
+      <p className="mt-3 text-xs leading-relaxed text-muted">
+        Publishing evidence?{" "}
+        <Link href="/badge" className="underline decoration-dotted hover:text-accent">
+          Embed a verify badge
+        </Link>{" "}
+        that deep-links readers here.
       </p>
     </div>
   );

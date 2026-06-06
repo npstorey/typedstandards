@@ -57,6 +57,9 @@ export default function RootLayout({
                 <Link href="/verify" className="hover:text-accent">
                   Verify
                 </Link>
+                <Link href="/badge" className="hover:text-accent">
+                  Badge
+                </Link>
                 <a
                   href="https://github.com/npstorey/typedstandards"
                   target="_blank"
