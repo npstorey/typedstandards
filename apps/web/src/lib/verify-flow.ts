@@ -42,11 +42,32 @@ import {
   LIFECYCLE_STATE_SIGNALS,
   LIFECYCLE_SOURCE_SIGNALS,
 } from './trust-signal';
+import {
+  PRIMARY_HOST,
+  HOST_DIRECTORY_PATH,
+  fetchHostDirectory,
+  validateHostDirectory,
+  type HostDirectory,
+} from './host-directory';
 
-/** The default host a bare hash / slug is resolved against. civicaitools.org is
- *  the first/only entry in the host directory today (Q47 / Phase D generalizes
- *  this to a published directory). */
-export const DEFAULT_HOST = 'https://civicaitools.org';
+// Re-export the host-recognition surface (Phase D / Q47) so the verifier UI pulls
+// the whole verification flow — cryptographic checks AND publisher recognition —
+// from this one module.
+export { resolveHostRecognition } from './host-directory';
+export type {
+  HostDirectory,
+  HostDirectoryEntry,
+  HostRecognition,
+  HostRecognitionStatus,
+} from './host-directory';
+
+/** The host a bare hash / slug is resolved against — there is no origin in a bare
+ *  identifier, so it is looked up on the directory's anchor host. Derived from the
+ *  published host directory (Phase D / Q47) rather than a standalone hardcoded
+ *  constant, so the directory is the single source of truth for which hosts the
+ *  verifier knows about. Recognition itself is directory-driven (see
+ *  resolveHostRecognition), never keyed off this constant. */
+export const DEFAULT_HOST = PRIMARY_HOST;
 
 /** The §9.2.1 commitment sidecar shape (what the WS1 endpoint returns). A bundle
  *  may additionally carry `package` / `trustRegistry` inline for offline use. */
@@ -79,6 +100,10 @@ export interface Commitment {
   /** Offline bundle extensions (not emitted by the endpoint). */
   package?: Record<string, unknown> | null;
   trustRegistry?: unknown;
+  /** Offline snapshot of the typedstandards.org host directory, so a bundle can
+   *  resolve publisher recognition without a network fetch (same staleness caveat
+   *  as the registry snapshot — Q47 / #119). */
+  hostDirectory?: unknown;
 }
 
 export type InputMode = 'hash' | 'url' | 'bundle';
@@ -119,6 +144,11 @@ export interface ResolvedInput {
   commitment: Commitment;
   pkg: Record<string, unknown> | null;
   registry: TrustRegistry | undefined;
+  /** The host directory used for publisher recognition (Phase D), or
+   *  `'unavailable'` when it could not be loaded. Distinct from the publisher
+   *  sources below: it comes from the verifier's curator (typedstandards.org),
+   *  not from the package's host, so it is tracked separately. */
+  directory: HostDirectory | 'unavailable';
   /** Where each piece came from, for the independence disclosure. */
   sources: {
     commitment: { kind: SourceKind; url?: string };
@@ -213,7 +243,7 @@ export async function resolveCommitment(
 
 /** A resolution step, emitted as each piece is obtained (drives the live UI). */
 export interface ResolveStep {
-  key: 'commitment' | 'package' | 'registry';
+  key: 'commitment' | 'package' | 'registry' | 'directory';
   label: string;
   kind: SourceKind;
   url?: string;
@@ -281,6 +311,35 @@ export async function resolveInput(
     ...(registrySource.url ? { url: registrySource.url } : {}),
   });
 
+  // Host directory (Phase D recognition dimension). It is the verifier's curator
+  // data, not the package's, so it is resolved separately from the publisher
+  // sources above. Bundle mode honours the offline intent: an embedded snapshot is
+  // used if present, otherwise the network is NOT touched (recognition then reads
+  // a calm "directory unavailable"). Online modes fetch the canonical same-origin
+  // directory; any failure degrades to 'unavailable' without affecting the
+  // cryptographic verdict.
+  let directory: HostDirectory | 'unavailable';
+  let directoryStep: SourceKind | null = null;
+  if (commitment.hostDirectory !== undefined) {
+    directory = validateHostDirectory(commitment.hostDirectory) ?? 'unavailable';
+    if (directory !== 'unavailable') directoryStep = 'inline';
+  } else if (mode === 'bundle') {
+    directory = 'unavailable';
+  } else {
+    directory = await fetchHostDirectory(globalThis.fetch, HOST_DIRECTORY_PATH, signal);
+    if (directory !== 'unavailable') directoryStep = 'fetched';
+  }
+  if (directoryStep) {
+    onStep?.({
+      key: 'directory',
+      label:
+        directoryStep === 'inline'
+          ? 'Read publisher directory from bundle'
+          : 'Loaded the typedstandards.org publisher directory',
+      kind: directoryStep,
+    });
+  }
+
   const fullyOffline =
     mode === 'bundle' && pkgSource.kind === 'inline' && registrySource.kind === 'inline';
 
@@ -288,6 +347,7 @@ export async function resolveInput(
     commitment,
     pkg,
     registry,
+    directory,
     sources: {
       commitment: { kind: mode === 'bundle' ? 'inline' : 'fetched', url: commitmentUrl },
       pkg: pkgSource,

@@ -34,7 +34,9 @@ export default async function VerifyPage({
         verifier resolves the package&apos;s own proofs and re-checks them here, in
         your browser — recomputing the hash, checking the signature, and looking up
         the signing key in the publisher&apos;s trust registry. Each check shows the
-        values it computed.
+        values it computed. You get two independent readings: whether the
+        cryptography holds, and — separately — whether the publisher is one
+        typedstandards.org recognizes.
       </p>
 
       <div className="mt-8">
