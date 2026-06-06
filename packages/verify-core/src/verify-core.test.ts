@@ -12,6 +12,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'crypto';
+import { readFileSync } from 'node:fs';
 import { ed25519, ed25519ph } from '@noble/curves/ed25519.js';
 import {
   extractRawPublicKey,
@@ -325,4 +326,37 @@ test('verifyEvidence: surfaces lifecycle STATE from the sidecar (portable depth)
   );
   assert.equal(active.lifecycle.status, 'active');
   assert.equal(active.lifecycle.source, 'none');
+});
+
+// --- 4. Carried-offline Rekor inclusion through the orchestrator (#119 P1) --
+
+test('verifyEvidence: verifies carried Rekor inclusion OFFLINE (failFetch, no network)', async () => {
+  // A real rekor.sigstore.dev entry + its proof + checkpoint, carried in the input
+  // (as an offline bundle would). The orchestrator folds the proof and verifies the
+  // checkpoint signature against the pinned log key — with `failFetch`, proving the
+  // whole #8 deep check runs with ZERO network (the property #119 demonstrates).
+  const fx = JSON.parse(
+    readFileSync(new URL('./__fixtures__/rekor-inclusion.json', import.meta.url), 'utf8'),
+  ) as { body: string; inclusionProof: Record<string, unknown> };
+  const { pkg, packageHash, signature, registry } = buildSignedFixture();
+
+  const result = await verifyEvidence(
+    {
+      package: pkg,
+      packageHash,
+      signature,
+      rekorEntryId: null, // no id ⇒ no fetch; inclusion comes from the carried proof
+      rekorInclusionProof: fx.inclusionProof as never,
+      rekorEntryBody: fx.body,
+      lifecycle: null,
+    },
+    { registry, fetch: failFetch },
+  );
+
+  assert.ok(result.rekorInclusion, 'a carried proof yields an inclusion verdict');
+  assert.equal(result.rekorInclusion!.inclusionVerified, true);
+  assert.equal(result.rekorInclusion!.checkpointVerified, true);
+  assert.equal(result.rekorInclusion!.origin, 'rekor.sigstore.dev');
+  // hash-parity (#8 online) stayed untouched: no entry id ⇒ null, not a regression.
+  assert.equal(result.rekorVerified, null);
 });
