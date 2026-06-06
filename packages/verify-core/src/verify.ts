@@ -14,15 +14,22 @@
 // sidecar (`buildCommitmentView`) so WS3 can wire sidecar → verifyEvidence with
 // no glue. The server route adapts its DB row to the same shape.
 //
-// Check depth matches the current server exactly: fully client-side for
-// #1/#2/#3/#4/#5/#6/#9/#12/#13/#14/#15; PRESENCE for #7 (RFC 3161); hash-PARITY
-// for #8 (Rekor); lifecycle STATE for #10 unless the caller supplies a deeper
-// resolution. The deeper offline crypto (TSA chain, Merkle inclusion, independent
-// lifecycle-chain verification) is civic-ai-tools-website#119.
+// Check depth: fully client-side for #1/#2/#3/#4/#5/#6/#9/#12/#13/#14/#15; PRESENCE
+// for #7 (RFC 3161); #8 (Rekor) is hash-PARITY AND, when an inclusion proof is
+// available (carried for offline, or on the fetched entry), cryptographic Merkle
+// inclusion against the pinned log key (civic-ai-tools-website#119 P1); lifecycle
+// STATE for #10 unless the caller supplies a deeper resolution. The remaining
+// deeper offline crypto (TSA chain #7, independent lifecycle-chain #10) is #119
+// P2 / P3.
 
 import { recomputePackageHash } from './checks.ts';
 import { verifySignature } from './signature.ts';
 import { verifyRekorEntry, type RekorVerifyResult } from './rekor.ts';
+import {
+  verifyRekorInclusion,
+  type RekorInclusionProof,
+  type RekorInclusionResult,
+} from './rekor-inclusion.ts';
 import {
   verifyKeyTrust,
   legacyEmbeddedKeyTrust,
@@ -89,6 +96,13 @@ export interface VerifyInput {
   rfc3161Timestamp?: string | null;
   /** Rekor entry id (#8 hash-parity, needs a fetcher). */
   rekorEntryId?: string | null;
+  /** Carried Rekor inclusion proof (#8 deep, civic-ai-tools-website#119). When
+   *  supplied with `rekorEntryBody`, Merkle inclusion is verified OFFLINE against
+   *  the pinned log key — no fetch, no civicaitools.org dependency. */
+  rekorInclusionProof?: RekorInclusionProof | null;
+  /** The Rekor entry's canonical leaf bytes (its base64 `body`), carried so the
+   *  inclusion proof can be folded offline (D2). */
+  rekorEntryBody?: string | null;
   /** Lifecycle STATE from the sidecar (#10 state-depth). Ignored when the caller
    *  supplies `deps.lifecycleResolution`. */
   lifecycle?: CommitmentLifecycleState | null;
@@ -124,6 +138,10 @@ export interface VerifyResult {
   rekorVerified: boolean | null;
   rekorDetails: { logIndex?: number; logEntryUrl?: string } | null;
   rekorIntegratedTime?: number;
+  /** Cryptographic Merkle-inclusion verdict (#119): null when no proof was
+   *  available, else the graded result (`inclusionVerified` / `checkpointVerified`).
+   *  Additive to `rekorVerified` (hash-parity). */
+  rekorInclusion: RekorInclusionResult | null;
   hasRekor: boolean;
   hasTimestamp: boolean;
   keyTrust: KeyTrustResult | null;
@@ -176,10 +194,14 @@ export async function verifyEvidence(
   }
   const hasSigning = !!input.signature || !!input.signatureMalformed;
 
-  // Step 3 — Rekor (check #8, hash-parity). Also yields integratedTime for #5.
+  // Step 3 — Rekor (check #8). Hash-parity (online) yields integratedTime for #5;
+  // Merkle inclusion (#119) is verified cryptographically. The carried proof + body
+  // verify inclusion OFFLINE (no fetch); otherwise the online fetch's entry carries
+  // the proof. Carried-offline takes precedence — it is the zero-dependency property.
   let rekorVerified: boolean | null = null;
   let rekorDetails: { logIndex?: number; logEntryUrl?: string } | null = null;
   let rekorIntegratedTime: number | undefined;
+  let rekorInclusion: RekorInclusionResult | null = null;
   if (input.rekorEntryId && packageHash) {
     const rekorResult: RekorVerifyResult = await verifyRekorEntry(
       input.rekorEntryId,
@@ -194,6 +216,10 @@ export async function verifyEvidence(
         logEntryUrl: rekorResult.logEntryUrl,
       };
     }
+    if (rekorResult.inclusion) rekorInclusion = rekorResult.inclusion;
+  }
+  if (input.rekorInclusionProof && input.rekorEntryBody) {
+    rekorInclusion = verifyRekorInclusion(input.rekorEntryBody, input.rekorInclusionProof);
   }
 
   // Step 3b — blob references embedded in the package (check #9).
@@ -253,6 +279,7 @@ export async function verifyEvidence(
     rekorVerified,
     rekorDetails,
     ...(rekorIntegratedTime !== undefined ? { rekorIntegratedTime } : {}),
+    rekorInclusion,
     hasRekor: !!input.rekorEntryId,
     hasTimestamp: !!input.rfc3161Timestamp,
     keyTrust,
