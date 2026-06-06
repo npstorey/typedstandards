@@ -24,4 +24,5 @@ export * from './trust-registry.ts';
 export * from './checks.ts';
 export * from './lifecycle.ts';
 export * from './rekor.ts';
+export * from './rekor-inclusion.ts';
 export * from './verify.ts';
