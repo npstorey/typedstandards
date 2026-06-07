@@ -20,6 +20,7 @@ import {
   type VerifyResult,
   type VerifySignatureEnvelope,
   type CommitmentLifecycleState,
+  type RekorInclusionProof,
   type TrustRegistry,
 } from '@typedstandards/verify-core';
 import {
@@ -92,6 +93,9 @@ export interface Commitment {
   rfc3161Timestamp?: string | null;
   rekorEntryId?: string | null;
   rekorInclusionProof?: string | null;
+  /** The Rekor entry's canonical leaf bytes (base64), carried so the browser can
+   *  verify Merkle inclusion OFFLINE from the carried proof — no re-fetch (#119 P1). */
+  rekorEntryBody?: string | null;
   lifecycle?: CommitmentLifecycleState | null;
   trustRegistryUrl?: string;
   trustRegistryUrlLegacy?: string;
@@ -357,6 +361,23 @@ export async function resolveInput(
   };
 }
 
+/** Parse the carried Rekor inclusion proof (a JSON string in the commitment) into
+ *  the structured proof verify-core folds. Only a REAL proof (audit path + signed
+ *  checkpoint) is usable; the empty `{}` some early packages carry — and any
+ *  malformed value — resolves to null (inclusion is then simply not verified). */
+function parseInclusionProof(raw: string | null | undefined): RekorInclusionProof | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && Array.isArray(parsed.hashes) && typeof parsed.checkpoint === 'string') {
+      return parsed as RekorInclusionProof;
+    }
+  } catch {
+    // malformed proof string ⇒ null
+  }
+  return null;
+}
+
 /** Map the resolved commitment + package to the verify-core input. */
 export function buildVerifyInput(commitment: Commitment, pkg: Record<string, unknown> | null): VerifyInput {
   return {
@@ -365,6 +386,10 @@ export function buildVerifyInput(commitment: Commitment, pkg: Record<string, unk
     signature: commitment.signature ?? null,
     rfc3161Timestamp: commitment.rfc3161Timestamp ?? null,
     rekorEntryId: commitment.rekorEntryId ?? null,
+    // Carried proof + entry body ⇒ the browser verifies Merkle inclusion OFFLINE
+    // from the bundle, not only via the online Rekor fetch (#119 P1).
+    rekorInclusionProof: parseInclusionProof(commitment.rekorInclusionProof),
+    rekorEntryBody: commitment.rekorEntryBody ?? null,
     lifecycle: commitment.lifecycle ?? null,
   };
 }
