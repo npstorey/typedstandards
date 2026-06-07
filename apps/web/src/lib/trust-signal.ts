@@ -283,47 +283,84 @@ export function resolveKeyTrust(
   return keyTrust ? KEY_TRUST_SIGNALS[keyTrust.status] : NO_SIGNING_KEY_SIGNAL;
 }
 
-// --- #7 Timestamp validity (hasTimestamp: boolean) -----------------------
+// --- #7 RFC 3161 timestamp (DEEP: chain-verified to a pinned TSA root) ----
+// As of verify-core 0.6.0 (#119 P2b) the token is cryptographically verified
+// offline — TSA signature + embedded cert chain to the pinned FreeTSA root — not
+// merely detected. So the signal is driven by that verdict, not presence: a present-
+// but-unverified (e.g. forged) token reads as alarm, an absent one stays calm.
 
-export const TIMESTAMP_SIGNALS: Record<BiStateKey, TrustSignalDescriptor> = {
-  true: {
+export const TIMESTAMP_SIGNALS = {
+  verified: {
     tier: 'verified',
     label: 'Timestamped',
-    detail: 'Carries an RFC 3161 timestamp token.',
+    detail:
+      'Carries an RFC 3161 timestamp token, cryptographically chain-verified to the pinned FreeTSA root — fixing when these bytes existed.',
   },
-  false: {
+  failed: {
+    tier: 'alarm',
+    label: 'Timestamp did not verify',
+    detail:
+      'A timestamp token is present, but its TSA signature or certificate chain did not verify against the pinned root.',
+  },
+  absent: {
     tier: 'normal',
     label: 'No timestamp',
     detail: 'This package carries no timestamp token (common for earlier-format packages).',
   },
-};
-export const resolveTimestamp = (hasTimestamp: boolean): TrustSignalDescriptor =>
-  TIMESTAMP_SIGNALS[biKey(hasTimestamp)];
+} as const satisfies Record<string, TrustSignalDescriptor>;
+export const resolveTimestamp = (
+  hasTimestamp: boolean,
+  rfc3161Verified: boolean | null,
+): TrustSignalDescriptor =>
+  !hasTimestamp
+    ? TIMESTAMP_SIGNALS.absent
+    : rfc3161Verified === true
+      ? TIMESTAMP_SIGNALS.verified
+      : TIMESTAMP_SIGNALS.failed;
 
-// --- #8 Transparency-log inclusion (rekorVerified: boolean | null) -------
+// --- #8 Transparency-log inclusion (DEEP: offline Merkle inclusion) -------
+// As of verify-core 0.6.0 (#119 P1), when an inclusion proof is carried the entry's
+// RFC 6962 Merkle path is recomputed and the signed checkpoint is verified against a
+// pinned Rekor log key — offline, no network. `included` is that strong verdict.
+// Packages without a carried proof fall back to `matched` (online hash-parity); an
+// unreachable / unconfirmed log is `unconfirmed` (Attention, not Alarm — a transient
+// outage is the common cause and the log is not the package's content).
 
-export const REKOR_SIGNALS: Record<TriStateKey, TrustSignalDescriptor> = {
-  true: {
+export const REKOR_SIGNALS = {
+  included: {
     tier: 'verified',
     label: 'Recorded in a public transparency log',
-    detail: 'A matching entry was confirmed in the Sigstore Rekor transparency log.',
+    detail:
+      'Merkle inclusion verified offline against the log’s signed checkpoint — this entry is in a log the Sigstore key vouches for.',
   },
-  // Attention, not Alarm: the most common cause is a transient Rekor outage, and
-  // the supplementary log is not the package's content. See the design note.
-  false: {
+  matched: {
+    tier: 'verified',
+    label: 'Recorded in a public transparency log',
+    detail:
+      'A matching entry was confirmed in the Sigstore Rekor transparency log (entry-hash parity; no inclusion proof was carried for offline recomputation).',
+  },
+  unconfirmed: {
     tier: 'attention',
     label: 'Transparency-log entry not confirmed',
     detail:
       'This package references a transparency-log entry that could not be confirmed — the log may be unreachable.',
   },
-  null: {
+  absent: {
     tier: 'normal',
     label: 'Not in a transparency log',
     detail: 'This package was not recorded in a public transparency log.',
   },
+} as const satisfies Record<string, TrustSignalDescriptor>;
+export const resolveRekor = (
+  hasRekor: boolean,
+  inclusionVerifiedOffline: boolean,
+  rekorVerified: boolean | null,
+): TrustSignalDescriptor => {
+  if (inclusionVerifiedOffline) return REKOR_SIGNALS.included;
+  if (!hasRekor) return REKOR_SIGNALS.absent;
+  if (rekorVerified === true) return REKOR_SIGNALS.matched;
+  return REKOR_SIGNALS.unconfirmed;
 };
-export const resolveRekor = (v: boolean | null): TrustSignalDescriptor =>
-  REKOR_SIGNALS[triKey(v)];
 
 // --- #9 BlobRef integrity (blobRefsVerified: boolean | null) -------------
 

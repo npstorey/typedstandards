@@ -9,19 +9,21 @@
 // follows civicaitools.org's site-wide 307 to its canonical host transparently
 // (a custom header would trigger a CORS preflight whose OPTIONS hits the 307 and
 // can be rejected). Verification depth MATCHES verify-core / the civicaitools.org
-// server: full client-side crypto for #1–#6/#9/#12–#15, PRESENCE for #7 (RFC
-// 3161), hash-PARITY for #8 (Rekor), STATE for #10 (lifecycle). The deeper offline
-// crypto (TSA chain, Merkle inclusion, signed lifecycle chain) is #119, not here.
+// server: full client-side crypto for #1–#6/#9/#12–#15; #7 (RFC 3161) is the TSA
+// signature + cert chain verified offline to the pinned FreeTSA root; #8 (Rekor) is
+// the RFC 6962 Merkle inclusion proof recomputed against a signed checkpoint when one
+// is carried (else online hash-parity); #10 (lifecycle) resolves from the carried
+// signed attestation chain when present (#119 P1/P2b/P3).
 
 import {
   verifyEvidence,
   validateRegistry,
   verifyLifecycleChain,
+  parseInclusionProof,
   type VerifyInput,
   type VerifyResult,
   type VerifySignatureEnvelope,
   type CommitmentLifecycleState,
-  type RekorInclusionProof,
   type CarriedLifecycleNode,
   type LifecycleResolution,
   type TrustRegistry,
@@ -368,24 +370,9 @@ export async function resolveInput(
   };
 }
 
-/** Parse the carried Rekor inclusion proof (a JSON string in the commitment) into
- *  the structured proof verify-core folds. Only a REAL proof (audit path + signed
- *  checkpoint) is usable; the empty `{}` some early packages carry — and any
- *  malformed value — resolves to null (inclusion is then simply not verified). */
-function parseInclusionProof(raw: string | null | undefined): RekorInclusionProof | null {
-  if (!raw) return null;
-  try {
-    const parsed = JSON.parse(raw);
-    if (parsed && Array.isArray(parsed.hashes) && typeof parsed.checkpoint === 'string') {
-      return parsed as RekorInclusionProof;
-    }
-  } catch {
-    // malformed proof string ⇒ null
-  }
-  return null;
-}
-
-/** Map the resolved commitment + package to the verify-core input. */
+/** Map the resolved commitment + package to the verify-core input. The carried Rekor
+ *  inclusion proof is parsed with verify-core's shared `parseInclusionProof` — the one
+ *  guard the server route, this flow, and the backfill all share (#119 P4). */
 export function buildVerifyInput(commitment: Commitment, pkg: Record<string, unknown> | null): VerifyInput {
   return {
     package: pkg,
@@ -446,7 +433,8 @@ export interface CheckRow {
   name: string;
   signal: ResolvedTrustSignal;
   math: MathLine[];
-  /** Honest depth caveat (e.g. presence-only #7, hash-parity #8). */
+  /** Optional honest depth caveat for a row whose verdict is shallower than its
+   *  signal might imply. (#7/#8 are now full offline crypto, so neither sets one.) */
   depthNote?: string;
 }
 
@@ -546,30 +534,50 @@ export function buildCheckRows(
     rows.push(row('5', 'Key trust', resolveKeyTrust(null), [{ label: 'Status', value: 'no signing key to check' }]));
   }
 
-  // #7 — RFC 3161 timestamp (PRESENCE only).
-  rows.push(
-    row(
-      '7',
-      'Timestamp',
-      resolveTimestamp(result.hasTimestamp),
-      [{ label: 'RFC 3161 token', value: result.hasTimestamp ? 'present' : 'absent' }],
-      'Presence only — the timestamp token is not cryptographically chain-verified here (#119).',
-    ),
-  );
+  // #7 — RFC 3161 timestamp (DEEP: TSA signature + cert chain to the pinned root,
+  // verified offline by verify-core — #119 P2b). The row reflects that verdict, not
+  // mere presence.
+  {
+    const ts = result.rfc3161;
+    const tsMath: MathLine[] = [
+      { label: 'RFC 3161 token', value: result.hasTimestamp ? 'present' : 'absent' },
+    ];
+    if (ts) {
+      if (ts.tsa) tsMath.push({ label: 'Timestamp authority', value: ts.tsa });
+      if (ts.genTime !== undefined)
+        tsMath.push({ label: 'Signed at (genTime)', value: new Date(ts.genTime).toISOString(), mono: true });
+      tsMath.push({
+        label: 'Certificate chain',
+        value: ts.chainVerified ? 'verified to the pinned FreeTSA root' : 'not verified',
+      });
+    }
+    rows.push(row('7', 'Timestamp', resolveTimestamp(result.hasTimestamp, ts?.verified ?? null), tsMath));
+  }
 
-  // #8 — Rekor transparency log (hash-PARITY).
-  if (result.hasRekor) {
+  // #8 — Rekor transparency log (DEEP: offline Merkle inclusion + signed checkpoint
+  // when a proof is carried — #119 P1; otherwise online hash-parity). The row reflects
+  // whichever depth was actually reached.
+  if (result.hasRekor || result.rekorInclusion) {
+    const incl = result.rekorInclusion;
+    const inclusionVerifiedOffline = !!(incl && incl.inclusionVerified && incl.checkpointVerified);
     const math: MathLine[] = [];
     if (result.rekorDetails?.logIndex !== undefined)
       math.push({ label: 'Log index', value: String(result.rekorDetails.logIndex), mono: true });
     if (input.rekorEntryId) math.push({ label: 'Entry', value: truncMiddle(input.rekorEntryId, 12, 6), mono: true, full: input.rekorEntryId });
+    if (incl) {
+      if (incl.treeSize !== undefined) math.push({ label: 'Tree size', value: String(incl.treeSize), mono: true });
+      if (incl.origin) math.push({ label: 'Checkpoint origin', value: incl.origin });
+      math.push({
+        label: 'Inclusion proof',
+        value: inclusionVerifiedOffline ? 'verified offline against the signed checkpoint' : 'not verified',
+      });
+    }
     rows.push(
       row(
         '8',
         'Transparency log',
-        resolveRekor(result.rekorVerified),
+        resolveRekor(result.hasRekor, inclusionVerifiedOffline, result.rekorVerified),
         math.length ? math : [{ label: 'Status', value: 'checked' }],
-        'Hash-parity — the entry hash is compared; the Merkle inclusion proof is not yet recomputed (#119).',
       ),
     );
   }
