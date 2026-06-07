@@ -18,6 +18,9 @@ import {
 const fx = JSON.parse(
   readFileSync(new URL('./__fixtures__/rfc3161-token.json', import.meta.url), 'utf8'),
 ) as { tokenB64: string; expectedHashHex: string };
+const highS = JSON.parse(
+  readFileSync(new URL('./__fixtures__/rfc3161-token-highs.json', import.meta.url), 'utf8'),
+) as { tokenB64: string; expectedHashHex: string };
 
 test('verifyRfc3161Timestamp: a real FreeTSA token verifies fully OFFLINE', () => {
   const r = verifyRfc3161Timestamp(fx.tokenB64, fx.expectedHashHex);
@@ -29,6 +32,15 @@ test('verifyRfc3161Timestamp: a real FreeTSA token verifies fully OFFLINE', () =
   assert.equal(r.tsa, 'freetsa.org');
   assert.equal(typeof r.genTime, 'number');
   assert.equal(r.reason, undefined);
+});
+
+test('a real HIGH-S TSA signature verifies (lowS:false — regression for da9246)', () => {
+  // FreeTSA legitimately emits high-S ECDSA signatures; `@noble`'s default
+  // lowS:true would false-negative them. This is the real prod token that exposed it.
+  const r = verifyRfc3161Timestamp(highS.tokenB64, highS.expectedHashHex);
+  assert.equal(r.signatureValid, true, 'a high-S TSA signature must verify');
+  assert.equal(r.verified, true);
+  assert.equal(r.tsa, 'freetsa.org');
 });
 
 test('a token over a DIFFERENT hash fails the message imprint', () => {

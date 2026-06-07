@@ -273,7 +273,13 @@ export function verifyCheckpointSignature(
     if (!anchor) continue;
     try {
       const point = extractP256Point(anchor.publicKeyDer);
-      if (p256.verify(sig.sig, checkpoint.signedBody, point, { format: 'der' })) {
+      // `lowS: false`: the log signer may emit a high-S checkpoint signature; low-S
+      // is a signing-side malleability convention, not a verification rule, so a
+      // verifier must accept both S and n−S (see the rfc3161.ts note — a real high-S
+      // TSA token exposed this default). We only ask "did this log key sign this
+      // checkpoint". (`@noble` prehashes with the curve hash by default, so the note
+      // body is passed as the message.)
+      if (p256.verify(sig.sig, checkpoint.signedBody, point, { format: 'der', lowS: false })) {
         return { verified: true, origin: anchor.origin, keyHint: hint };
       }
     } catch {
