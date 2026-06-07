@@ -78,6 +78,36 @@ export interface RekorInclusionProof {
   checkpoint: string;
 }
 
+/**
+ * Parse the carried Rekor inclusion proof — the JSON string in
+ * `verification.inclusionProof` (or the stored DB column) — into the structured proof
+ * `verifyRekorInclusion` folds. Only a REAL proof is usable: it must carry an audit
+ * path (`hashes`) AND a signed `checkpoint`. The empty `{}` some early packages carry,
+ * any value missing those fields, and malformed JSON all resolve to null — inclusion
+ * is then simply not verified, never thrown. This is the SINGLE guard the server
+ * route, the browser verify-flow, and the backfill script share (#119 P4), so "what
+ * counts as a real proof" is defined and tested in exactly one place.
+ */
+export function parseInclusionProof(
+  raw: string | null | undefined,
+): RekorInclusionProof | null {
+  if (!raw) return null;
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (
+      parsed !== null &&
+      typeof parsed === 'object' &&
+      Array.isArray((parsed as RekorInclusionProof).hashes) &&
+      typeof (parsed as RekorInclusionProof).checkpoint === 'string'
+    ) {
+      return parsed as RekorInclusionProof;
+    }
+  } catch {
+    // malformed proof string ⇒ null
+  }
+  return null;
+}
+
 export type RekorInclusionFailReason =
   | 'leaf_index_out_of_range'
   | 'proof_wrong_length'

@@ -17,6 +17,7 @@ import {
   verifyRekorInclusion,
   computeInclusionRoot,
   parseRekorCheckpoint,
+  parseInclusionProof,
   REKOR_LOG_ANCHORS,
   type RekorInclusionProof,
 } from './index.ts';
@@ -180,4 +181,31 @@ test('parseRekorCheckpoint: extracts origin, size, 32-byte root, and a key hint'
   assert.equal(c!.signatures[0].keyHint.length, 4);
   // Garbage in ⇒ null, not a throw.
   assert.equal(parseRekorCheckpoint('not a checkpoint'), null);
+});
+
+// --- Shared parseInclusionProof guard (#119 P4) ----------------------------
+
+test('parseInclusionProof: accepts a real serialized proof, rejects the non-proofs', () => {
+  // A real proof (audit path + signed checkpoint) round-trips through JSON.
+  const real = JSON.stringify(fixture.inclusionProof);
+  const parsed = parseInclusionProof(real);
+  assert.ok(parsed, 'a real proof parses');
+  assert.deepEqual(parsed!.hashes, fixture.inclusionProof.hashes);
+  assert.equal(parsed!.checkpoint, fixture.inclusionProof.checkpoint);
+
+  // The values the three consumers must all treat as "no usable proof":
+  assert.equal(parseInclusionProof(null), null, 'null ⇒ null');
+  assert.equal(parseInclusionProof(undefined), null, 'undefined ⇒ null');
+  assert.equal(parseInclusionProof(''), null, 'empty string ⇒ null');
+  assert.equal(parseInclusionProof('{}'), null, 'the empty {} early packages carry ⇒ null');
+  assert.equal(parseInclusionProof('not json'), null, 'malformed JSON ⇒ null (never throws)');
+  assert.equal(parseInclusionProof('"5"'), null, 'a JSON primitive ⇒ null');
+  assert.equal(parseInclusionProof('null'), null, 'JSON null ⇒ null');
+  // Missing the checkpoint, or hashes not an array, are partial/unusable ⇒ null.
+  assert.equal(parseInclusionProof(JSON.stringify({ hashes: ['ab'] })), null, 'no checkpoint ⇒ null');
+  assert.equal(
+    parseInclusionProof(JSON.stringify({ hashes: 'ab', checkpoint: 'x' })),
+    null,
+    'hashes not an array ⇒ null',
+  );
 });
