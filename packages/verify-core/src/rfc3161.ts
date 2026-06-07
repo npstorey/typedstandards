@@ -1,25 +1,23 @@
 // RFC 3161 timestamp verification (spec §9.2 check #7, deep) — browser-safe.
 //
-// `verifyEvidence` today does PRESENCE for #7 (`!!rfc3161Timestamp`). This closes
-// the cryptographic gap for the FreeTSA profile our producer uses (#119 P2a): it
-// parses the RFC 3161 token (a PKCS#7/CMS SignedData over a TSTInfo) and verifies,
-// OFFLINE, that a trusted TSA attested the package hash at a point in time:
-//   1. messageImprint.hashedMessage == the package hash (sha256), so the token is
+// `verifyEvidence` did PRESENCE for #7. P2a added cryptographic TSA-signature
+// verification; P2b (this) closes it to a FULL chain to a pinned trust anchor:
+//   1. messageImprint.hashedMessage == the package hash (sha256) — the token is
 //      ABOUT this package;
-//   2. signedAttrs.messageDigest == SHA-512(TSTInfo), so the signature is BOUND to
-//      that TSTInfo;
-//   3. the TSA's ECDSA-P384 signature over SHA-512(signedAttrs) verifies against the
-//      PINNED FreeTSA signing key (the trust anchor);
-//   4. genTime falls within that signing cert's validity window.
+//   2. signedAttrs.messageDigest == SHA-512(TSTInfo) — the signature is BOUND to it;
+//   3. the token's EMBEDDED signing cert chains to the PINNED FreeTSA RSA-4096 root
+//      (each link's signature verified; CA + validity-vs-genTime checked) — so the
+//      signer is trusted WITHOUT pinning the (rotatable) signing key;
+//   4. the signing cert carries EKU id-kp-timeStamping and its validity covers
+//      genTime;
+//   5. the TSA's ECDSA-P384 signature over SHA-512(signedAttrs) verifies under THAT
+//      chain-validated leaf key.
 //
-// SCOPE (P2a): FreeTSA uses an EC P-384 signing cert and `ecdsa-with-SHA512`, so the
-// TSA-signature check is pure `@noble` ECDSA — no WebCrypto/RSA. The anchor is the
-// PINNED signing-cert public key (re-pin on rotation — documented below). P2b adds
-// full embedded-cert chain validation to FreeTSA's RSA root (which removes the
-// re-pin), and generalizes EKU/validity from the certs themselves. The recipe here
-// was validated byte-for-byte against a real freetsa.org token (cross-checked with
-// OpenSSL `ts -verify`) before shipping; `__fixtures__/rfc3161-token.json` is that
-// token and the tests reproduce it offline.
+// Crypto: the leaf TSA signature is `@noble` ECDSA-P384 (the cert key); the cert
+// chain is RSASSA-PKCS1-v1.5/SHA-512 via WebCrypto (`globalThis.crypto.subtle`, a
+// global — verify-core stays browser-safe). lowS:false on the ECDSA verify (a TSA
+// emits high-S; see the #119 lowS fix). Validated byte-for-byte against real
+// freetsa.org tokens (low-S + high-S fixtures) cross-checked with OpenSSL.
 
 import { p384 } from '@noble/curves/nist.js';
 import { sha512 } from '@noble/hashes/sha2.js';
@@ -34,8 +32,14 @@ import {
   readTime,
   type DerNode,
 } from './asn1.ts';
+import {
+  parseCertificate,
+  verifyCertSignatureRsa,
+  bytesEqual,
+  OID_EKU_TIMESTAMPING,
+  type X509Cert,
+} from './x509.ts';
 
-// --- OIDs ------------------------------------------------------------------
 const OID_SIGNED_DATA = '1.2.840.113549.1.7.2';
 const OID_CT_TSTINFO = '1.2.840.113549.1.9.16.1.4';
 const OID_SHA256 = '2.16.840.1.101.3.4.2.1';
@@ -44,196 +48,206 @@ const OID_ECDSA_SHA512 = '1.2.840.10045.4.3.4';
 const OID_ATTR_MESSAGE_DIGEST = '1.2.840.113549.1.9.4';
 
 /**
- * A pinned TSA signing key — the OFFLINE trust anchor for check #7 (spec §10.3).
- * Pinning the SIGNING key (not the long-lived root) is the P2a "acceptable v1":
- * it must be re-pinned if FreeTSA rotates the signing cert. P2b anchors to the RSA
- * root via the token's embedded chain, which removes the re-pin.
+ * A pinned TSA ROOT — the OFFLINE trust anchor for check #7 (spec §10.3). Pinning the
+ * long-lived ROOT (not the signing cert) means a verifier trusts ANY signing cert the
+ * root issues: the token's embedded chain is validated up to this anchor, so FreeTSA
+ * rotating its signing cert needs no re-pin (the P2a fragility, now removed).
  */
-export interface TsaAnchor {
+export interface TsaRootAnchor {
   name: string;
-  /** EC P-384 signing public key, base64 SPKI DER. */
-  signingKeyDer: string;
-  /** Signing cert validity window (ISO 8601, UTC). genTime must fall inside it. */
-  notBefore: string;
-  notAfter: string;
+  /** Root public key, base64 SPKI DER. */
+  rootKeyDer: string;
 }
 
-// PROVENANCE (anchor pinning — spec §10.3). FreeTSA's online TSA (`freetsa.org/tsr`)
-// signs with this EC P-384 key (cert serial C2E986160DA8E9CD, OU=TSA, EKU
-// id-kp-timeStamping, valid 2026-02-15 → 2040-02-02). Captured 2026-06-07 from
-// `https://freetsa.org/files/tsa.crt`; a live token verified against it with both
-// `@noble` (here) and OpenSSL `ts -verify` against FreeTSA's published CA. The cert
-// chains to FreeTSA's self-signed RSA-4096 root (OU=Root CA) — pinning that root and
-// validating the embedded chain is P2b.
-export const FREETSA_TSA_ANCHORS: readonly TsaAnchor[] = [
+// PROVENANCE (anchor pinning — spec §10.3). FreeTSA's self-signed root CA
+// (O=Free TSA/OU=Root CA, RSA-4096, SHA-256 fingerprint
+// A6:37:9E:7C:EC:C0:5F:AA:3C:BF:07:60:13:D7:45:E3:27:BB:BA:A3:8C:0B:9A:F2:24:69:D4:70:1D:18:AA:BC).
+// Captured 2026-06-07 from `https://freetsa.org/files/cacert.pem`; real tokens'
+// embedded signing certs chain to it (verified with `@noble`/WebCrypto here and
+// OpenSSL `ts -verify`). Adopters changing TSAs document their root here (§10.3).
+export const FREETSA_ROOT_ANCHORS: readonly TsaRootAnchor[] = [
   {
     name: 'freetsa.org',
-    signingKeyDer:
-      'MHYwEAYHKoZIzj0CAQYFK4EEACIDYgAEohXhobLWy4cYsdKOFALpjUsB1FJTntwwb7PH2LOfNMAA1ufaKhkgsdeW6etU0pl5MC5tSVuPF52yy4sz+mbY3L7IVdx/bs9m0ud7IA14YNcC2yIQLa2gvnxwsrR3rlWr',
-    notBefore: '2026-02-15T19:44:22Z',
-    notAfter: '2040-02-02T19:44:22Z',
+    rootKeyDer:
+      'MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAtgKODjAy8REQ2WTNqUudAnjhlCrpE6qlmQfNppeTmVvZrH4zutn+NwTaHAGpjSGv4/WRpZ1wZ3BRZ5mPUBZyLgq0YrIfQ5Fx0s/MRZPzc1r3lKWrMR9sAQx4mN4z11xFEO529L0dFJjPF9MD8Gpd2feWzGyptlelb+PqT+++fOa2oY0+NaMM7l/xcNHPOaMz0/2olk0i22hbKeVhvokPCqhFhzsuhKsmq4Of/o+t6dI7sx5h0nPMm4gGSRhfq+z6BTRgCrqQG2FOLoVFgt6iIm/BnNffUr7VDYd3zZmIwFOj/H3DKHoGik/xK3E82YA2ZulVOFRW/zj4ApjPa5OFbpIkd0pmzxzdEcL479hSA9dFiyVmSxPtY5ze1P+BE9bMU1PScpRzw8MHFXxyKqW13Qv7LWw4sbk3SciB7GACbQiVGzgkvXG6y85HOuvWNvC5GLSiyP9GlPB0V68tbxz4JVTRdw/Xn/XTFNzRBM3cq8lBOAVt/PAX5+uFcv1S9wFE8YjaBfWCP1jdBil+c4e+0tdywT2oJmYBBF/kEt1wmGwMmHunNEuQNzh1FtJY54hbUfiWi38mASE7xMtMhfj/C4SvapiDN837gYaPfs8x3KZxbX7C3YAsFnJinlwAUss1fdKar8Q/YVs7H/nU4c4Ixxxz4f67fcVqM2ITKentbCMCAwEAAQ==',
   },
 ];
 
 export type Rfc3161FailReason =
   | 'parse_error'
-  | 'not_granted'
-  | 'unexpected_content_type'
   | 'unexpected_algorithm'
   | 'no_message_digest'
   | 'content_not_bound'
-  | 'no_anchor'
-  | 'signature_invalid'
   | 'imprint_mismatch'
-  | 'genTime_outside_validity';
+  | 'no_signing_cert'
+  | 'eku_not_timestamping'
+  | 'genTime_outside_validity'
+  | 'chain_incomplete'
+  | 'chain_signature_invalid'
+  | 'untrusted_root'
+  | 'signature_invalid';
 
 export interface Rfc3161VerifyResult {
-  /** All checks passed: a pinned TSA's signature binds this package hash to genTime. */
+  /** All checks passed: a chain-trusted TSA signed this package hash at genTime. */
   verified: boolean;
-  /** messageImprint.hashedMessage == the expected package hash (sha256). */
   imprintMatches: boolean | null;
-  /** The TSA ECDSA-P384 signature over SHA-512(signedAttrs) verifies vs the anchor. */
-  signatureValid: boolean | null;
-  /** signedAttrs.messageDigest == SHA-512(TSTInfo) — the sig is bound to the TSTInfo. */
   contentBound: boolean | null;
-  /** genTime within the pinned signing cert's validity window. */
+  /** The embedded signing cert chains to the pinned root (each link verified). */
+  chainVerified: boolean | null;
+  /** The signing cert carries EKU id-kp-timeStamping. */
+  ekuTimestamping: boolean | null;
+  /** genTime within the signing cert's validity window. */
   withinValidity: boolean | null;
-  /** RFC 3161 genTime, epoch ms. */
+  /** The TSA ECDSA-P384 signature verifies under the chain-validated leaf key. */
+  signatureValid: boolean | null;
   genTime?: number;
-  /** The matched anchor name (when the signature verified). */
+  /** The matched root anchor name. */
   tsa?: string;
   reason?: Rfc3161FailReason;
 }
 
-// EC P-384 SPKI DER is a fixed 120-byte structure: a 23-byte prefix (SEQUENCE →
-// AlgorithmIdentifier{ id-ecPublicKey, secp384r1 } → BIT STRING) then the 97-byte
-// uncompressed point (0x04 ‖ X ‖ Y).
+// EC P-384 SPKI DER: 23-byte prefix + 97-byte uncompressed point (0x04 ‖ X ‖ Y).
 const EC_P384_SPKI_PREFIX = Uint8Array.from([
   0x30, 0x76, 0x30, 0x10, 0x06, 0x07, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x02, 0x01,
   0x06, 0x05, 0x2b, 0x81, 0x04, 0x00, 0x22, 0x03, 0x62, 0x00,
 ]);
 const EC_P384_SPKI_LENGTH = 120;
 
-function extractP384Point(publicKeyB64Der: string): Uint8Array {
-  const der = base64ToBytes(publicKeyB64Der);
-  if (der.length !== EC_P384_SPKI_LENGTH) {
-    throw new Asn1Error(`Unexpected P-384 SPKI length ${der.length}`);
-  }
+function extractP384Point(spkiDer: Uint8Array): Uint8Array {
+  if (spkiDer.length !== EC_P384_SPKI_LENGTH) throw new Asn1Error('not a P-384 SPKI');
   for (let i = 0; i < EC_P384_SPKI_PREFIX.length; i++) {
-    if (der[i] !== EC_P384_SPKI_PREFIX[i]) throw new Asn1Error('Unexpected P-384 SPKI prefix');
+    if (spkiDer[i] !== EC_P384_SPKI_PREFIX[i]) throw new Asn1Error('unexpected P-384 SPKI prefix');
   }
-  return der.slice(EC_P384_SPKI_LENGTH - 97);
+  return spkiDer.slice(EC_P384_SPKI_LENGTH - 97);
 }
 
-/** The AlgorithmIdentifier's OID (its first child). */
 function algorithmOid(buf: Uint8Array, alg: DerNode): string {
   return oidToString(buf, children(buf, alg)[0]);
 }
 
 interface ParsedToken {
-  tstInfo: Uint8Array; // the TSTInfo eContent bytes (DER)
-  signedAttrs: DerNode; // the [0] IMPLICIT signedAttrs node
+  tstInfo: Uint8Array;
+  signedAttrs: DerNode;
   digestAlgOid: string;
   signatureAlgOid: string;
-  signature: Uint8Array; // the signerInfo signature OCTET STRING content (DER ECDSA)
+  signature: Uint8Array;
+  certs: X509Cert[];
 }
 
-/** Navigate TimeStampResp → ContentInfo → SignedData → { TSTInfo, signerInfo }. */
 function parseToken(buf: Uint8Array): ParsedToken {
   const resp = readNode(buf, 0);
   const respKids = children(buf, resp);
-  // PKIStatusInfo.status: 0 granted, 1 grantedWithMods; anything else ⇒ no token.
-  const status = children(buf, respKids[0])[0];
-  const statusVal = content(buf, status);
-  if (statusVal.length !== 1 || statusVal[0] > 1) throw new Asn1Error('PKIStatus not granted');
-  const contentInfo = respKids[1];
-  if (!contentInfo) throw new Asn1Error('no timeStampToken');
-
-  const ciKids = children(buf, contentInfo);
+  const status = content(buf, children(buf, respKids[0])[0]);
+  if (status.length !== 1 || status[0] > 1) throw new Asn1Error('PKIStatus not granted');
+  const ciKids = children(buf, respKids[1]);
   if (oidToString(buf, ciKids[0]) !== OID_SIGNED_DATA) throw new Asn1Error('not signedData');
-  const signedData = children(buf, ciKids[1])[0]; // [0] EXPLICIT → SignedData
+  const sd = children(buf, children(buf, ciKids[1])[0]);
 
-  const sd = children(buf, signedData);
-  const encap = sd.find((c) => c.tag === 0x30); // first SEQUENCE = encapContentInfo
-  const signerInfos = sd.filter((c) => c.tag === 0x31).pop(); // last SET = signerInfos
+  const encap = sd.find((c) => c.tag === 0x30);
+  const certsNode = sd.find((c) => c.tag === 0xa0); // certificates [0] IMPLICIT
+  const signerInfos = sd.filter((c) => c.tag === 0x31).pop();
   if (!encap || !signerInfos) throw new Asn1Error('malformed SignedData');
 
   const encapKids = children(buf, encap);
   if (oidToString(buf, encapKids[0]) !== OID_CT_TSTINFO) throw new Asn1Error('eContent not TSTInfo');
-  const tstOctet = children(buf, encapKids[1])[0]; // [0] EXPLICIT → OCTET STRING
+  const tstOctet = children(buf, encapKids[1])[0];
   if (tstOctet.tag !== 0x04) throw new Asn1Error('TSTInfo not an OCTET STRING');
-  const tstInfo = buf.slice(tstOctet.contentStart, tstOctet.contentEnd);
 
-  const signerInfo = children(buf, signerInfos)[0];
-  const si = children(buf, signerInfo);
+  const si = children(buf, children(buf, signerInfos)[0]);
   const signedAttrs = si.find((c) => c.tag === 0xa0);
   const signature = si.find((c) => c.tag === 0x04);
   if (!signedAttrs || !signature) throw new Asn1Error('signerInfo missing signedAttrs/signature');
-  // SignerInfo has three SEQUENCEs: sid (issuerAndSerialNumber), digestAlgorithm,
-  // signatureAlgorithm. The digest alg is the LAST 0x30 before signedAttrs (the sid
-  // also precedes it); the signature alg is the first 0x30 after.
   const seqs = si.filter((c) => c.tag === 0x30);
   const digestAlg = seqs.filter((c) => c.end <= signedAttrs.start).pop();
   const signatureAlg = seqs.find((c) => c.start >= signedAttrs.end);
   if (!digestAlg || !signatureAlg) throw new Asn1Error('signerInfo missing algorithm ids');
 
+  const certs = certsNode ? children(buf, certsNode).map((n) => parseCertificate(buf, n)) : [];
+
   return {
-    tstInfo,
+    tstInfo: buf.slice(tstOctet.contentStart, tstOctet.contentEnd),
     signedAttrs,
     digestAlgOid: algorithmOid(buf, digestAlg),
     signatureAlgOid: algorithmOid(buf, signatureAlg),
     signature: content(buf, signature),
+    certs,
   };
 }
 
-/** The OCTET STRING value of the messageDigest signed attribute. */
 function messageDigestAttr(buf: Uint8Array, signedAttrs: DerNode): Uint8Array | null {
   for (const attr of children(buf, signedAttrs)) {
     const kids = children(buf, attr);
     if (oidToString(buf, kids[0]) === OID_ATTR_MESSAGE_DIGEST) {
-      const value = children(buf, kids[1])[0]; // SET OF → OCTET STRING
-      return content(buf, value);
+      return content(buf, children(buf, kids[1])[0]);
     }
   }
   return null;
 }
 
-/** Pull { hashedMessage, hashAlgOid, genTime } out of a TSTInfo. */
 function parseTstInfo(tst: Uint8Array): {
   hashedMessage: Uint8Array;
   hashAlgOid: string;
   genTime: number;
 } {
-  const root = readNode(tst, 0);
-  const kids = children(tst, root); // version, policy, messageImprint, serial, genTime, …
-  const messageImprint = kids[2];
-  const miKids = children(tst, messageImprint);
-  const hashAlgOid = algorithmOid(tst, miKids[0]);
-  const hashedMessage = content(tst, miKids[1]);
+  const kids = children(tst, readNode(tst, 0));
+  const miKids = children(tst, kids[2]);
   const genTimeNode = kids.find((c) => c.tag === 0x18);
   if (!genTimeNode) throw new Asn1Error('TSTInfo missing genTime');
-  return { hashedMessage, hashAlgOid, genTime: readTime(tst, genTimeNode) };
-}
-
-function bytesEqual(a: Uint8Array, b: Uint8Array): boolean {
-  if (a.length !== b.length) return false;
-  let diff = 0;
-  for (let i = 0; i < a.length; i++) diff |= a[i] ^ b[i];
-  return diff === 0;
+  return {
+    hashedMessage: content(tst, miKids[1]),
+    hashAlgOid: algorithmOid(tst, miKids[0]),
+    genTime: readTime(tst, genTimeNode),
+  };
 }
 
 /**
- * Verify an RFC 3161 timestamp token (base64) attests `expectedHashHex` (the package
- * SHA-256), against the pinned TSA anchors. Returns a graded verdict; a parse failure
- * or unknown anchor is reported (not thrown) so the caller can render it calmly,
- * while a real cryptographic failure (`signature_invalid` / `imprint_mismatch` /
- * `content_not_bound`) is the alarm signal.
+ * Validate the embedded chain from `leaf` up to a self-signed cert whose key is a
+ * pinned root anchor, verifying each link's RSA signature, that issuers are CAs, and
+ * that genTime falls within every cert's validity. Returns the matched anchor or a
+ * reason. Bounded against cycles/length.
  */
-export function verifyRfc3161Timestamp(
+async function validateChainToRoot(
+  certs: X509Cert[],
+  leaf: X509Cert,
+  anchors: readonly TsaRootAnchor[],
+  genTime: number,
+): Promise<{ ok: boolean; tsa?: string; reason?: Rfc3161FailReason }> {
+  let current = leaf;
+  for (let depth = 0; depth < 8; depth++) {
+    if (genTime < current.notBefore || genTime > current.notAfter) {
+      return { ok: false, reason: 'genTime_outside_validity' };
+    }
+    if (bytesEqual(current.issuerDer, current.subjectDer)) {
+      // self-signed: trusted iff its key is pinned.
+      const anchor = anchors.find((a) => bytesEqual(base64ToBytes(a.rootKeyDer), current.spkiDer));
+      return anchor ? { ok: true, tsa: anchor.name } : { ok: false, reason: 'untrusted_root' };
+    }
+    const issuer = certs.find((c) => bytesEqual(c.subjectDer, current.issuerDer));
+    if (!issuer || !issuer.isCA) return { ok: false, reason: 'chain_incomplete' };
+    if (!(await verifyCertSignatureRsa(current, issuer.spkiDer))) {
+      return { ok: false, reason: 'chain_signature_invalid' };
+    }
+    current = issuer;
+  }
+  return { ok: false, reason: 'chain_incomplete' };
+}
+
+function fail(base: Rfc3161VerifyResult, reason: Rfc3161FailReason): Rfc3161VerifyResult {
+  return { ...base, reason };
+}
+
+/**
+ * Verify an RFC 3161 token (base64) attests `expectedHashHex` (the package SHA-256),
+ * chaining the token's embedded signing cert to a pinned TSA root. Async (the cert
+ * chain uses WebCrypto RSA). A parse failure / untrusted chain is reported, not
+ * thrown; `imprint_mismatch` / `content_not_bound` / `chain_signature_invalid` /
+ * `signature_invalid` are the alarm signals.
+ */
+export async function verifyRfc3161Timestamp(
   tokenB64: string,
   expectedHashHex: string,
-  anchors: readonly TsaAnchor[] = FREETSA_TSA_ANCHORS,
-): Rfc3161VerifyResult {
+  anchors: readonly TsaRootAnchor[] = FREETSA_ROOT_ANCHORS,
+): Promise<Rfc3161VerifyResult> {
   let buf: Uint8Array;
   let token: ParsedToken;
   let tst: ReturnType<typeof parseTstInfo>;
@@ -247,9 +261,11 @@ export function verifyRfc3161Timestamp(
     return {
       verified: false,
       imprintMatches: null,
-      signatureValid: null,
       contentBound: null,
+      chainVerified: null,
+      ekuTimestamping: null,
       withinValidity: null,
+      signatureValid: null,
       reason: 'parse_error',
     };
   }
@@ -257,68 +273,56 @@ export function verifyRfc3161Timestamp(
   const base: Rfc3161VerifyResult = {
     verified: false,
     imprintMatches: null,
-    signatureValid: null,
     contentBound: null,
+    chainVerified: null,
+    ekuTimestamping: null,
     withinValidity: null,
+    signatureValid: null,
     genTime: tst.genTime,
   };
 
-  // FreeTSA profile (P2a): SHA-512 digest + ECDSA-with-SHA-512 signature.
   if (token.digestAlgOid !== OID_SHA512 || token.signatureAlgOid !== OID_ECDSA_SHA512) {
-    return { ...base, reason: 'unexpected_algorithm' };
+    return fail(base, 'unexpected_algorithm');
   }
 
-  // (1) message imprint is about THIS package (sha256).
-  const imprintMatches =
+  base.imprintMatches =
     tst.hashAlgOid === OID_SHA256 && bytesToHex(tst.hashedMessage) === expectedHashHex.toLowerCase();
-  base.imprintMatches = imprintMatches;
-  if (!imprintMatches) return { ...base, reason: 'imprint_mismatch' };
+  if (!base.imprintMatches) return fail(base, 'imprint_mismatch');
 
-  // (2) the signature is bound to this TSTInfo via the messageDigest attribute.
-  if (!mdAttr) return { ...base, reason: 'no_message_digest' };
-  const contentBound = bytesEqual(mdAttr, sha512(token.tstInfo));
-  base.contentBound = contentBound;
-  if (!contentBound) return { ...base, reason: 'content_not_bound' };
+  if (!mdAttr) return fail(base, 'no_message_digest');
+  base.contentBound = bytesEqual(mdAttr, sha512(token.tstInfo));
+  if (!base.contentBound) return fail(base, 'content_not_bound');
 
-  // (3) ECDSA-P384 signature over SHA-512(signedAttrs re-tagged [0] → SET) verifies
-  // against a pinned anchor key. (`@noble` prehashes with SHA-384 by default, so we
-  // hash with SHA-512 ourselves and pass `prehash: false`.)
+  // The signing cert is the embedded cert with EKU id-kp-timeStamping.
+  const leaf = token.certs.find((c) => c.ekus.includes(OID_EKU_TIMESTAMPING));
+  if (!leaf) {
+    base.ekuTimestamping = token.certs.length > 0 ? false : null;
+    return fail(base, token.certs.length > 0 ? 'eku_not_timestamping' : 'no_signing_cert');
+  }
+  base.ekuTimestamping = true;
+  base.withinValidity = tst.genTime >= leaf.notBefore && tst.genTime <= leaf.notAfter;
+
+  const chain = await validateChainToRoot(token.certs, leaf, anchors, tst.genTime);
+  base.chainVerified = chain.ok;
+  if (!chain.ok) return fail(base, chain.reason ?? 'untrusted_root');
+  base.tsa = chain.tsa;
+  if (!base.withinValidity) return fail(base, 'genTime_outside_validity');
+
+  // The TSA signature: ECDSA-P384 over SHA-512(signedAttrs re-tagged [0]→SET),
+  // under the chain-validated leaf key. lowS:false — a TSA emits high-S (#119 fix).
   const signedBytes = Uint8Array.from(rawTlv(buf, token.signedAttrs));
-  signedBytes[0] = 0x31; // [0] IMPLICIT (0xa0) → SET OF (0x31) for the signature input
-  const digest = sha512(signedBytes);
-
-  let matched: TsaAnchor | undefined;
-  for (const anchor of anchors) {
-    try {
-      const point = extractP384Point(anchor.signingKeyDer);
-      // `lowS: false` is REQUIRED here: low-S is a signature-malleability convention
-      // for SIGNING, not a validity rule. A TSA (like FreeTSA) legitimately emits
-      // high-S ECDSA signatures (~half of them); `@noble`'s default `lowS: true`
-      // would false-negative those (it rejected the real high-S da9246 token —
-      // regression-tested). Accepting high-S is correct: both S and n−S are valid
-      // signatures by the same key, and we only ask "did this TSA sign this hash".
-      if (p384.verify(token.signature, digest, point, { format: 'der', prehash: false, lowS: false })) {
-        matched = anchor;
-        break;
-      }
-    } catch {
-      // malformed anchor key ⇒ try the next
-    }
+  signedBytes[0] = 0x31;
+  try {
+    const point = extractP384Point(leaf.spkiDer);
+    base.signatureValid = p384.verify(token.signature, sha512(signedBytes), point, {
+      format: 'der',
+      prehash: false,
+      lowS: false,
+    });
+  } catch {
+    base.signatureValid = false;
   }
-  base.signatureValid = !!matched;
-  if (!matched) {
-    // Distinguish "no pinned key vouches for this token" (calm — unknown TSA) from a
-    // signature that fails under a known key. Here, none verified ⇒ no_anchor.
-    return { ...base, reason: 'no_anchor' };
-  }
-  base.tsa = matched.name;
-
-  // (4) genTime within the pinned signing cert's validity window.
-  const notBefore = Date.parse(matched.notBefore);
-  const notAfter = Date.parse(matched.notAfter);
-  const withinValidity = tst.genTime >= notBefore && tst.genTime <= notAfter;
-  base.withinValidity = withinValidity;
-  if (!withinValidity) return { ...base, reason: 'genTime_outside_validity' };
+  if (!base.signatureValid) return fail(base, 'signature_invalid');
 
   return { ...base, verified: true };
 }

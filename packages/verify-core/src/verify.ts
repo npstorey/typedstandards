@@ -234,7 +234,7 @@ export async function verifyEvidence(
   // the timestamped hash against the pinned TSA anchor (#119 P2a). Pure/offline.
   let rfc3161: Rfc3161VerifyResult | null = null;
   if (input.rfc3161Timestamp && packageHash) {
-    rfc3161 = verifyRfc3161Timestamp(input.rfc3161Timestamp, packageHash);
+    rfc3161 = await verifyRfc3161Timestamp(input.rfc3161Timestamp, packageHash);
   }
 
   // Step 3b — blob references embedded in the package (check #9).
@@ -247,10 +247,21 @@ export async function verifyEvidence(
     }
   }
 
-  // Step 4 — key trust against the registry (check #5).
+  // Step 4 — key trust against the registry (check #5). A VERIFIED RFC 3161 genTime
+  // is a cryptographically attested upper bound on when the package was signed — a
+  // second time source alongside Rekor's `integratedTime` (#119 P2a). Use the
+  // EARLIEST attested time: the signature predates any timestamp over its hash, so
+  // the smallest attested time is the strongest proof a deprecated-key signature was
+  // made before deprecation. Both are in SECONDS for `verifyKeyTrust` (genTime is ms).
+  let signedBeforeTime = rekorIntegratedTime;
+  if (rfc3161?.verified && rfc3161.genTime !== undefined) {
+    const genTimeSec = Math.floor(rfc3161.genTime / 1000);
+    signedBeforeTime =
+      signedBeforeTime === undefined ? genTimeSec : Math.min(signedBeforeTime, genTimeSec);
+  }
   let keyTrust: KeyTrustResult | null = null;
   if (sigPublicKey && sigKid) {
-    keyTrust = verifyKeyTrust(sigPublicKey, sigKid, rekorIntegratedTime, deps.registry);
+    keyTrust = verifyKeyTrust(sigPublicKey, sigKid, signedBeforeTime, deps.registry);
   } else if (sigPublicKey) {
     keyTrust = legacyEmbeddedKeyTrust();
   }

@@ -360,3 +360,41 @@ test('verifyEvidence: verifies carried Rekor inclusion OFFLINE (failFetch, no ne
   // hash-parity (#8 online) stayed untouched: no entry id ⇒ null, not a regression.
   assert.equal(result.rekorVerified, null);
 });
+
+// --- 5. A verified RFC 3161 genTime bounds the #5 deprecated-key check (P2a) ------
+
+test('verifyEvidence: a verified RFC 3161 genTime bounds the deprecated-key (#5) check', async () => {
+  // The real high-S FreeTSA token (genTime 2026-04-16). With NO Rekor entry, genTime
+  // is the ONLY attested time, so it must drive the deprecated-key time-bounding.
+  const tok = JSON.parse(
+    readFileSync(new URL('./__fixtures__/rfc3161-token-highs.json', import.meta.url), 'utf8'),
+  ) as { tokenB64: string; expectedHashHex: string };
+  const KID2 = 'platform:dep-key';
+  const PUB = 'placeholder-spki-key'; // verifyKeyTrust matches on (kid, publicKey) equality
+  const registry = (deprecatedAt: string): TrustRegistry => ({
+    keys: [
+      { kid: KID2, publicKey: PUB, status: 'deprecated', activatedAt: '2026-01-01T00:00:00.000Z', deprecatedAt, revokedAt: null, signerIdentity: SIGNER },
+    ],
+  });
+  const input: VerifyInput = {
+    package: null,
+    packageHash: tok.expectedHashHex, // == the token's message imprint ⇒ rfc3161 verifies
+    signature: { signature: 'AA==', publicKey: PUB, algorithm: 'Ed25519ph', kid: KID2 },
+    rfc3161Timestamp: tok.tokenB64,
+    rekorEntryId: null, // no Rekor ⇒ the verified genTime is the only time source
+    lifecycle: null,
+  };
+
+  const signedBeforeDeprecation = await verifyEvidence(input, {
+    registry: registry('2026-05-01T00:00:00.000Z'),
+    fetch: failFetch,
+  });
+  assert.equal(signedBeforeDeprecation.rfc3161?.verified, true);
+  assert.equal(signedBeforeDeprecation.keyTrust?.status, 'deprecated_valid');
+
+  const signedAfterDeprecation = await verifyEvidence(input, {
+    registry: registry('2026-03-01T00:00:00.000Z'),
+    fetch: failFetch,
+  });
+  assert.equal(signedAfterDeprecation.keyTrust?.status, 'deprecated_invalid');
+});
