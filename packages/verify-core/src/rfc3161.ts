@@ -291,7 +291,13 @@ export function verifyRfc3161Timestamp(
   for (const anchor of anchors) {
     try {
       const point = extractP384Point(anchor.signingKeyDer);
-      if (p384.verify(token.signature, digest, point, { format: 'der', prehash: false })) {
+      // `lowS: false` is REQUIRED here: low-S is a signature-malleability convention
+      // for SIGNING, not a validity rule. A TSA (like FreeTSA) legitimately emits
+      // high-S ECDSA signatures (~half of them); `@noble`'s default `lowS: true`
+      // would false-negative those (it rejected the real high-S da9246 token —
+      // regression-tested). Accepting high-S is correct: both S and n−S are valid
+      // signatures by the same key, and we only ask "did this TSA sign this hash".
+      if (p384.verify(token.signature, digest, point, { format: 'der', prehash: false, lowS: false })) {
         matched = anchor;
         break;
       }
