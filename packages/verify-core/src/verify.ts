@@ -14,13 +14,15 @@
 // sidecar (`buildCommitmentView`) so WS3 can wire sidecar → verifyEvidence with
 // no glue. The server route adapts its DB row to the same shape.
 //
-// Check depth: fully client-side for #1/#2/#3/#4/#5/#6/#9/#12/#13/#14/#15; PRESENCE
-// for #7 (RFC 3161); #8 (Rekor) is hash-PARITY AND, when an inclusion proof is
-// available (carried for offline, or on the fetched entry), cryptographic Merkle
-// inclusion against the pinned log key (civic-ai-tools-website#119 P1); lifecycle
-// STATE for #10 unless the caller supplies a deeper resolution. The remaining
-// deeper offline crypto (TSA chain #7, independent lifecycle-chain #10) is #119
-// P2 / P3.
+// Check depth: fully client-side for #1/#2/#3/#4/#5/#6/#9/#12/#13/#14/#15; #7 (RFC
+// 3161) is PRESENCE (`hasTimestamp`) AND, when a token is present, cryptographic TSA
+// verification against the pinned FreeTSA anchor (civic-ai-tools-website#119 P2a —
+// ECDSA-P384 over the signed TSTInfo, message-imprint match, genTime-in-validity);
+// #8 (Rekor) is hash-PARITY AND, when an inclusion proof is available (carried for
+// offline, or on the fetched entry), cryptographic Merkle inclusion against the
+// pinned log key (#119 P1); lifecycle STATE for #10 unless the caller supplies a
+// deeper resolution. Remaining deeper crypto: TSA full cert-chain #7 (#119 P2b),
+// independent lifecycle-chain #10 (#119 P3).
 
 import { recomputePackageHash } from './checks.ts';
 import { verifySignature } from './signature.ts';
@@ -30,6 +32,7 @@ import {
   type RekorInclusionProof,
   type RekorInclusionResult,
 } from './rekor-inclusion.ts';
+import { verifyRfc3161Timestamp, type Rfc3161VerifyResult } from './rfc3161.ts';
 import {
   verifyKeyTrust,
   legacyEmbeddedKeyTrust,
@@ -144,6 +147,10 @@ export interface VerifyResult {
   rekorInclusion: RekorInclusionResult | null;
   hasRekor: boolean;
   hasTimestamp: boolean;
+  /** Cryptographic RFC 3161 TSA verdict (#119 P2a): null when no token was present,
+   *  else the graded result (signature vs pinned TSA anchor, message-imprint match,
+   *  genTime-in-validity). Additive to `hasTimestamp` (presence). */
+  rfc3161: Rfc3161VerifyResult | null;
   keyTrust: KeyTrustResult | null;
   blobRefsVerified: boolean | null;
   blobRefs: BlobRefVerification[];
@@ -222,6 +229,14 @@ export async function verifyEvidence(
     rekorInclusion = verifyRekorInclusion(input.rekorEntryBody, input.rekorInclusionProof);
   }
 
+  // Step 3c — RFC 3161 timestamp (check #7, deep). Presence is `hasTimestamp`; when a
+  // token + package hash are present, cryptographically verify the TSA signature over
+  // the timestamped hash against the pinned TSA anchor (#119 P2a). Pure/offline.
+  let rfc3161: Rfc3161VerifyResult | null = null;
+  if (input.rfc3161Timestamp && packageHash) {
+    rfc3161 = verifyRfc3161Timestamp(input.rfc3161Timestamp, packageHash);
+  }
+
   // Step 3b — blob references embedded in the package (check #9).
   let blobRefs: BlobRefVerification[] = [];
   let blobRefsVerified: boolean | null = null;
@@ -282,6 +297,7 @@ export async function verifyEvidence(
     rekorInclusion,
     hasRekor: !!input.rekorEntryId,
     hasTimestamp: !!input.rfc3161Timestamp,
+    rfc3161,
     keyTrust,
     blobRefsVerified,
     blobRefs,
