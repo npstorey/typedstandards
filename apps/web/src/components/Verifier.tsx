@@ -7,6 +7,7 @@ import {
   resolveInput,
   buildVerifyInput,
   runVerify,
+  resolveCarriedLifecycle,
   buildCheckRows,
   rollupVerdict,
   buildPreview,
@@ -79,7 +80,10 @@ export function Verifier({
 
       setPhase("verifying");
       const vinput = buildVerifyInput(resolvedInput.commitment, resolvedInput.pkg);
-      const result = await runVerify(vinput, resolvedInput.registry);
+      // Independently resolve #10 from the carried signed attestation chain (#119 P3);
+      // undefined ⇒ verifyEvidence resolves lifecycle at STATE depth.
+      const lifecycleResolution = resolveCarriedLifecycle(resolvedInput.commitment);
+      const result = await runVerify(vinput, resolvedInput.registry, lifecycleResolution);
       if (ac.signal.aborted) return;
 
       const builtRows = buildCheckRows(result, vinput, resolvedInput.commitment);

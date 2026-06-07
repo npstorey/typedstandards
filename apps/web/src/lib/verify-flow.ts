@@ -16,11 +16,14 @@
 import {
   verifyEvidence,
   validateRegistry,
+  verifyLifecycleChain,
   type VerifyInput,
   type VerifyResult,
   type VerifySignatureEnvelope,
   type CommitmentLifecycleState,
   type RekorInclusionProof,
+  type CarriedLifecycleNode,
+  type LifecycleResolution,
   type TrustRegistry,
 } from '@typedstandards/verify-core';
 import {
@@ -97,6 +100,10 @@ export interface Commitment {
    *  verify Merkle inclusion OFFLINE from the carried proof — no re-fetch (#119 P1). */
   rekorEntryBody?: string | null;
   lifecycle?: CommitmentLifecycleState | null;
+  /** Signed lifecycle attestation envelopes (#119 P3), carried so the browser
+   *  resolves #10 to `source: 'attestation-chain'` offline — independently verifying
+   *  each node (hash, signature, reachability). Absent ⇒ resolve at STATE depth. */
+  lifecycleAttestations?: CarriedLifecycleNode[];
   trustRegistryUrl?: string;
   trustRegistryUrlLegacy?: string;
   subjectTitle?: string;
@@ -394,9 +401,33 @@ export function buildVerifyInput(commitment: Commitment, pkg: Record<string, unk
   };
 }
 
-/** Run the §9.2 check suite in the browser. */
-export function runVerify(input: VerifyInput, registry: TrustRegistry | undefined): Promise<VerifyResult> {
-  return verifyEvidence(input, { registry, fetch: globalThis.fetch });
+/**
+ * Independently resolve #10 from the commitment's carried signed attestation chain
+ * (#119 P3), or `undefined` when none is carried (the verifier then resolves at STATE
+ * depth). The result is injected as `deps.lifecycleResolution` — the same mechanism
+ * the civicaitools.org server uses for its DB-resolved chain — so the browser reaches
+ * `source: 'attestation-chain'` having verified each node itself (hash, signature,
+ * reachability). The target signer is the content node's `signer.identifier`; with
+ * none, no attestation can signer-match, so the status honestly stays active.
+ */
+export function resolveCarriedLifecycle(commitment: Commitment): LifecycleResolution | undefined {
+  const carried = commitment.lifecycleAttestations;
+  if (!carried || carried.length === 0) return undefined;
+  return verifyLifecycleChain(carried, commitment.packageHash, commitment.signer?.identifier ?? '');
+}
+
+/** Run the §9.2 check suite in the browser. A browser-resolved lifecycle chain (from
+ *  `resolveCarriedLifecycle`) is injected as the deeper #10 resolution when present. */
+export function runVerify(
+  input: VerifyInput,
+  registry: TrustRegistry | undefined,
+  lifecycleResolution?: LifecycleResolution,
+): Promise<VerifyResult> {
+  return verifyEvidence(input, {
+    registry,
+    fetch: globalThis.fetch,
+    ...(lifecycleResolution ? { lifecycleResolution } : {}),
+  });
 }
 
 // --- "Show the math" rows -------------------------------------------------
