@@ -49,10 +49,11 @@ export default async function VerifyPage({
         <code className="font-mono">@typedstandards/verify-core</code> v
         {verifyCorePkg.version} — the same verification core civicaitools.org runs
         server-side. Depth matches that core: full client-side crypto for the
-        signature, hashes, and key trust; presence for the RFC 3161 timestamp;
-        hash-parity for the Rekor transparency log. Disclosure ≠ validation: this
-        surfaces integrity, identity, timestamp, and transparency — not whether the
-        content is correct.
+        signature, hashes, and key trust; the RFC 3161 timestamp is chain-verified
+        offline to the pinned FreeTSA root; and the Rekor transparency-log entry has
+        its Merkle inclusion proof recomputed against the log’s signed checkpoint.
+        Disclosure ≠ validation: this surfaces integrity, identity, timestamp, and
+        transparency — not whether the content is correct.
       </p>
       <p className="mt-3 text-xs leading-relaxed text-muted">
         Publishing evidence?{" "}
