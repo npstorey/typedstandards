@@ -34,10 +34,11 @@ import {
 } from './asn1.ts';
 import {
   parseCertificate,
-  verifyCertSignatureRsa,
+  verifyCertChainToAnchor,
   bytesEqual,
   OID_EKU_TIMESTAMPING,
   type X509Cert,
+  type ChainFailReason,
 } from './x509.ts';
 
 const OID_SIGNED_DATA = '1.2.840.113549.1.7.2';
@@ -200,11 +201,33 @@ function parseTstInfo(tst: Uint8Array): {
   };
 }
 
+// Map the X.509 chain verifier's precise reason onto this module's vocabulary. The
+// strict-RFC structural/policy rejections (#119 P4) collapse to `chain_incomplete`
+// (the chain could not be trusted) and only a real RSA link failure surfaces as
+// `chain_signature_invalid`; the chain layer keeps the fine-grained reason.
+function toRfc3161ChainReason(reason: ChainFailReason): Rfc3161FailReason {
+  switch (reason) {
+    case 'genTime_outside_validity':
+      return 'genTime_outside_validity';
+    case 'untrusted_root':
+      return 'untrusted_root';
+    case 'link_signature_invalid':
+      return 'chain_signature_invalid';
+    case 'unsupported_critical_extension':
+    case 'algorithm_mismatch':
+    case 'issuer_not_found':
+    case 'issuer_not_ca':
+    case 'path_len_exceeded':
+      return 'chain_incomplete';
+  }
+}
+
 /**
- * Validate the embedded chain from `leaf` up to a self-signed cert whose key is a
- * pinned root anchor, verifying each link's RSA signature, that issuers are CAs, and
- * that genTime falls within every cert's validity. Returns the matched anchor or a
- * reason. Bounded against cycles/length.
+ * Validate the embedded chain from `leaf` up to a pinned root anchor, delegating to
+ * the strict RFC 5280 verifier in `x509.ts` (each link's RSA signature; CA + keyUsage
+ * keyCertSign on issuers; pathLenConstraint; unknown-critical-extension and inner==
+ * outer-algorithm rejection; validity at genTime). Returns the matched anchor or a
+ * mapped reason.
  */
 async function validateChainToRoot(
   certs: X509Cert[],
@@ -212,24 +235,9 @@ async function validateChainToRoot(
   anchors: readonly TsaRootAnchor[],
   genTime: number,
 ): Promise<{ ok: boolean; tsa?: string; reason?: Rfc3161FailReason }> {
-  let current = leaf;
-  for (let depth = 0; depth < 8; depth++) {
-    if (genTime < current.notBefore || genTime > current.notAfter) {
-      return { ok: false, reason: 'genTime_outside_validity' };
-    }
-    if (bytesEqual(current.issuerDer, current.subjectDer)) {
-      // self-signed: trusted iff its key is pinned.
-      const anchor = anchors.find((a) => bytesEqual(base64ToBytes(a.rootKeyDer), current.spkiDer));
-      return anchor ? { ok: true, tsa: anchor.name } : { ok: false, reason: 'untrusted_root' };
-    }
-    const issuer = certs.find((c) => bytesEqual(c.subjectDer, current.issuerDer));
-    if (!issuer || !issuer.isCA) return { ok: false, reason: 'chain_incomplete' };
-    if (!(await verifyCertSignatureRsa(current, issuer.spkiDer))) {
-      return { ok: false, reason: 'chain_signature_invalid' };
-    }
-    current = issuer;
-  }
-  return { ok: false, reason: 'chain_incomplete' };
+  const result = await verifyCertChainToAnchor(certs, leaf, anchors, genTime);
+  if (result.ok) return { ok: true, tsa: result.anchorName };
+  return { ok: false, reason: toRfc3161ChainReason(result.reason ?? 'issuer_not_found') };
 }
 
 function fail(base: Rfc3161VerifyResult, reason: Rfc3161FailReason): Rfc3161VerifyResult {
