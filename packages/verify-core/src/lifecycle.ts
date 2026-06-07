@@ -194,3 +194,74 @@ export function resolveLifecycleFromLegacyColumns(columns: {
       : {}),
   };
 }
+
+/** A signed lifecycle attestation, carried in the bundle so the chain resolves with
+ *  NO reference-implementation dependency (civic-ai-tools-website#119 P3). The server
+ *  fetches these from the DB + blob; an offline verifier reads them from the bundle. */
+export interface CarriedLifecycleNode {
+  /** The signed attestation node JSON (the envelope) — recomputed + signature-checked. */
+  node: Record<string, unknown>;
+  /** The stored nodeId (envelope hash) the recomputed hash must match. */
+  nodeId: string;
+  /** The signature envelope over the node (`{signature, publicKey, algorithm}`). */
+  signature?: { signature?: string; publicKey?: string; algorithm?: string } | null;
+  /** Presence flags (surfaced; per-attestation TSA/Rekor depth is a follow-up). */
+  hasTimestamp?: boolean;
+  hasRekor?: boolean;
+}
+
+function pickString(v: unknown): string | undefined {
+  return typeof v === 'string' && v.length > 0 ? v : undefined;
+}
+
+/**
+ * Resolve lifecycle (#10) INDEPENDENTLY from carried signed attestation nodes —
+ * the browser/offline path that reaches `source: 'attestation-chain'` with no
+ * reference-implementation dependency (civic-ai-tools-website#119 P3).
+ *
+ * Unlike the server (whose DB query guarantees the rows target this node and whose
+ * rows are platform-signed), an independent verifier must NOT trust the carrier, so
+ * each node is gated before it can affect status:
+ *   - REACHABILITY (§9.2 #13): `node.targetNodeId` MUST equal the content node's id;
+ *     an attestation about a different node is not part of this lifecycle.
+ *   - INTEGRITY: the recomputed envelope hash MUST equal the stored `nodeId`.
+ *   - SIGNATURE: the Ed25519(ph) signature MUST verify over that hash.
+ * A node failing any of these is EXCLUDED (a forged/tampered/misdirected transition
+ * cannot move the status). Surviving nodes go to `resolveLifecycleFromChain`, which
+ * applies the §8.10.3 retention asymmetry (a valid but non-signer-matched attestation
+ * is surfaced in the chain yet does NOT move the publisher's status). That shared
+ * resolver is unchanged, so the server route's output stays byte-identical.
+ */
+export function verifyLifecycleChain(
+  carried: CarriedLifecycleNode[],
+  contentNodeId: string,
+  targetSignerIdentifier: string,
+): LifecycleResolution {
+  const views: LifecycleAttestationView[] = [];
+  for (const entry of carried) {
+    // Reachability: the attestation must reference THIS content node.
+    if (pickString(entry.node['targetNodeId']) !== contentNodeId) continue;
+
+    const verdict = verifyAttestationNode(entry.node, entry.nodeId, entry.signature ?? null);
+    // Independent crypto gate: integrity + a valid signature, or it cannot count.
+    if (!verdict.nodeIdMatches || verdict.signatureValid !== true) continue;
+
+    const signer = entry.node['signer'] as SignerIdentity | undefined;
+    const metadata = entry.node['metadata'] as Record<string, unknown> | undefined;
+    views.push({
+      nodeId: entry.nodeId,
+      type: pickString(entry.node['type']) ?? '',
+      signer,
+      createdAt: pickString(metadata?.['createdAt']) ?? '',
+      reason: pickString(entry.node['reason']),
+      effectiveAt: pickString(entry.node['effectiveAt']),
+      priorWithdrawalNodeId: pickString(entry.node['priorWithdrawalNodeId']),
+      signatureValid: verdict.signatureValid,
+      nodeIdMatches: verdict.nodeIdMatches,
+      hasTimestamp: !!entry.hasTimestamp,
+      hasRekor: !!entry.hasRekor,
+      signerMatchesTarget: !!signer && signer.identifier === targetSignerIdentifier,
+    });
+  }
+  return resolveLifecycleFromChain(views);
+}
