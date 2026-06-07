@@ -12,15 +12,20 @@ import {
   rollupVerdict,
   buildPreview,
   resolveHostRecognition,
+  registryMetaOf,
+  canRecheckKeyTrust,
+  recheckKeyTrustLive,
   VerifyFlowError,
   type CheckRow as CheckRowData,
   type HostRecognition,
   type InputMode,
+  type KeyTrustRecheck,
   type PagePreview as PreviewData,
   type ResolveStep,
   type ResolvedInput,
   type Verdict,
 } from "@/lib/verify-flow";
+import type { VerifyResult } from "@typedstandards/verify-core";
 import { CheckRow } from "./CheckRow";
 import { VerdictBanner } from "./VerdictBanner";
 import { RecognitionBanner } from "./RecognitionBanner";
@@ -46,6 +51,12 @@ export function Verifier({
   const [recognition, setRecognition] = useState<HostRecognition | null>(null);
   const [preview, setPreview] = useState<PreviewData | null>(null);
   const [resolved, setResolved] = useState<ResolvedInput | null>(null);
+  const [result, setResult] = useState<VerifyResult | null>(null);
+  const [recheck, setRecheck] = useState<{
+    phase: "idle" | "loading" | "done" | "error";
+    data?: KeyTrustRecheck;
+    error?: string;
+  }>({ phase: "idle" });
   const [shareHash, setShareHash] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -67,6 +78,8 @@ export function Verifier({
     setRecognition(null);
     setPreview(null);
     setResolved(null);
+    setResult(null);
+    setRecheck({ phase: "idle" });
     setShareHash(null);
     setCopied(false);
 
@@ -85,8 +98,14 @@ export function Verifier({
       const lifecycleResolution = resolveCarriedLifecycle(resolvedInput.commitment);
       const result = await runVerify(vinput, resolvedInput.registry, lifecycleResolution);
       if (ac.signal.aborted) return;
+      setResult(result);
 
-      const builtRows = buildCheckRows(result, vinput, resolvedInput.commitment);
+      const builtRows = buildCheckRows(
+        result,
+        vinput,
+        resolvedInput.commitment,
+        registryMetaOf(resolvedInput),
+      );
       setRows(builtRows);
       setVerdict(rollupVerdict(result));
       // The second, independent dimension (Phase D): host recognition. Resolved
@@ -138,6 +157,19 @@ export function Verifier({
     setRaw(text);
     void run(text);
   };
+
+  // Online recheck (#119 P4): re-run the registry-dependent #5 check against the
+  // LIVE registry, closing the offline-revocation gap a carried snapshot leaves.
+  const onRecheck = useCallback(async () => {
+    if (!resolved || !result) return;
+    setRecheck({ phase: "loading" });
+    try {
+      const data = await recheckKeyTrustLive(resolved.commitment, result);
+      setRecheck({ phase: "done", data });
+    } catch (e) {
+      setRecheck({ phase: "error", error: e instanceof Error ? e.message : String(e) });
+    }
+  }, [resolved, result]);
 
   const running = phase === "resolving" || phase === "verifying" || phase === "revealing";
   const mode: InputMode = detectInputMode(raw);
@@ -243,6 +275,13 @@ export function Verifier({
                 </ol>
               )}
 
+              {phase === "done" &&
+                resolved &&
+                result &&
+                canRecheckKeyTrust(registryMetaOf(resolved), result) && (
+                  <KeyTrustRecheckPanel state={recheck} onRecheck={onRecheck} />
+                )}
+
               {phase === "done" && resolved && <IndependenceNote resolved={resolved} />}
 
               {phase === "done" && preview && <PagePreview preview={preview} />}
@@ -280,6 +319,70 @@ function ResolutionSteps({ steps }: { steps: ResolveStep[] }) {
         </li>
       ))}
     </ul>
+  );
+}
+
+function asOfDate(iso?: string): string {
+  if (!iso) return "";
+  const t = Date.parse(iso);
+  return Number.isNaN(t) ? iso : new Date(t).toISOString().slice(0, 10);
+}
+
+function KeyTrustRecheckPanel({
+  state,
+  onRecheck,
+}: {
+  state: { phase: "idle" | "loading" | "done" | "error"; data?: KeyTrustRecheck; error?: string };
+  onRecheck: () => void;
+}) {
+  return (
+    <div className="rounded-lg border border-border bg-surface p-3 text-xs leading-relaxed">
+      <p className="text-muted">
+        <strong className="text-foreground">Key trust used a registry snapshot.</strong> A
+        key revoked after the snapshot&apos;s date can&apos;t be seen offline. Re-check against
+        the live registry to close that gap.
+      </p>
+      {state.phase === "idle" && (
+        <button
+          type="button"
+          onClick={onRecheck}
+          className="mt-2 rounded-md border border-border px-2.5 py-1 font-medium hover:border-accent hover:text-accent"
+        >
+          Re-check against the live registry
+        </button>
+      )}
+      {state.phase === "loading" && (
+        <p className="mt-2 text-muted" aria-live="polite">
+          Re-checking against the live registry…
+        </p>
+      )}
+      {state.phase === "error" && (
+        <p className="mt-2" style={{ color: "var(--trust-attention)" }}>
+          Couldn&apos;t reach the live registry — you may be offline. {state.error}
+        </p>
+      )}
+      {state.phase === "done" && state.data && (
+        <p
+          className="mt-2"
+          style={{ color: state.data.changed ? "var(--trust-alarm)" : "var(--trust-verified)" }}
+          aria-live="polite"
+        >
+          {state.data.changed ? "⚠ " : "✓ "}
+          Live registry
+          {state.data.generatedAt ? ` (as of ${asOfDate(state.data.generatedAt)})` : ""}:{" "}
+          {state.data.changed ? (
+            <>
+              key trust is now <strong>{state.data.status}</strong> — this changed after the
+              snapshot you verified against.
+            </>
+          ) : (
+            <>
+              key trust unchanged (still <strong>{state.data.status}</strong>).
+            </>
+          )}
+        </p>
+      )}
+    </div>
   );
 }
 

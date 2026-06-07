@@ -19,6 +19,8 @@ import {
   verifyEvidence,
   validateRegistry,
   verifyLifecycleChain,
+  verifyKeyTrust,
+  legacyEmbeddedKeyTrust,
   parseInclusionProof,
   type VerifyInput,
   type VerifyResult,
@@ -27,6 +29,7 @@ import {
   type CarriedLifecycleNode,
   type LifecycleResolution,
   type TrustRegistry,
+  type KeyTrustStatus,
 } from '@typedstandards/verify-core';
 import {
   type TrustTier,
@@ -47,25 +50,25 @@ import {
   CAPTURE_METHOD_VOCAB_SIGNALS,
   LIFECYCLE_STATE_SIGNALS,
   LIFECYCLE_SOURCE_SIGNALS,
-} from './trust-signal';
+} from './trust-signal.ts';
 import {
   PRIMARY_HOST,
   HOST_DIRECTORY_PATH,
   fetchHostDirectory,
   validateHostDirectory,
   type HostDirectory,
-} from './host-directory';
+} from './host-directory.ts';
 
 // Re-export the host-recognition surface (Phase D / Q47) so the verifier UI pulls
 // the whole verification flow — cryptographic checks AND publisher recognition —
 // from this one module.
-export { resolveHostRecognition } from './host-directory';
+export { resolveHostRecognition } from './host-directory.ts';
 export type {
   HostDirectory,
   HostDirectoryEntry,
   HostRecognition,
   HostRecognitionStatus,
-} from './host-directory';
+} from './host-directory.ts';
 
 /** The host a bare hash / slug is resolved against — there is no origin in a bare
  *  identifier, so it is looked up on the directory's anchor host. Derived from the
@@ -452,6 +455,148 @@ function row(
   return { num, name, signal: toResolvedSignal(descriptor), math, ...(depthNote ? { depthNote } : {}) };
 }
 
+// --- Registry freshness (#119 P4 PR-C: revocation-staleness honesty) -------
+
+/** The registry document's self-declared as-of date (`generatedAt`, the CRL
+ *  `thisUpdate` precedent). Read defensively: verify-core's `TrustRegistry` type
+ *  doesn't yet declare the field, but `validateRegistry` passes it through, so it
+ *  is present at runtime on a stamped registry. */
+export function registryGeneratedAt(registry: TrustRegistry | undefined): string | undefined {
+  const g = (registry as { generatedAt?: unknown } | undefined)?.generatedAt;
+  return typeof g === 'string' ? g : undefined;
+}
+
+/** Render an ISO timestamp as a plain YYYY-MM-DD, or pass the raw value through if
+ *  it isn't a parseable date (honest-but-imprecise, never a throw). */
+function fmtAsOf(iso: string): string {
+  const t = Date.parse(iso);
+  return Number.isNaN(t) ? iso : new Date(t).toISOString().slice(0, 10);
+}
+
+/** Where the registry the verdict relied on came from, for the #5 staleness note
+ *  and the online-recheck affordance. */
+export interface RegistryMeta {
+  /** 'inline' = a snapshot carried in the bundle; 'fetched' = pulled live. */
+  kind: SourceKind;
+  /** The live registry URL, when one is known (drives the recheck affordance even
+   *  for an inline snapshot whose commitment also names a URL). */
+  url?: string;
+  /** The registry document's `generatedAt`, when stamped. */
+  generatedAt?: string;
+  /** Whether a registry was actually loaded (vs. unavailable). */
+  available: boolean;
+}
+
+// Key-trust statuses whose verdict actually CONSULTED the registry — the only ones
+// for which a snapshot/liveness caveat is meaningful. `legacy_embedded` was never
+// registry-vouched, and `registry_unavailable` had no registry to be stale.
+const REGISTRY_BACKED_STATUSES = new Set<KeyTrustStatus>([
+  'active',
+  'deprecated_valid',
+  'deprecated_invalid',
+  'revoked',
+  'unknown_key',
+]);
+
+/** The honest staleness note for the #5 row, or `undefined` when none applies
+ *  (verdict didn't rely on the registry). 'fetched' is current; 'inline' carries
+ *  the offline-revocation caveat. A missing `generatedAt` degrades to a dateless
+ *  but honest note. */
+export function keyTrustStalenessNote(
+  status: KeyTrustStatus,
+  meta: RegistryMeta | undefined,
+): string | undefined {
+  if (!meta || !meta.available || !REGISTRY_BACKED_STATUSES.has(status)) return undefined;
+  const asOf = meta.generatedAt ? ` (as of ${fmtAsOf(meta.generatedAt)})` : '';
+  if (meta.kind === 'fetched') {
+    return `Checked against the live registry${asOf}.`;
+  }
+  const asOfInline = meta.generatedAt ? `, as of ${fmtAsOf(meta.generatedAt)}` : ' (date not stated)';
+  return `Verified against the registry snapshot carried in this bundle${asOfInline} — a key revoked after that date cannot be reflected offline. Re-check against the live registry to close the gap.`;
+}
+
+/** The earliest verified "signed before" time the #5 check is bounded by — the min
+ *  of the Rekor integratedTime and a verified RFC 3161 genTime (#119 P2a). Mirrors
+ *  the derivation inside verify-core's `verifyEvidence`, so a re-check reproduces
+ *  the original #5 verdict exactly. Both are seconds since epoch. */
+function signedBeforeTimeOf(result: VerifyResult): number | undefined {
+  let t = result.rekorIntegratedTime;
+  if (result.rfc3161?.verified && result.rfc3161.genTime !== undefined) {
+    const genTimeSec = Math.floor(result.rfc3161.genTime / 1000);
+    t = t === undefined ? genTimeSec : Math.min(t, genTimeSec);
+  }
+  return t;
+}
+
+export interface KeyTrustRecheck {
+  status: KeyTrustStatus;
+  verified: boolean;
+  /** The live status differs from the snapshot verdict — e.g. now revoked. */
+  changed: boolean;
+  /** The live registry's `generatedAt`, when stamped. */
+  generatedAt?: string;
+}
+
+/**
+ * Re-run ONLY the registry-dependent key-trust check (#5) against the LIVE
+ * registry, closing the offline-revocation gap when the verifier is connected. The
+ * rest of the verdict is offline-complete and registry-independent, so it is not
+ * recomputed. Reproduces verify-core's #5 inputs (public key, kid, earliest
+ * attested time) so a `changed` result reflects a real registry change — e.g. a key
+ * revoked AFTER the snapshot's `generatedAt`. Throws (not a silent pass) when the
+ * commitment names no registry URL or the live registry can't be fetched/validated.
+ */
+export async function recheckKeyTrustLive(
+  commitment: Commitment,
+  result: VerifyResult,
+  signal?: AbortSignal,
+): Promise<KeyTrustRecheck> {
+  const url = commitment.trustRegistryUrl ?? commitment.trustRegistryUrlLegacy;
+  if (!url) throw new VerifyFlowError('This bundle names no trust-registry URL to re-check against.');
+  const liveRegistry = validateRegistry(await getJson(url, signal));
+  const publicKey = commitment.signature?.publicKey;
+  const kid = result.kid;
+  const live =
+    publicKey && kid
+      ? verifyKeyTrust(publicKey, kid, signedBeforeTimeOf(result), liveRegistry)
+      : legacyEmbeddedKeyTrust();
+  return {
+    status: live.status,
+    verified: live.verified,
+    changed: live.status !== result.keyTrust?.status,
+    ...(registryGeneratedAt(liveRegistry) ? { generatedAt: registryGeneratedAt(liveRegistry) } : {}),
+  };
+}
+
+/** Build the #5 registry meta from a resolved input. The recheck URL falls back to
+ *  the commitment's declared registry URL, so an inline snapshot whose bundle also
+ *  names a URL can still be re-checked live. */
+export function registryMetaOf(resolved: ResolvedInput): RegistryMeta {
+  const url =
+    resolved.sources.registry.url ??
+    resolved.commitment.trustRegistryUrl ??
+    resolved.commitment.trustRegistryUrlLegacy;
+  const generatedAt = registryGeneratedAt(resolved.registry);
+  return {
+    kind: resolved.sources.registry.kind,
+    available: !!resolved.registry,
+    ...(url ? { url } : {}),
+    ...(generatedAt ? { generatedAt } : {}),
+  };
+}
+
+/** The online recheck is offered only when an inline SNAPSHOT backed a
+ *  registry-dependent verdict AND a live URL is known — i.e. exactly when an
+ *  offline-revocation gap could exist and is closeable. */
+export function canRecheckKeyTrust(meta: RegistryMeta, result: VerifyResult): boolean {
+  return (
+    meta.kind === 'inline' &&
+    !!meta.url &&
+    !!result.keyTrust &&
+    REGISTRY_BACKED_STATUSES.has(result.keyTrust.status)
+  );
+}
+
 /**
  * Build the per-check rows from the verdict + input. Each row carries the trust
  * signal (tier/label) AND the computed values the verifier saw — the "math".
@@ -462,6 +607,7 @@ export function buildCheckRows(
   result: VerifyResult,
   input: VerifyInput,
   commitment: Commitment,
+  registryMeta?: RegistryMeta,
 ): CheckRow[] {
   const rows: CheckRow[] = [];
 
@@ -522,13 +668,22 @@ export function buildCheckRows(
     rows.push(row('4', 'Content fingerprint', CONTENT_HASH_SIGNALS[ch.status], math));
   }
 
-  // #5 — key trust (trust-registry lookup).
+  // #5 — key trust (trust-registry lookup). The staleness note (#119 P4) makes the
+  // offline-revocation limit legible: a snapshot can't reflect a key revoked after
+  // its `generatedAt`; the recheck affordance closes that gap when connected.
   if (result.keyTrust) {
+    const stalenessNote = keyTrustStalenessNote(result.keyTrust.status, registryMeta);
     rows.push(
-      row('5', 'Key trust', resolveKeyTrust(result.keyTrust), [
-        { label: 'kid', value: result.kid ?? '—', mono: true },
-        { label: 'Registry status', value: result.keyTrust.status },
-      ]),
+      row(
+        '5',
+        'Key trust',
+        resolveKeyTrust(result.keyTrust),
+        [
+          { label: 'kid', value: result.kid ?? '—', mono: true },
+          { label: 'Registry status', value: result.keyTrust.status },
+        ],
+        stalenessNote,
+      ),
     );
   } else {
     rows.push(row('5', 'Key trust', resolveKeyTrust(null), [{ label: 'Status', value: 'no signing key to check' }]));
