@@ -92,7 +92,12 @@ export function Verifier({
       setResolved(resolvedInput);
 
       setPhase("verifying");
-      const vinput = buildVerifyInput(resolvedInput.commitment, resolvedInput.pkg);
+      // Offline-first for a fully self-contained bundle (#119 Q15): drop the redundant
+      // online Rekor parity so verification touches zero network when nothing needs
+      // fetching. Hosted/URL verification (fullyOffline=false) is unaffected.
+      const vinput = buildVerifyInput(resolvedInput.commitment, resolvedInput.pkg, {
+        offline: resolvedInput.fullyOffline,
+      });
       // Independently resolve #10 from the carried signed attestation chain (#119 P3);
       // undefined ⇒ verifyEvidence resolves lifecycle at STATE depth.
       const lifecycleResolution = resolveCarriedLifecycle(resolvedInput.commitment);

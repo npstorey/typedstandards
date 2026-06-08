@@ -375,17 +375,32 @@ export async function resolveInput(
 
 /** Map the resolved commitment + package to the verify-core input. The carried Rekor
  *  inclusion proof is parsed with verify-core's shared `parseInclusionProof` — the one
- *  guard the server route, this flow, and the backfill all share (#119 P4). */
-export function buildVerifyInput(commitment: Commitment, pkg: Record<string, unknown> | null): VerifyInput {
+ *  guard the server route, this flow, and the backfill all share (#119 P4).
+ *
+ *  `opts.offline` (set for a fully self-contained bundle) makes verification
+ *  OFFLINE-FIRST (#119 Q15): when the bundle carries the Rekor inclusion proof + entry
+ *  body — which verify #8 cryptographically with no network — we drop `rekorEntryId` so
+ *  `verifyEvidence` skips its redundant online hash-parity re-fetch (verify.ts:212).
+ *  The carried Merkle inclusion is strictly stronger than the online parity, and the
+ *  `integratedTime` that fetch would yield isn't available offline anyway, so #5 bounds
+ *  on the carried, verified RFC 3161 genTime instead. This is what makes a self-contained
+ *  bundle verify with TRULY zero network. Online (hosted/URL) verification is unchanged —
+ *  `rekorEntryId` is kept, so the online parity + its integratedTime still apply. */
+export function buildVerifyInput(
+  commitment: Commitment,
+  pkg: Record<string, unknown> | null,
+  opts: { offline?: boolean } = {},
+): VerifyInput {
+  const rekorInclusionProof = parseInclusionProof(commitment.rekorInclusionProof);
+  const carriedInclusion = !!(rekorInclusionProof && commitment.rekorEntryBody);
+  const dropOnlineRekor = !!opts.offline && carriedInclusion;
   return {
     package: pkg,
     packageHash: commitment.packageHash,
     signature: commitment.signature ?? null,
     rfc3161Timestamp: commitment.rfc3161Timestamp ?? null,
-    rekorEntryId: commitment.rekorEntryId ?? null,
-    // Carried proof + entry body ⇒ the browser verifies Merkle inclusion OFFLINE
-    // from the bundle, not only via the online Rekor fetch (#119 P1).
-    rekorInclusionProof: parseInclusionProof(commitment.rekorInclusionProof),
+    rekorEntryId: dropOnlineRekor ? null : (commitment.rekorEntryId ?? null),
+    rekorInclusionProof,
     rekorEntryBody: commitment.rekorEntryBody ?? null,
     lifecycle: commitment.lifecycle ?? null,
   };
