@@ -66,17 +66,28 @@ The barrel (`.`) also exports the individual check functions
 `computeContentHashSha256`), and every status vocabulary type — so a consumer can
 drive the checks one-at-a-time and render the math as it resolves.
 
-## Check depth (v1)
+## Check depth (v0.6.x)
 
-Fully client-side: #1 envelope hash, #2 signature, #3 canonicalization, #4 content
-hash, #5 key trust, #6 kid consistency, #9 blob refs, #12 type, #13 nodeId, #14
-signer identity, #15 captureMethod vocab. **Presence** only for #7 (RFC 3161).
-**Hash-parity** only for #8 (Rekor). **State** depth for #10 (lifecycle).
+Every check in the spec §9.2 sequence runs fully client-side, including the three
+that shipped at reduced depth in v0.1:
 
-The deeper offline crypto — TSA-chain verification, Rekor Merkle-inclusion,
-independent lifecycle-chain verification, and the authoritative bundle-mode test —
-is a fast-follow (#119), not in this release. The UI built on this should be
-honest about what is presence vs. full-crypto.
+- **#7 RFC 3161 timestamp** — full cryptographic verification: token parsing,
+  message-imprint match, TSA signature, and certificate-chain validation with
+  strict RFC 5280 checks to a pinned root (FreeTSA EC-P384 leaf → RSA-4096
+  root).
+- **#8 Rekor transparency log** — cryptographic Merkle inclusion-proof
+  verification from the proof carried with the package, against Rekor's pinned
+  public key; no live call to Rekor required.
+- **#10 lifecycle** — independent verification of the signed lifecycle
+  attestation chain, including reachability from the package node, instead of
+  trusting a host-reported state.
+
+Verification is offline-first: from a self-contained commitment bundle the full
+sequence runs with zero network access (demonstrated by a hermetic,
+network-blocked test in this monorepo). Trust anchors (the TSA certificate
+chain and the Rekor log public key) ship pinned in the source with capture
+dates and rotation notes. See `CHANGELOG.md` for how each check reached full
+depth across 0.2.0–0.6.0.
 
 ## License
 
