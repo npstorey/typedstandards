@@ -67,6 +67,36 @@ export interface VerifySignatureEnvelope {
   kid?: string;
 }
 
+/**
+ * Why a package's content was unavailable for envelope recomputation (#1).
+ *   - `private` — the commitment OMITTED the content location: a creator-only /
+ *     unlisted record whose bytes are private by design. Integrity is N/A, never a
+ *     failure; the public commitment (signature, key, timestamp, transparency log)
+ *     is still fully verifiable.
+ *   - `unfetchable` — a location WAS present but its bytes could not be retrieved
+ *     (404 / network). An availability problem, surfaced as unconfirmed rather than
+ *     altered.
+ */
+export type ContentUnavailableReason = 'private' | 'unfetchable';
+
+/**
+ * Tri-state envelope integrity (#1). Replaces the boolean `hashMatch` lens, which
+ * collapsed "content unavailable" onto `false` — so a private (content-redacted)
+ * record read as tampered.
+ *   - `verified`    — bytes present; the recomputed hash matches the signed hash.
+ *   - `altered`     — bytes present; the hash MISMATCHES. Real tampering.
+ *   - `unavailable` — no bytes to recompute from; `reason` says whether the content
+ *                     was private by design or merely unfetchable.
+ * `hashMatch` is retained UNCHANGED for back-compat (it is `false` in BOTH the
+ * `altered` and `unavailable` cases); a consumer that must not conflate tampering
+ * with unavailability reads THIS field.
+ */
+export interface EnvelopeIntegrityResult {
+  status: 'verified' | 'altered' | 'unavailable';
+  /** Present only when `status === 'unavailable'`. */
+  reason?: ContentUnavailableReason;
+}
+
 /** Lifecycle STATE as carried by the WS1 sidecar (`CommitmentLifecycle`). */
 export interface CommitmentLifecycleState {
   status: 'active' | 'withdrawn';
@@ -81,9 +111,11 @@ export interface CommitmentLifecycleState {
  * the package JSON the sidecar's `packageUrl` resolves to.
  */
 export interface VerifyInput {
-  /** The canonical package JSON (the signed envelope). Null mirrors the server's
-   *  "blob unavailable" path: integrity fails and the package-derived checks
-   *  report null. */
+  /** The canonical package JSON (the signed envelope). Null when the content is
+   *  unavailable — its bytes were not fetched, so envelope integrity (#1) cannot be
+   *  recomputed and the package-derived checks report null. `contentUnavailableReason`
+   *  says WHY it is null (private-by-design vs. unfetchable); the two read very
+   *  differently and must not be conflated with tampering. */
   package: Record<string, unknown> | null;
   /** The claimed envelope hash (`sidecar.packageHash` / `basePackageHash`). */
   packageHash: string;
@@ -112,6 +144,13 @@ export interface VerifyInput {
   /** Legacy external SHA-256 for the pre-v0.1 content-hash relabel. Defaults to
    *  `packageHash` (they coincide for pre-v0.1 packages). */
   legacyExternalHash?: string;
+  /** When `package` is null, why: `private` (the commitment redacted the content
+   *  location — a sealed/committed record) or `unfetchable` (a location was present
+   *  but its bytes could not be retrieved). Drives the `unavailable` reason on
+   *  `envelopeIntegrity`. Ignored when `package` is non-null. Absent ⇒ the
+   *  conservative `unfetchable` (a null package with no stated reason is treated as
+   *  an unconfirmed availability problem, never silently as a by-design redaction). */
+  contentUnavailableReason?: ContentUnavailableReason;
 }
 
 export interface VerifyDeps {
@@ -131,6 +170,10 @@ export interface VerifyDeps {
  *  can surface them directly. */
 export interface VerifyResult {
   hashMatch: boolean;
+  /** Tri-state envelope integrity (#1) — the corrected lens consumers SHOULD render
+   *  instead of branching on `hashMatch`, which cannot express "content unavailable,
+   *  so integrity is N/A" and reads it as tampering. See `EnvelopeIntegrityResult`. */
+  envelopeIntegrity: EnvelopeIntegrityResult;
   recomputedHash: string | null;
   /** = recomputedHash (check #13 nodeId). */
   nodeId: string | null;
@@ -173,12 +216,23 @@ export async function verifyEvidence(
 ): Promise<VerifyResult> {
   const { package: pkg, packageHash } = input;
 
-  // Step 1 — recompute the envelope hash (checks #1 + #13).
+  // Step 1 — recompute the envelope hash (checks #1 + #13). Tri-state: a present
+  // package recomputes to `verified` / `altered`; a null package is `unavailable`
+  // (NOT `altered`) — its content was never fetched, so there is nothing to compare,
+  // and `contentUnavailableReason` distinguishes a by-design redaction (private)
+  // from a fetch failure (unfetchable). `hashMatch` stays a boolean for back-compat.
   let hashMatch = false;
   let recomputedHash: string | null = null;
+  let envelopeIntegrity: EnvelopeIntegrityResult;
   if (pkg) {
     recomputedHash = recomputePackageHash(pkg);
     hashMatch = recomputedHash === packageHash;
+    envelopeIntegrity = { status: hashMatch ? 'verified' : 'altered' };
+  } else {
+    envelopeIntegrity = {
+      status: 'unavailable',
+      reason: input.contentUnavailableReason ?? 'unfetchable',
+    };
   }
 
   // Step 2 — signature (check #2), dispatching on the stored algorithm (#111).
@@ -297,6 +351,7 @@ export async function verifyEvidence(
 
   return {
     hashMatch,
+    envelopeIntegrity,
     recomputedHash,
     nodeId: recomputedHash,
     signatureValid,

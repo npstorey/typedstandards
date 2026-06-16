@@ -309,20 +309,29 @@ export function Verifier({
 function ResolutionSteps({ steps }: { steps: ResolveStep[] }) {
   return (
     <ul className="rounded-lg border border-border bg-surface p-3 text-xs">
-      {steps.map((s) => (
-        <li key={s.key} className="flex items-center gap-2 py-0.5">
-          <span style={{ color: "var(--trust-verified)" }} aria-hidden>
-            ✓
-          </span>
-          <span className="font-medium">{s.label}</span>
-          {s.kind === "fetched" && s.url && (
-            <span className="truncate font-mono text-muted" title={s.url}>
-              {hostOf(s.url)}
+      {steps.map((s) => {
+        // A `skipped` step retrieved NOTHING (content private, or its location
+        // couldn't be reached). A green ✓ would imply a successful fetch, so render a
+        // neutral marker + muted label instead (#21).
+        const skipped = s.state === "skipped";
+        return (
+          <li key={s.key} className="flex items-center gap-2 py-0.5">
+            <span
+              style={{ color: skipped ? "var(--trust-normal)" : "var(--trust-verified)" }}
+              aria-hidden
+            >
+              {skipped ? "–" : "✓"}
             </span>
-          )}
-          {s.kind === "inline" && <span className="text-muted">(offline)</span>}
-        </li>
-      ))}
+            <span className={skipped ? "font-medium text-muted" : "font-medium"}>{s.label}</span>
+            {!skipped && s.kind === "fetched" && s.url && (
+              <span className="truncate font-mono text-muted" title={s.url}>
+                {hostOf(s.url)}
+              </span>
+            )}
+            {s.kind === "inline" && <span className="text-muted">(offline)</span>}
+          </li>
+        );
+      })}
     </ul>
   );
 }
