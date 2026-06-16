@@ -263,6 +263,11 @@ export interface ResolveStep {
   label: string;
   kind: SourceKind;
   url?: string;
+  /** `done` (default) → the step retrieved/read its piece (rendered with a ✓).
+   *  `skipped` → the step intentionally retrieved NOTHING: the package content was
+   *  private (no location to fetch) or its location couldn't be reached. A ✓ would
+   *  misrepresent that, so the UI renders a neutral marker instead. */
+  state?: 'done' | 'skipped';
 }
 
 /** Steps 2 + 3 — fetch (or read inline) the package blob and the trust registry.
@@ -282,25 +287,47 @@ export async function resolveInput(
     ...(commitmentUrl ? { url: commitmentUrl } : {}),
   });
 
-  // Package blob.
+  // Package blob. Three outcomes when the bytes aren't read inline:
+  //   - a location is present and fetches            → pkg set (normal path);
+  //   - NO location (the commitment redacted it)     → content is private by design,
+  //                                                     pkg null, step `skipped`;
+  //   - a location is present but its fetch FAILS    → content unfetchable (404 /
+  //                                                     network), pkg null, step
+  //                                                     `skipped` — do NOT abort the
+  //                                                     whole verification: the
+  //                                                     commitment is still checkable
+  //                                                     and an availability gap is not
+  //                                                     tampering.
+  // verify-core's `envelopeIntegrity` distinguishes private vs. unfetchable from the
+  // commitment shape (see buildVerifyInput); here we only fork the live step label.
   let pkg: Record<string, unknown> | null;
   let pkgSource: { kind: SourceKind; url?: string };
+  let pkgStep: { label: string; state: 'done' | 'skipped' };
   if (commitment.package) {
     pkg = commitment.package;
     pkgSource = { kind: 'inline' };
+    pkgStep = { label: 'Read package from bundle', state: 'done' };
   } else if (commitment.packageUrl) {
-    pkg = (await getJson(commitment.packageUrl, signal)) as Record<string, unknown>;
-    pkgSource = { kind: 'fetched', url: commitment.packageUrl };
+    try {
+      pkg = (await getJson(commitment.packageUrl, signal)) as Record<string, unknown>;
+      pkgSource = { kind: 'fetched', url: commitment.packageUrl };
+      pkgStep = { label: 'Fetched package blob', state: 'done' };
+    } catch (err) {
+      if (signal?.aborted) throw err; // a real cancellation still aborts.
+      pkg = null;
+      pkgSource = { kind: 'fetched', url: commitment.packageUrl };
+      pkgStep = { label: 'Content could not be fetched', state: 'skipped' };
+    }
   } else {
-    // No blob and no inline package: integrity can't be checked (mirrors the
-    // server's "blob unavailable" path — verifyEvidence reports nulls).
     pkg = null;
     pkgSource = { kind: 'fetched' };
+    pkgStep = { label: 'Content is private — not fetched', state: 'skipped' };
   }
   onStep?.({
     key: 'package',
-    label: pkgSource.kind === 'inline' ? 'Read package from bundle' : 'Fetched package blob',
+    label: pkgStep.label,
     kind: pkgSource.kind,
+    state: pkgStep.state,
     ...(pkgSource.url ? { url: pkgSource.url } : {}),
   });
 
@@ -403,6 +430,13 @@ export function buildVerifyInput(
     rekorInclusionProof,
     rekorEntryBody: commitment.rekorEntryBody ?? null,
     lifecycle: commitment.lifecycle ?? null,
+    // When the content is unavailable, tell verify-core WHY so #1 reads N/A (private)
+    // vs. unconfirmed (unfetchable) rather than a false "altered". The signal is the
+    // commitment shape: a redacted location (no `packageUrl`) ⇒ private by design; a
+    // present location that nonetheless yielded no package ⇒ a fetch failure.
+    ...(pkg === null
+      ? { contentUnavailableReason: commitment.packageUrl ? 'unfetchable' : 'private' }
+      : {}),
   };
 }
 
@@ -626,15 +660,28 @@ export function buildCheckRows(
 ): CheckRow[] {
   const rows: CheckRow[] = [];
 
-  // #1 — envelope integrity.
+  // #1 — envelope integrity (TRI-STATE, #21). When the content is unavailable there is
+  // nothing to recompute, so the "Recomputed SHA-256" line reads as prose (why it
+  // wasn't recomputed), not a misleading blank "—" beside an alarm.
+  const integrity = result.envelopeIntegrity;
+  const recomputed: MathLine =
+    integrity.status === 'unavailable'
+      ? {
+          label: 'Recomputed SHA-256',
+          value:
+            integrity.reason === 'private'
+              ? 'not recomputed — content private'
+              : 'not recomputed — content unavailable',
+        }
+      : {
+          label: 'Recomputed SHA-256',
+          value: result.recomputedHash ? truncMiddle(result.recomputedHash) : '—',
+          mono: true,
+          ...(result.recomputedHash ? { full: result.recomputedHash } : {}),
+        };
   rows.push(
-    row('1', 'Envelope integrity', resolveEnvelopeIntegrity(result.hashMatch), [
-      {
-        label: 'Recomputed SHA-256',
-        value: result.recomputedHash ? truncMiddle(result.recomputedHash) : '—',
-        mono: true,
-        ...(result.recomputedHash ? { full: result.recomputedHash } : {}),
-      },
+    row('1', 'Envelope integrity', resolveEnvelopeIntegrity(integrity), [
+      recomputed,
       { label: 'Claimed hash', value: truncMiddle(input.packageHash), mono: true, full: input.packageHash },
     ]),
   );
@@ -817,10 +864,18 @@ export interface Verdict {
  * load-bearing integrity check fails the package; a fully-green signed core
  * verifies; a signed-but-intact package with unconfirmed elements reads as
  * "verified, with caveats"; an unsigned package reads calm.
+ *
+ * Envelope integrity is TRI-STATE (#21): only `altered` (bytes present, hash
+ * MISMATCHES) alarms. Content that is `unavailable` — private by design, or simply
+ * unfetchable — is NOT a failure: the public commitment still verifies on its own,
+ * and the verdict surfaces that the content hash merely couldn't be recomputed here.
  */
 export function rollupVerdict(result: VerifyResult): Verdict {
+  const integrity = result.envelopeIntegrity;
+  const contentUnavailable = integrity.status === 'unavailable';
+
   const alarm =
-    result.hashMatch === false ||
+    integrity.status === 'altered' || // bytes present + hash mismatch — real tampering
     result.signatureValid === false ||
     result.contentHash?.status === 'content_hash_mismatch' ||
     result.blobRefsVerified === false ||
@@ -845,8 +900,40 @@ export function rollupVerdict(result: VerifyResult): Verdict {
     };
   }
 
+  // Content unavailable, but no commitment-level check alarmed. The public commitment
+  // (signature, key trust, timestamp, transparency log) is the thing being verified
+  // here; the content hash simply couldn't be recomputed. This is the sealed/committed
+  // value proposition — a publicly verifiable commitment without disclosing content —
+  // so it must read CALM, never as "Verification failed".
+  if (contentUnavailable) {
+    const commitmentGreen =
+      result.signatureValid === true && result.keyTrust?.status === 'active';
+    if (integrity.reason === 'private') {
+      return commitmentGreen
+        ? {
+            tier: 'verified',
+            headline: 'Commitment verified — content private',
+            detail:
+              'The public commitment fully verifies: the signature, signing key, timestamp, and transparency-log entry all check out. The content itself is private, so its bytes were not retrieved and the envelope hash was not recomputed here. This confirms the commitment’s integrity and identity, not the content.',
+          }
+        : {
+            tier: 'attention',
+            headline: 'Commitment verified, with caveats — content private',
+            detail:
+              'The content is private, so the envelope hash was not recomputed here. The commitment checks ran, but something in them is unconfirmed or unrecognized (see the amber checks) — not proven bad.',
+          };
+    }
+    // unfetchable
+    return {
+      tier: 'attention',
+      headline: 'Content could not be retrieved',
+      detail:
+        'The commitment’s signature and proofs were checked, but the package’s content could not be fetched from its stated location, so the envelope hash was not recomputed. This is an availability problem, not proof of alteration.',
+    };
+  }
+
   const fullyGreen =
-    result.hashMatch === true &&
+    integrity.status === 'verified' &&
     result.signatureValid === true &&
     result.keyTrust?.status === 'active';
 
@@ -872,6 +959,11 @@ export function rollupVerdict(result: VerifyResult): Verdict {
 export interface PagePreview {
   /** Whether the package bytes were available to render. */
   available: boolean;
+  /** When `available` is false, why — so the empty-preview copy reads honestly:
+   *  `private` (content withheld by design) vs. `unfetchable` (a location that
+   *  couldn't be retrieved). Mirrors the commitment-shape signal buildVerifyInput
+   *  uses for `contentUnavailableReason`. */
+  unavailableReason?: 'private' | 'unfetchable';
   type?: string;
   signerDisplayName?: string;
   captureMethod?: string;
@@ -898,6 +990,7 @@ export function buildPreview(
   if (!pkg) {
     return {
       available: false,
+      unavailableReason: commitment.packageUrl ? 'unfetchable' : 'private',
       ...(str(commitment.subjectTitle) ? { listingTitle: commitment.subjectTitle } : {}),
     };
   }

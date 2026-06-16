@@ -8,8 +8,9 @@ export function PagePreview({ preview }: { preview: PreviewData }) {
   if (!preview.available) {
     return (
       <div className="rounded-lg border border-border bg-surface p-4 text-sm text-muted">
-        The package bytes could not be fetched, so there is nothing to preview. The
-        proofs above were still checked against the commitment.
+        {preview.unavailableReason === "private"
+          ? "This package’s content is private, so there is nothing to preview here. The public commitment’s proofs above were still verified."
+          : "The package bytes could not be fetched, so there is nothing to preview. The proofs above were still checked against the commitment."}
       </div>
     );
   }

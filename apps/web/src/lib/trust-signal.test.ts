@@ -8,7 +8,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { resolveTimestamp, resolveRekor } from './trust-signal.ts';
+import { resolveTimestamp, resolveRekor, resolveEnvelopeIntegrity } from './trust-signal.ts';
 
 const detailOf = (d: { detail?: string }): string => {
   assert.ok(d.detail, 'descriptor carries a detail string');
@@ -40,4 +40,30 @@ test('resolveRekor: deep offline inclusion is distinct from parity / outage / ab
 
   // no entry at all ⇒ calm.
   assert.equal(resolveRekor(false, false, null).tier, 'normal');
+});
+
+test('resolveEnvelopeIntegrity: tri-state — content-unavailable is NOT tampering (#21)', () => {
+  // bytes present + hash matches ⇒ green.
+  assert.equal(resolveEnvelopeIntegrity({ status: 'verified' }).tier, 'verified');
+
+  // bytes present + hash MISMATCHES ⇒ the one alarm. No-regression guardrail:
+  // a fetched, tampered package must still read "Contents changed since signing".
+  const altered = resolveEnvelopeIntegrity({ status: 'altered' });
+  assert.equal(altered.tier, 'alarm');
+  assert.match(altered.label, /changed since signing/);
+
+  // content private by design ⇒ NEUTRAL/calm (same family as "no timestamp"),
+  // never amber/red.
+  const priv = resolveEnvelopeIntegrity({ status: 'unavailable', reason: 'private' });
+  assert.equal(priv.tier, 'normal', 'content-private is calm, not an alarm');
+  // Vocabulary-neutral copy: says "content private", NOT "sealed" (the committed→
+  // sealed UI rename is a separate post-demo sweep).
+  assert.match(priv.label, /private/i);
+  assert.doesNotMatch(priv.label, /sealed/i);
+  assert.doesNotMatch(detailOf(priv), /sealed/i);
+
+  // present-but-unfetchable location ⇒ Attention (unconfirmed), not a false altered.
+  const unfetchable = resolveEnvelopeIntegrity({ status: 'unavailable', reason: 'unfetchable' });
+  assert.equal(unfetchable.tier, 'attention');
+  assert.doesNotMatch(unfetchable.label, /changed since signing/);
 });

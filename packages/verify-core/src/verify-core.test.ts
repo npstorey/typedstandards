@@ -246,6 +246,7 @@ test('parity: a clean package passes the orchestrator and manual path identicall
 
   // The clean package is fully green on both paths.
   assert.equal(core.hashMatch, true);
+  assert.deepEqual(core.envelopeIntegrity, { status: 'verified' });
   assert.equal(core.signatureValid, true);
   assert.equal(core.keyTrust?.status, 'active');
   assert.equal(core.contentHash?.status, 'ok');
@@ -274,9 +275,57 @@ test('parity: tampered CONTENT fails both paths identically (hash + content-hash
   // Envelope integrity breaks; content-hash recompute breaks; the signature over
   // the ORIGINAL claimed hash still validates (the tamper is caught by #1/#4).
   assert.equal(core.hashMatch, false);
+  // Bytes WERE present and the hash mismatches → `altered`, NOT `unavailable`. This
+  // is the no-regression guardrail: a fetched, tampered package still alarms.
+  assert.deepEqual(core.envelopeIntegrity, { status: 'altered' });
   assert.equal(core.contentHash?.status, 'content_hash_mismatch');
   assert.equal(core.signatureValid, true);
   assert.deepEqual(coreSlice(core), manual);
+});
+
+test('verifyEvidence: content-unavailable is `unavailable`, not `altered` (#21)', async () => {
+  const { packageHash, signature, registry } = buildSignedFixture();
+
+  // Private-by-design (a sealed/committed record whose commitment omits the content
+  // location): the bytes are never fetched, so `package` is null. Envelope integrity
+  // must read `unavailable`/`private` — N/A, NOT a hash mismatch — while the
+  // commitment checks (signature, key trust) still verify.
+  const priv = await verifyEvidence(
+    {
+      package: null,
+      packageHash,
+      signature,
+      rekorEntryId: null,
+      lifecycle: null,
+      contentUnavailableReason: 'private',
+    },
+    { registry, fetch: failFetch },
+  );
+  assert.equal(priv.hashMatch, false); // back-compat: still false…
+  assert.deepEqual(priv.envelopeIntegrity, { status: 'unavailable', reason: 'private' }); // …but distinctly unavailable
+  assert.equal(priv.recomputedHash, null);
+  assert.equal(priv.signatureValid, true, 'the public commitment still verifies');
+  assert.equal(priv.keyTrust?.status, 'active');
+  // Package-derived checks degrade to null rather than failing.
+  assert.equal(priv.contentHash, null);
+
+  // A present-but-unfetchable location (404 / network) is the conservative reason and
+  // also the default when no reason is given.
+  const unfetchable = await verifyEvidence(
+    { package: null, packageHash, signature, rekorEntryId: null, lifecycle: null, contentUnavailableReason: 'unfetchable' },
+    { registry, fetch: failFetch },
+  );
+  assert.deepEqual(unfetchable.envelopeIntegrity, { status: 'unavailable', reason: 'unfetchable' });
+
+  const noReason = await verifyEvidence(
+    { package: null, packageHash, signature, rekorEntryId: null, lifecycle: null },
+    { registry, fetch: failFetch },
+  );
+  assert.deepEqual(
+    noReason.envelopeIntegrity,
+    { status: 'unavailable', reason: 'unfetchable' },
+    'a null package with no stated reason defaults to the conservative unfetchable',
+  );
 });
 
 test('parity: tampered CLAIMED HASH fails both paths identically (signature)', async () => {

@@ -21,6 +21,7 @@
 // precision, P5 narrative bridge, P9 user language.
 
 import type {
+  EnvelopeIntegrityResult,
   ContentCanonicalizationStatus,
   ContentHashStatus,
   KeyTrustStatus,
@@ -114,23 +115,67 @@ export function triKey(v: boolean | null | undefined): TriStateKey {
 // Per-check status → descriptor maps, ordered by spec §9.2 check number.
 // =========================================================================
 
-// --- #1 Envelope integrity (hashMatch: boolean) --------------------------
+// --- #1 Envelope integrity (TRI-STATE: verified / altered / unavailable) --
+//
+// The boolean conflation is gone (verify-core 0.7.0 / #21). A package whose content
+// is UNAVAILABLE — a content-private record whose commitment omits the location, or
+// a stated location whose bytes couldn't be fetched — cannot have its envelope hash
+// recomputed, and that is NOT tampering. verify-core reports `envelopeIntegrity` as
+// `{ status, reason }`; this resolver maps the FOUR readings onto tiers:
+//   - verified                  → green     (bytes present, hash matches)
+//   - altered                   → ALARM     (bytes present, hash MISMATCHES — real tampering)
+//   - unavailable + private     → NEUTRAL   (content private — N/A; same calm family as
+//                                            "no timestamp"; never amber/red)
+//   - unavailable + unfetchable → attention (an availability problem — unconfirmed, not bad)
 
-export const ENVELOPE_INTEGRITY_SIGNALS: Record<BiStateKey, TrustSignalDescriptor> = {
-  true: {
-    tier: 'verified',
-    label: 'Contents unchanged since signing',
-    detail: 'The bytes of this package match the hash that was signed.',
-  },
-  false: {
-    tier: 'alarm',
-    label: 'Contents changed since signing',
-    detail:
-      'The recomputed hash does not match the signed package — it may have been altered.',
-  },
+export const ENVELOPE_INTEGRITY_VERIFIED: TrustSignalDescriptor = {
+  tier: 'verified',
+  label: 'Contents unchanged since signing',
+  detail: 'The bytes of this package match the hash that was signed.',
 };
-export const resolveEnvelopeIntegrity = (hashMatch: boolean): TrustSignalDescriptor =>
-  ENVELOPE_INTEGRITY_SIGNALS[biKey(hashMatch)];
+// Load-bearing twin of VERIFIED, opposite tier — the bytes were fetched and do NOT
+// hash to the signed value. This is the only envelope-integrity case that alarms.
+export const ENVELOPE_INTEGRITY_ALTERED: TrustSignalDescriptor = {
+  tier: 'alarm',
+  label: 'Contents changed since signing',
+  detail:
+    'The recomputed hash does not match the signed package — it may have been altered.',
+};
+// Content private by design (the commitment redacted the location). NEUTRAL, never a
+// failure. Vocabulary-NEUTRAL copy on purpose: it says "content private", NOT "sealed"
+// — the committed→sealed UI rename (ADR-0016) is a separate post-demo sweep.
+export const ENVELOPE_INTEGRITY_CONTENT_PRIVATE: TrustSignalDescriptor = {
+  tier: 'normal',
+  label: 'Content is private — integrity can’t be recomputed here',
+  detail:
+    'This package’s content is private, so its bytes can’t be fetched and the envelope hash can’t be recomputed here. The public commitment — signature, signing key, timestamp, and transparency-log entry — is still fully verifiable.',
+};
+// A present location whose bytes couldn't be retrieved (404 / network). Attention, not
+// alarm: an availability gap is unconfirmed, not proof of alteration.
+export const ENVELOPE_INTEGRITY_UNAVAILABLE: TrustSignalDescriptor = {
+  tier: 'attention',
+  label: 'Content could not be retrieved',
+  detail:
+    'This package names a content location, but its bytes could not be fetched, so the envelope hash was not recomputed. This is an availability problem, not proof of alteration.',
+};
+
+/** Resolve the tri-state envelope-integrity verdict (#1). The `unavailable` status
+ *  splits on `reason`: a by-design `private` redaction is the calm NEUTRAL reading,
+ *  an `unfetchable` location is the Attention reading. Only `altered` alarms. */
+export function resolveEnvelopeIntegrity(
+  integrity: EnvelopeIntegrityResult,
+): TrustSignalDescriptor {
+  switch (integrity.status) {
+    case 'verified':
+      return ENVELOPE_INTEGRITY_VERIFIED;
+    case 'altered':
+      return ENVELOPE_INTEGRITY_ALTERED;
+    case 'unavailable':
+      return integrity.reason === 'private'
+        ? ENVELOPE_INTEGRITY_CONTENT_PRIVATE
+        : ENVELOPE_INTEGRITY_UNAVAILABLE;
+  }
+}
 
 // --- #2 Signature mathematics (signatureValid: boolean | null) -----------
 

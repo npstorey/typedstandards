@@ -6,6 +6,23 @@ references are to `npstorey/civic-ai-tools-website` (#119 is the offline-crypto
 hardening arc; #116 is the standalone-verifier arc this package was extracted
 in).
 
+## 0.7.0 — 2026-06-16
+
+- #1 envelope integrity is now TRI-STATE. `VerifyResult` gains an
+  `envelopeIntegrity: { status: 'verified' | 'altered' | 'unavailable'; reason? }`
+  field. A null `package` (content not fetched) previously surfaced only as
+  `hashMatch: false`, which a consumer could not distinguish from real tampering;
+  it now resolves to `status: 'unavailable'`, distinct from the `altered`
+  (bytes-present, hash-mismatch) case. `VerifyInput` gains an optional
+  `contentUnavailableReason: 'private' | 'unfetchable'` so the caller can say WHY
+  the content is absent — `private` (the commitment redacted the location for a
+  sealed/committed record, integrity N/A) vs. `unfetchable` (a present location
+  whose bytes could not be retrieved). Fixes the verifier false-alarming
+  "Contents changed since signing" on a perfectly valid content-private package
+  (npstorey/typedstandards#21). Additive and back-compatible: `hashMatch` is
+  unchanged (still `false` in both the `altered` and `unavailable` cases), so
+  existing consumers reading only `hashMatch` are unaffected.
+
 ## 0.6.1 — 2026-06-10
 
 - Documentation only; no code changes. Corrects the README's stale "Check
