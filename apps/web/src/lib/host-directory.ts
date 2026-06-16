@@ -83,12 +83,17 @@ export const HOST_DIRECTORY_PATH = '/.well-known/typed-host-directory.json';
  */
 export const HOST_DIRECTORY: HostDirectory = {
   version: 1,
-  updated: '2026-06-06',
+  updated: '2026-06-16',
   publishers: [
     {
       registryOrigin: 'https://civicaitools.org',
       displayName: 'Civic AI Tools',
       profileUrl: 'https://civicaitools.org',
+    },
+    {
+      registryOrigin: 'https://data-concierge.dathere.com',
+      displayName: 'datHere Data Concierge',
+      profileUrl: 'https://dathere.com',
     },
   ],
 };
