@@ -75,11 +75,14 @@ export const HOST_DIRECTORY_PATH = '/.well-known/typed-host-directory.json';
  * the verifier fetches it at runtime (so the roster can change without redeploying
  * the verifier code, and forks read the same shared roster).
  *
- * First and only entry today: civicaitools.org. The roster language stays generic
- * — no other adopter is named until a real host commitment exists (Q47
- * stakeholder-boundary discipline; datHere stays generic per ADR-0004). New
- * publishers are added editorially here; governance-at-scale is deferred (Q47:
- * static curated JSON + editorial listing until a real second publisher arrives).
+ * Two entries today: civicaitools.org (the platform's own registry) and datHere
+ * Data Concierge — the first external publisher, listed once its trust registry went
+ * live (the "real second publisher" Q47 anticipated as the trigger to move past a
+ * single self-entry). New publishers are added editorially here; a written, fair
+ * listing criterion + editorial process is tracked in civic-ai-tools#95 (Q47
+ * governance-at-scale), to land before the RFC. Until then, listing stays a curated,
+ * hand-reviewed JSON roster (a directory entry grants only condition (a) of the
+ * impersonation-safety rule above; the green badge still requires (b)).
  */
 export const HOST_DIRECTORY: HostDirectory = {
   version: 1,
