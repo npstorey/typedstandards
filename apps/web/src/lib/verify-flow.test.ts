@@ -10,7 +10,15 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import type { VerifyResult, EnvelopeIntegrityResult } from '@typedstandards/verify-core';
-import { rollupVerdict, buildVerifyInput, buildPreview, type Commitment } from './verify-flow.ts';
+import {
+  rollupVerdict,
+  buildVerifyInput,
+  buildPreview,
+  deriveShareTarget,
+  DEFAULT_HOST,
+  type Commitment,
+  type ResolvedInput,
+} from './verify-flow.ts';
 
 /** A fully-green VerifyResult; override per case. Cast once — rollupVerdict reads a
  *  well-defined subset, and a focused unit test needn't hand-build all 20+ fields. */
@@ -130,4 +138,57 @@ test('buildPreview: an unavailable preview reports WHY (private vs. unfetchable)
   });
   assert.equal(missing.available, false);
   assert.equal(missing.unavailableReason, 'unfetchable');
+});
+
+// deriveShareTarget — the shareable link is rebuilt from the URL that ACTUALLY
+// resolved (sources.commitment.url), never from packageHash (a hash the slug-indexed
+// endpoint 404s on). Only sources.commitment.url matters here, so build a minimal
+// ResolvedInput and cast (mirrors mkResult above).
+function mkResolved(commitmentUrl?: string): ResolvedInput {
+  return {
+    sources: {
+      commitment: commitmentUrl ? { kind: 'fetched', url: commitmentUrl } : { kind: 'inline' },
+    },
+  } as unknown as ResolvedInput;
+}
+
+test('deriveShareTarget: same-host slug → clean /verify/<slug>', () => {
+  const url = `${DEFAULT_HOST}/api/evidence/noise-trends-in-nyc-2026/commitment`;
+  assert.equal(deriveShareTarget(mkResolved(url)), '/verify/noise-trends-in-nyc-2026');
+});
+
+test('deriveShareTarget: same-host 64-hex hash → clean /verify/<hash>', () => {
+  const hash = 'e'.repeat(64);
+  const url = `${DEFAULT_HOST}/api/evidence/${hash}/commitment`;
+  assert.equal(deriveShareTarget(mkResolved(url)), `/verify/${hash}`);
+});
+
+test('deriveShareTarget: cross-host (datHere) → /verify?url=<encoded>, NOT collapsed to /verify/<id>', () => {
+  const url = 'https://data-concierge.dathere.com/api/evidence/some-slug/commitment';
+  const target = deriveShareTarget(mkResolved(url));
+  assert.equal(target, `/verify?url=${encodeURIComponent(url)}`);
+  // The cross-host origin MUST be preserved — a short link would re-resolve against
+  // DEFAULT_HOST and 404.
+  assert.doesNotMatch(target ?? '', /^\/verify\/some-slug$/);
+});
+
+test('deriveShareTarget: undefined url (bundle) → null', () => {
+  assert.equal(deriveShareTarget(mkResolved(undefined)), null);
+});
+
+test('deriveShareTarget: same-host non-canonical path → /verify?url=<encoded> fallback', () => {
+  // No `/api/` prefix — routes to the safe fallback rather than a short link.
+  const url = `${DEFAULT_HOST}/evidence/some-slug/commitment`;
+  assert.equal(deriveShareTarget(mkResolved(url)), `/verify?url=${encodeURIComponent(url)}`);
+});
+
+test('deriveShareTarget: percent-encoded id round-trips → /verify/a%20b', () => {
+  const url = `${DEFAULT_HOST}/api/evidence/a%20b/commitment`;
+  assert.equal(deriveShareTarget(mkResolved(url)), '/verify/a%20b');
+});
+
+test('deriveShareTarget: decoded id with a slash (%2F) → /verify?url= fallback', () => {
+  // %2F decodes to "/", which would break the single-segment /verify/[hash] route.
+  const url = `${DEFAULT_HOST}/api/evidence/a%2Fb/commitment`;
+  assert.equal(deriveShareTarget(mkResolved(url)), `/verify?url=${encodeURIComponent(url)}`);
 });
