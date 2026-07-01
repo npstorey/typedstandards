@@ -72,6 +72,14 @@ export default function RootLayout({
                 >
                   GitHub
                 </a>
+                <a
+                  href={EXPRESS_INTEREST_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-muted hover:text-accent"
+                >
+                  Contact
+                </a>
               </nav>
             </div>
           </header>

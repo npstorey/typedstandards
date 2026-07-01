@@ -13,10 +13,11 @@ export default function Home() {
           A standard for signed evidence you can verify yourself.
         </h1>
         <p className="mt-6 max-w-2xl text-lg leading-relaxed text-muted">
-          Typed Standards defines a format for evidence packages that carry their
-          own cryptographic proof — a signature, a content hash, and a public
-          trust registry. Anyone can check a package independently, without
-          trusting the site that produced it.
+          Typed Standards defines a format for publishing AI-generated answers
+          as evidence packages that carry their own cryptographic proof — a
+          signature, a content hash, and a public trust registry. Anyone can
+          check a package independently, without trusting the site that
+          produced it.
         </p>
         <div className="mt-9 flex flex-wrap items-center gap-4">
           <Link
