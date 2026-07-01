@@ -224,6 +224,49 @@ export function deriveCommitmentUrl(input: string): string {
   return u.toString();
 }
 
+/**
+ * Build the root-relative share link that re-resolves the SAME commitment that just
+ * verified. It is rebuilt from `sources.commitment.url` — the exact request URL that
+ * returned 200 — never from `commitment.packageHash` (a hash that the slug-indexed
+ * `/api/evidence/<id>/commitment` endpoint does NOT resolve, so a hash-keyed link
+ * 404s).
+ *
+ * - `null` when no commitment URL exists (inline / bundle — nothing hosted to link to).
+ * - A clean `/verify/<id>` short link only for a same-host (`DEFAULT_HOST`), canonical
+ *   `^/api/evidence/<id>/commitment$` URL, which round-trips through `detectInputMode`'s
+ *   'hash' mode (it rebuilds that exact URL). The captured segment is decoded then
+ *   re-`encodeURIComponent`'d so it survives the extra encode 'hash' mode applies; a
+ *   decoded `/` (an escaped `%2F`) would break the single-segment `/verify/[hash]`
+ *   route, so it falls through to the `?url=` form.
+ * - Otherwise (cross-host origin, or an unusual same-host path) →
+ *   `/verify?url=<encoded>`, which re-resolves against the ORIGINAL origin via 'url'
+ *   mode (`deriveCommitmentUrl` is idempotent for a `/commitment`-terminated URL).
+ *
+ * The only residual risk — a backend slug alias that later expires — is outside the
+ * verifier's control and no worse than the id the user just verified with.
+ */
+export function deriveShareTarget(resolved: ResolvedInput): string | null {
+  const commitmentUrl = resolved.sources.commitment.url;
+  if (!commitmentUrl) return null; // inline (bundle) — nothing to re-resolve.
+
+  let u: URL;
+  try {
+    u = new URL(commitmentUrl);
+  } catch {
+    return null;
+  }
+
+  if (u.origin === DEFAULT_HOST) {
+    const m = u.pathname.match(/^\/api\/evidence\/([^/]+)\/commitment$/);
+    if (m) {
+      const id = decodeURIComponent(m[1]);
+      if (!id.includes('/')) return `/verify/${encodeURIComponent(id)}`;
+    }
+  }
+
+  return `/verify?url=${encodeURIComponent(commitmentUrl)}`;
+}
+
 /** Step 1 — resolve the commitment for hash / URL / bundle input. */
 export async function resolveCommitment(
   mode: InputMode,

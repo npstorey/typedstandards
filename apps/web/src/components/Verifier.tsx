@@ -11,6 +11,7 @@ import {
   buildCheckRows,
   rollupVerdict,
   buildPreview,
+  deriveShareTarget,
   resolveHostRecognition,
   registryMetaOf,
   canRecheckKeyTrust,
@@ -57,7 +58,7 @@ export function Verifier({
     data?: KeyTrustRecheck;
     error?: string;
   }>({ phase: "idle" });
-  const [shareHash, setShareHash] = useState<string | null>(null);
+  const [sharePath, setSharePath] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
@@ -80,7 +81,7 @@ export function Verifier({
     setResolved(null);
     setResult(null);
     setRecheck({ phase: "idle" });
-    setShareHash(null);
+    setSharePath(null);
     setCopied(false);
 
     const mode = detectInputMode(s);
@@ -130,12 +131,13 @@ export function Verifier({
       if (ac.signal.aborted) return;
       setPhase("done");
 
-      // Shareable result URL (hash/url modes resolve the same way from the hash).
-      if (mode !== "bundle" && resolvedInput.commitment.packageHash) {
-        const hash = resolvedInput.commitment.packageHash;
-        setShareHash(hash);
+      // Shareable result link — rebuilt from the URL that actually resolved (200),
+      // never from `packageHash` (the slug-indexed endpoint 404s on a raw hash).
+      const nextSharePath = deriveShareTarget(resolvedInput);
+      if (nextSharePath) {
+        setSharePath(nextSharePath);
         if (typeof window !== "undefined") {
-          window.history.replaceState(null, "", `/verify/${hash}`);
+          window.history.replaceState(null, "", nextSharePath);
         }
       }
     } catch (e) {
@@ -291,9 +293,9 @@ export function Verifier({
 
               {phase === "done" && preview && <PagePreview preview={preview} />}
 
-              {phase === "done" && shareHash && (
-                <ShareLink hash={shareHash} copied={copied} onCopy={() => {
-                  const url = `${window.location.origin}/verify/${shareHash}`;
+              {phase === "done" && sharePath && (
+                <ShareLink path={sharePath} copied={copied} onCopy={() => {
+                  const url = `${window.location.origin}${sharePath}`;
                   void navigator.clipboard?.writeText(url);
                   setCopied(true);
                 }} />
@@ -429,19 +431,30 @@ function IndependenceNote({ resolved }: { resolved: ResolvedInput }) {
   );
 }
 
+/** A glanceable label for the share path: a truncated `/verify/<id>` for the clean
+ *  short link, or a collapsed `/verify?url=…` for the cross-host fallback. The full
+ *  path lives in the `title` tooltip and is what the Copy button actually copies. */
+function shareLabel(path: string): string {
+  if (path.startsWith("/verify?url=")) return "/verify?url=…";
+  const id = path.slice("/verify/".length);
+  return `/verify/${id.length > 12 ? `${id.slice(0, 12)}…` : id}`;
+}
+
 function ShareLink({
-  hash,
+  path,
   copied,
   onCopy,
 }: {
-  hash: string;
+  path: string;
   copied: boolean;
   onCopy: () => void;
 }) {
   return (
     <div className="flex flex-wrap items-center gap-3 border-t border-border pt-4 text-xs">
       <span className="text-muted">Shareable result:</span>
-      <code className="font-mono">/verify/{hash.slice(0, 12)}…</code>
+      <code className="font-mono" title={path}>
+        {shareLabel(path)}
+      </code>
       <button
         type="button"
         onClick={onCopy}
