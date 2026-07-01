@@ -39,6 +39,14 @@ npm run build --workspace @typedstandards/verify-core
 npm publish   --workspace @typedstandards/verify-core   # publishConfig.access = public
 ```
 
+## Contact routing
+
+Every contact / express-interest entry point on typedstandards.org (landing
+page and footer) reads one constant: `EXPRESS_INTEREST_URL` in
+[`apps/web/src/lib/site-config.ts`](apps/web/src/lib/site-config.ts). When a
+project inbox exists, changing that one constant re-routes every entry point —
+no other edit needed.
+
 ## License
 
 MIT © Nathan Storey

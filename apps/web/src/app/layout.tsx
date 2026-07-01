@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Space_Grotesk, Noto_Sans } from "next/font/google";
 import Link from "next/link";
+import { EXPRESS_INTEREST_URL } from "@/lib/site-config";
 import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
@@ -60,6 +61,9 @@ export default function RootLayout({
                 <Link href="/badge" className="hover:text-accent">
                   Badge
                 </Link>
+                <Link href="/roadmap" className="hover:text-accent">
+                  Roadmap
+                </Link>
                 <a
                   href="https://github.com/npstorey/typedstandards"
                   target="_blank"
@@ -67,6 +71,14 @@ export default function RootLayout({
                   className="text-muted hover:text-accent"
                 >
                   GitHub
+                </a>
+                <a
+                  href={EXPRESS_INTEREST_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-muted hover:text-accent"
+                >
+                  Contact
                 </a>
               </nav>
             </div>
@@ -89,6 +101,20 @@ export default function RootLayout({
                   className="hover:text-accent"
                 >
                   Nathan Storey
+                </a>{" "}
+                · Personal project · Not affiliated with any employer.
+              </p>
+              <p className="text-xs">
+                {/* Entry point reads from EXPRESS_INTEREST_URL — swap the
+                    constant in src/lib/site-config.ts to re-route every
+                    contact link. */}
+                <a
+                  href={EXPRESS_INTEREST_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-accent"
+                >
+                  Contact
                 </a>
               </p>
             </div>
