@@ -11,3 +11,13 @@
  * note in the repo README.
  */
 export const EXPRESS_INTEREST_URL = "https://nathanstorey.com/contact/";
+
+/**
+ * Optional acknowledgment sentence for the /roadmap colophon.
+ *
+ * Approved wording arrives from the comms side — do not draft or guess it
+ * here. When it lands, it is additive to the personal-project framing in the
+ * colophon, never a replacement for it. While null, the colophon renders
+ * exactly as it does today.
+ */
+export const SPONSOR_LINE: string | null = null;

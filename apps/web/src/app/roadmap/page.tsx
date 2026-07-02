@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 
+import { SPONSOR_LINE } from "@/lib/site-config";
+
 export const metadata: Metadata = {
   title: "Roadmap",
   description:
@@ -141,6 +143,7 @@ export default function RoadmapPage() {
           as a personal open-source project. This project is not affiliated
           with, endorsed by, or representative of Nathan&apos;s employer, the
           City of New York, or any government agency.
+          {SPONSOR_LINE && <> {SPONSOR_LINE}</>}
         </p>
       </div>
     </div>
