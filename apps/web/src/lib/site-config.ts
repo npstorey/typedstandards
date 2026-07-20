@@ -4,21 +4,21 @@
 
 /**
  * Where every contact / express-interest entry point on the site routes
- * (landing page and footer both read from here).
+ * (header nav, footer, and landing page all read from here).
  *
- * Swap point: when a project inbox exists, change this ONE constant and every
- * entry point re-routes — no other edit needed. See the "Contact routing"
- * note in the repo README.
+ * Single swap point: change this ONE constant and every entry point
+ * re-routes — no other edit needed. See the "Contact routing" note in the
+ * repo README.
  */
-export const EXPRESS_INTEREST_URL = "https://nathanstorey.com/contact/";
+export const EXPRESS_INTEREST_URL = "mailto:civicaitools@metagov.org";
 
 /**
- * Optional acknowledgment sentence for the /roadmap colophon.
+ * Optional sponsor / acknowledgment line rendered in the global site footer,
+ * once per page.
  *
  * Approved wording arrives from the comms side — do not draft or guess it
- * here. When it lands, it is additive to the personal-project framing in the
- * colophon, never a replacement for it. While null, the colophon renders
- * exactly as it does today.
+ * here. It is additive to the personal-project framing in the footer, never a
+ * replacement for it. While null, the footer renders exactly as it does today.
  */
 export const SPONSOR_LINE: {
   /** Sentence text before the linked name (keep the trailing space). */

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Space_Grotesk, Noto_Sans } from "next/font/google";
 import Link from "next/link";
-import { EXPRESS_INTEREST_URL } from "@/lib/site-config";
+import { EXPRESS_INTEREST_URL, SPONSOR_LINE } from "@/lib/site-config";
 import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
@@ -103,6 +103,21 @@ export default function RootLayout({
                   Nathan Storey
                 </a>{" "}
                 · Personal project · Not affiliated with any employer.
+                {SPONSOR_LINE && (
+                  <>
+                    {" "}
+                    {SPONSOR_LINE.prefix}
+                    <a
+                      href={SPONSOR_LINE.linkHref}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:text-accent"
+                    >
+                      {SPONSOR_LINE.linkText}
+                    </a>
+                    {SPONSOR_LINE.suffix}
+                  </>
+                )}
               </p>
               <p className="text-xs">
                 {/* Entry point reads from EXPRESS_INTEREST_URL — swap the
