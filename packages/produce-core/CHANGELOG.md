@@ -5,6 +5,11 @@ refer to the Typed Standards specification §9.2 verification sequence.
 
 ## 0.1.0 — 2026-07-31
 
+- **Declared `@noble/curves` as a direct dependency** (`^2.2.0`, aligned with
+  verify-core's range) — `signing.ts` imports it directly, so it must not be
+  a phantom dependency reached through verify-core; strict-layout consumers
+  (pnpm, Yarn PnP) would otherwise fail to resolve it.
+
 Initial release: the format-neutral, I/O-free producer core, extracted from
 the reference application's producer path (Q59 resolved via option (a); the
 format/domain line is recorded in civic-ai-tools ADR-0021).
