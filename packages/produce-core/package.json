@@ -1,0 +1,70 @@
+{
+  "name": "@typedstandards/produce-core",
+  "version": "0.1.0",
+  "description": "Portable, I/O-free producer core for Typed Standards evidence packages — format-neutral envelope and attestation assembly, the Ed25519ph signing mechanism, and pure external-proof codecs, sharing one canonicalization/hash chain with @typedstandards/verify-core.",
+  "license": "MIT",
+  "author": "Nathan Storey",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint .",
+    "test": "node --test --experimental-strip-types \"src/**/*.test.ts\"",
+    "prepare": "npm run build",
+    "prepublishOnly": "npm run clean && npm run build"
+  },
+  "dependencies": {
+    "@typedstandards/verify-core": "^0.7.0"
+  },
+  "devDependencies": {
+    "@typescript-eslint/parser": "^8",
+    "eslint": "^9",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/npstorey/typedstandards.git",
+    "directory": "packages/produce-core"
+  },
+  "homepage": "https://github.com/npstorey/typedstandards/tree/main/packages/produce-core#readme",
+  "bugs": {
+    "url": "https://github.com/npstorey/typedstandards/issues"
+  },
+  "keywords": [
+    "typed-standards",
+    "evidence",
+    "provenance",
+    "producer",
+    "ed25519",
+    "rfc8785",
+    "jcs",
+    "rfc3161",
+    "rekor",
+    "browser"
+  ]
+}
