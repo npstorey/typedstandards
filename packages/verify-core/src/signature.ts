@@ -10,12 +10,17 @@
 import { ed25519, ed25519ph } from '@noble/curves/ed25519.js';
 import { base64ToBytes, sha512Hex, utf8ToBytes } from './primitives.ts';
 
-// An Ed25519 public key in SPKI DER is a fixed 44-byte structure: a 12-byte
-// prefix (SEQUENCE → AlgorithmIdentifier{ OID 1.3.101.112 } → BIT STRING, 0
-// unused bits) followed by the 32-byte raw key. Asserting the prefix + length
-// before slicing the tail makes a malformed key throw rather than yield 32
-// arbitrary bytes — matching the old JWK path, which threw on a bad key.
-const ED25519_SPKI_PREFIX = Uint8Array.from([
+/**
+ * The fixed 12-byte prefix of an Ed25519 public key in SPKI DER (SEQUENCE →
+ * AlgorithmIdentifier{ OID 1.3.101.112 } → BIT STRING, 0 unused bits); the
+ * full 44-byte structure is this prefix followed by the 32-byte raw key.
+ * Asserting the prefix + length before slicing the tail makes a malformed key
+ * throw rather than yield 32 arbitrary bytes — matching the old JWK path,
+ * which threw on a bad key. Exported (typedstandards#36) so producers
+ * assembling SPKI DER — `@typedstandards/produce-core`'s
+ * `derivePublicKeySpki` — build from the same bytes this module asserts.
+ */
+export const ED25519_SPKI_PREFIX = Uint8Array.from([
   0x30, 0x2a, 0x30, 0x05, 0x06, 0x03, 0x2b, 0x65, 0x70, 0x03, 0x21, 0x00,
 ]);
 const ED25519_SPKI_LENGTH = 44;

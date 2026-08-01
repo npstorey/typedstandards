@@ -21,6 +21,7 @@
 
 import { ed25519ph } from '@noble/curves/ed25519.js';
 import {
+  ED25519_SPKI_PREFIX,
   base64ToBytes,
   children,
   content,
@@ -55,14 +56,6 @@ export interface SignResult {
 // --- key handling (no node:crypto) ---
 
 const ED25519_OID = '1.3.101.112';
-
-// An Ed25519 public key in SPKI DER is a fixed 44-byte structure: this
-// 12-byte prefix (SEQUENCE → AlgorithmIdentifier{ OID 1.3.101.112 } → BIT
-// STRING, 0 unused bits) followed by the 32-byte raw key. Mirrors the prefix
-// verify-core's `extractRawPublicKey` asserts before slicing the tail.
-const ED25519_SPKI_PREFIX = Uint8Array.from([
-  0x30, 0x2a, 0x30, 0x05, 0x06, 0x03, 0x2b, 0x65, 0x70, 0x03, 0x21, 0x00,
-]);
 
 /** Base64-encode raw bytes without `Buffer` (browser-safe: `btoa` is a WHATWG
  *  global in browsers and Node ≥16). */
@@ -132,8 +125,9 @@ function toRawSeed(key: Ed25519KeyInput): Uint8Array {
 
 /**
  * Derive the base64 SPKI DER public key for a private key — the stable
- * on-registry encoding (spec §8.3.3): fixed 12-byte Ed25519 SPKI prefix +
- * the 32-byte raw public key from `@noble/curves`.
+ * on-registry encoding (spec §8.3.3): verify-core's `ED25519_SPKI_PREFIX`
+ * (the bytes its `extractRawPublicKey` asserts before slicing) + the 32-byte
+ * raw public key from `@noble/curves`.
  */
 export function derivePublicKeySpki(key: Ed25519KeyInput): string {
   const seed = toRawSeed(key);

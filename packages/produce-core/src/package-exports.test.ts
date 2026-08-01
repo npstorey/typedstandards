@@ -70,6 +70,9 @@ test('index exports the produce-core API surface', async () => {
     // shared chain re-exports
     'computeEnvelopeHash',
     'computeContentHashSha256',
+    // primitives a producer-side harness consumes (0.2.0, civic-ai-tools#116 P1)
+    'sha256Hex',
+    'isBlobRef',
   ];
   for (const name of fns) {
     assert.equal(typeof api[name], 'function', `expected exported function ${name}`);
@@ -84,6 +87,7 @@ test('index exports the produce-core API surface', async () => {
     'ATTESTATION_LOCATED_AT',
     'ATTESTATION_EVALUATES',
     'LEGACY_JSON_CANONICALIZATION',
+    'DATHERE_AG_JUPYTER_CANONICALIZATION',
     'PROV_NS',
     'XSD_NS',
     'DCTERMS_NS',
@@ -91,6 +95,13 @@ test('index exports the produce-core API surface', async () => {
   for (const name of constants) {
     assert.equal(typeof api[name], 'string', `expected exported string constant ${name}`);
   }
+
+  // The Q32 captureMethod vocabulary table (an object, not a string).
+  assert.equal(
+    typeof api['PROFILE_CAPTURE_VOCAB'],
+    'object',
+    'expected exported vocabulary table PROFILE_CAPTURE_VOCAB',
+  );
 });
 
 // The signing-status contract: signing is explicit and unsigned results are
