@@ -25,11 +25,13 @@ test('the `.` export resolves under generic conditions (default present, last)',
   assert.equal(Object.keys(dot).at(-1), 'default', '`default` must be the last condition');
 });
 
-test('runtime dependency budget: @typedstandards/verify-core ONLY', () => {
+test('runtime dependency budget: the shared verification core + the curve suite it already uses', () => {
   assert.deepEqual(
     Object.keys(pkg.dependencies ?? {}),
-    ['@typedstandards/verify-core'],
-    'produce-core must have exactly one runtime dependency — the shared verification core',
+    ['@noble/curves', '@typedstandards/verify-core'],
+    'produce-core runtime deps are exactly verify-core plus @noble/curves — the one ' +
+      'package shipped src imports directly (signing.ts); declared so strict-layout ' +
+      'consumers (pnpm, Yarn PnP) can resolve it',
   );
   assert.equal(pkg.sideEffects, false, 'sideEffects must stay false');
   assert.equal(pkg.engines?.node, '>=18', 'engines.node must stay >=18');

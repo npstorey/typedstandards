@@ -33,6 +33,7 @@
     "prepublishOnly": "npm run clean && npm run build"
   },
   "dependencies": {
+    "@noble/curves": "^2.2.0",
     "@typedstandards/verify-core": "^0.7.0"
   },
   "devDependencies": {
