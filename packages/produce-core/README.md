@@ -5,9 +5,10 @@ packages — envelope and attestation assembly (spec §8.1, §8.12), the Ed25519
 signing mechanism (§8.3.1), pure external-proof codecs (RFC 3161
 `TimeStampReq`, Rekor `hashedrekord`), the §8.8.1 commitment view, and generic
 PROV-O helpers. Its verification counterpart is
-[`@typedstandards/verify-core`][vc] — the **only** runtime dependency, and a
-load-bearing one: producer and verifier share a single canonicalization/hash
-implementation, so both sides compute one envelope hash by construction.
+[`@typedstandards/verify-core`][vc] — a load-bearing runtime dependency
+(joined only by `@noble/curves`, the curve suite both packages use): producer
+and verifier share a single canonicalization/hash implementation, so both
+sides compute one envelope hash by construction.
 
 > Extracted from the reference application's producer path (Q59, resolved via
 > option (a)): an independent implementation can emit packages that verify
@@ -23,6 +24,11 @@ Everything **domain-shaped** — capture vocabulary, profile derivations, source
 registries, provenance graph walking — is the caller's: derived values arrive
 as explicit inputs (`dataSources`, `provenance`, `producerProfile`,
 `extensions`, …) and the core assembles them under the reference byte rules.
+
+The verify-core primitives a producer-side layer consumes (`sha256Hex`,
+`isBlobRef`, the canonicalization-rule URIs, the Q32 captureMethod vocabulary
+table) are re-exported here, so such a layer needs a single declared
+dependency.
 
 ## Install
 

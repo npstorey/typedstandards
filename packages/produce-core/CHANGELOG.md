@@ -3,6 +3,21 @@
 Factual record of what changed per published version. Check numbers (#1–#15)
 refer to the Typed Standards specification §9.2 verification sequence.
 
+## 0.2.0 — 2026-08-01
+
+- **Re-exports from `@typedstandards/verify-core`** so a producer-side
+  consumer needs a single import and a single declared dependency:
+  `sha256Hex`, `isBlobRef`, `DATHERE_AG_JUPYTER_CANONICALIZATION`,
+  `PROFILE_CAPTURE_VOCAB` (the Q32 captureMethod vocabulary table), and the
+  `CaptureMethod` type. Flagged in civic-ai-tools#116 P1: the S2 harness
+  consumed these from verify-core transitively, undeclared. Joins the
+  existing `LEGACY_JSON_CANONICALIZATION` / `computeEnvelopeHash` /
+  `computeContentHashSha256` re-exports; no behavior change.
+- **`ED25519_SPKI_PREFIX` de-duplicated** (typedstandards#36) — `signing.ts`
+  now imports the constant verify-core 0.8.0 exports instead of declaring a
+  byte-identical local copy; `@typedstandards/verify-core` dependency range
+  bumped to `^0.8.0` accordingly. No behavior change.
+
 ## 0.1.0 — 2026-07-31
 
 - **Declared `@noble/curves` as a direct dependency** (`^2.2.0`, aligned with

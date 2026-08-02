@@ -6,6 +6,14 @@ references are to `npstorey/civic-ai-tools-website` (#119 is the offline-crypto
 hardening arc; #116 is the standalone-verifier arc this package was extracted
 in).
 
+## 0.8.0 — 2026-08-01
+
+- New export: `ED25519_SPKI_PREFIX` (`signature.ts`) — the fixed 12-byte
+  Ed25519 SPKI DER prefix this module asserts in `extractRawPublicKey`.
+  Previously duplicated locally by `@typedstandards/produce-core`'s
+  `derivePublicKeySpki`, which now imports it (typedstandards#36). No behavior
+  change; the bytes are identical.
+
 ## 0.7.0 — 2026-06-16
 
 - #1 envelope integrity is now TRI-STATE. `VerifyResult` gains an

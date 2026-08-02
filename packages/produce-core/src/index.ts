@@ -23,15 +23,24 @@ export * from './rekor-proposal.ts';
 export * from './commitment.ts';
 export * from './provenance.ts';
 
-// Shared shapes and the canonicalization chain, re-exported from the
-// verification core so a producer needs a single import.
+// Shared shapes, the canonicalization chain, and the primitives a producer-
+// side harness consumes, re-exported from the verification core so a producer
+// needs a single import — and a single declared dependency. The additions in
+// 0.2.0 (`sha256Hex`, `isBlobRef`, the canonicalization-rule URIs, the Q32
+// captureMethod vocabulary table) were flagged in civic-ai-tools#116 P1:
+// the S2 harness imported them from verify-core transitively, undeclared.
 export type {
   BlobRef,
+  CaptureMethod,
   CarriedLifecycleNode,
   SignerIdentity,
 } from '@typedstandards/verify-core';
 export {
+  DATHERE_AG_JUPYTER_CANONICALIZATION,
   LEGACY_JSON_CANONICALIZATION,
+  PROFILE_CAPTURE_VOCAB,
   computeContentHashSha256,
   computeEnvelopeHash,
+  isBlobRef,
+  sha256Hex,
 } from '@typedstandards/verify-core';
