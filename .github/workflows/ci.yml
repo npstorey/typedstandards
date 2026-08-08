@@ -1,0 +1,66 @@
+# CI for the typedstandards monorepo.
+#
+# Charter: credential-free — this workflow reads no secrets anywhere, and uses
+# no third-party actions beyond actions/checkout and actions/setup-node.
+#
+# Step order is load-bearing: workspace consumers (produce-core, web) resolve
+# verify-core's *built dist*, not its source, so verify-core must build before
+# anything that compiles or runs against it.
+#
+# Install uses --ignore-scripts: on a fresh tree, npm ci runs workspace
+# `prepare` scripts in location order (produce-core before verify-core), so
+# produce-core's tsc fails against a not-yet-built verify-core dist. Skipping
+# lifecycle scripts and building explicitly (verify-core first, then all
+# workspaces) restores the required order. No dependency in the lockfile needs
+# its install scripts for build/test here: the only two with install scripts
+# (sharp, unrs-resolver) get their platform binaries via optional dependencies.
+
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # Root engines require Node >= 22 (packages support >= 18).
+          node-version: 22
+          cache: npm
+
+      - name: Install (lifecycle scripts skipped — see header note)
+        run: npm ci --ignore-scripts
+
+      - name: Build verify-core (consumers resolve its built dist)
+        run: npm run build:verify-core
+
+      - name: Build (all workspaces)
+        run: npm run build
+
+      - name: Test (all workspaces)
+        run: npm run test
+
+      - name: Typecheck (all workspaces)
+        run: npm run typecheck
+
+      - name: Lint (produce-core purity config)
+        run: npm run lint --workspace @typedstandards/produce-core
+
+      - name: Dependency-budget checker self-test
+        run: node --test scripts/check-dependency-budget.test.mjs
+
+      - name: Dependency-budget check
+        run: npm run check:budgets

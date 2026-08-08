@@ -1,0 +1,23 @@
+{
+  "$comment": [
+    "Dependency budgets: the runtime-dependency allowlist per published package,",
+    "enforced in CI by scripts/check-dependency-budget.mjs (root script: npm run check:budgets).",
+    "Each budget restates a decision of record, cited per entry — growing a budget",
+    "means changing the decision (ADR-level), not just editing this file.",
+    "Scope: `dependencies` only; devDependencies (build/test tooling) are unbudgeted."
+  ],
+  "packages": [
+    {
+      "path": "packages/verify-core",
+      "name": "@typedstandards/verify-core",
+      "budget": ["@noble/curves", "@noble/hashes", "canonicalize"],
+      "source": "civic-ai-tools ADR-0021 §C — verify-core's three pure runtime deps (https://github.com/npstorey/civic-ai-tools/blob/main/docs/adr/0021-produce-core-extraction.md)."
+    },
+    {
+      "path": "packages/produce-core",
+      "name": "@typedstandards/produce-core",
+      "budget": ["@typedstandards/verify-core", "@noble/curves"],
+      "source": "civic-ai-tools ADR-0021 §C — @typedstandards/verify-core as the load-bearing runtime dependency — plus typedstandards#35, which declared @noble/curves as a direct dependency (the phantom-dep incident this checker guards against)."
+    }
+  ]
+}
