@@ -3,6 +3,18 @@
 Factual record of what changed per published version. Check numbers (#1–#15)
 refer to the Typed Standards specification §9.2 verification sequence.
 
+## Unreleased
+
+- Removed the `prepare` (install-time build) script (typedstandards#39).
+  A fresh `npm ci` at the monorepo root previously failed here: npm runs
+  workspace `prepare` scripts in location order, so this package's tsc ran
+  before `@typedstandards/verify-core`'s dist existed — and npm 10.x runs
+  workspace `prepare` even under `--ignore-scripts`. Builds are now explicit
+  (`npm run build:verify-core`, then `npm run build`; CI does the same).
+  Published tarballs are unchanged — `prepublishOnly` still builds at
+  publish — but installing this package from git no longer auto-builds
+  `dist`.
+
 ## 0.2.0 — 2026-08-01
 
 - **Re-exports from `@typedstandards/verify-core`** so a producer-side

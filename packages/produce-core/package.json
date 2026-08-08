@@ -29,7 +29,6 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint .",
     "test": "node --test --experimental-strip-types \"src/**/*.test.ts\"",
-    "prepare": "npm run build",
     "prepublishOnly": "npm run clean && npm run build"
   },
   "dependencies": {

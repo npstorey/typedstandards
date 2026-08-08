@@ -4,16 +4,20 @@
 # no third-party actions beyond actions/checkout and actions/setup-node.
 #
 # Step order is load-bearing: workspace consumers (produce-core, web) resolve
-# verify-core's *built dist*, not its source, so verify-core must build before
-# anything that compiles or runs against it.
+# verify-core's *built dist*, not its source, so verify-core builds explicitly
+# before the all-workspaces build (root `npm run build` runs workspaces in
+# location order — produce-core first — so the ordering must be imposed here).
 #
-# Install uses --ignore-scripts: on a fresh tree, npm ci runs workspace
-# `prepare` scripts in location order (produce-core before verify-core), so
-# produce-core's tsc fails against a not-yet-built verify-core dist. Skipping
-# lifecycle scripts and building explicitly (verify-core first, then all
-# workspaces) restores the required order. No dependency in the lockfile needs
-# its install scripts for build/test here: the only two with install scripts
-# (sharp, unrs-resolver) get their platform binaries via optional dependencies.
+# Install: the core manifests deliberately carry NO `prepare` scripts. With
+# them, a fresh-tree npm ci died running produce-core's prepare (tsc) before
+# verify-core's dist existed — and npm 10.x runs workspace `prepare` scripts
+# even under --ignore-scripts (verified on npm 10.9.8; this workflow's first
+# run on PR #39 failed exactly there). Removing `prepare` is what makes fresh
+# installs work; `prepublishOnly` still builds at publish. The
+# --ignore-scripts flag below is defense-in-depth only: it skips dependency
+# install scripts (sharp, unrs-resolver — their platform binaries arrive via
+# optional dependencies, so build/test need no scripts) and would NOT save
+# this workflow if a workspace `prepare` script were reintroduced.
 
 name: CI
 
@@ -41,7 +45,7 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Install (lifecycle scripts skipped — see header note)
+      - name: Install (--ignore-scripts is defense-in-depth — see header note)
         run: npm ci --ignore-scripts
 
       - name: Build verify-core (consumers resolve its built dist)

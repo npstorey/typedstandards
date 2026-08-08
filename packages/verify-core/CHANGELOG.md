@@ -6,6 +6,17 @@ references are to `npstorey/civic-ai-tools-website` (#119 is the offline-crypto
 hardening arc; #116 is the standalone-verifier arc this package was extracted
 in).
 
+## Unreleased
+
+- Removed the `prepare` (install-time build) script (typedstandards#39).
+  A fresh `npm ci` at the monorepo root previously failed in workspace
+  `prepare` ordering (produce-core's tsc ran before this package's dist
+  existed), and npm 10.x runs workspace `prepare` even under
+  `--ignore-scripts`. Builds are now explicit (`npm run build:verify-core`,
+  then `npm run build`; CI does the same). Published tarballs are unchanged —
+  `prepublishOnly` still builds at publish — but installing this package from
+  git no longer auto-builds `dist`.
+
 ## 0.8.0 — 2026-08-01
 
 - New export: `ED25519_SPKI_PREFIX` (`signature.ts`) — the fixed 12-byte
