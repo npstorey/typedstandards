@@ -15,7 +15,8 @@
     "test": "npm run test --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "build:verify-core": "npm run build --workspace @typedstandards/verify-core",
-    "test:verify-core": "npm run test --workspace @typedstandards/verify-core"
+    "test:verify-core": "npm run test --workspace @typedstandards/verify-core",
+    "check:budgets": "node scripts/check-dependency-budget.mjs"
   },
   "engines": {
     "node": ">=22"

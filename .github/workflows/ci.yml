@@ -1,0 +1,70 @@
+# CI for the typedstandards monorepo.
+#
+# Charter: credential-free — this workflow reads no secrets anywhere, and uses
+# no third-party actions beyond actions/checkout and actions/setup-node.
+#
+# Step order is load-bearing: workspace consumers (produce-core, web) resolve
+# verify-core's *built dist*, not its source, so verify-core builds explicitly
+# before the all-workspaces build (root `npm run build` runs workspaces in
+# location order — produce-core first — so the ordering must be imposed here).
+#
+# Install: the core manifests deliberately carry NO `prepare` scripts. With
+# them, a fresh-tree npm ci died running produce-core's prepare (tsc) before
+# verify-core's dist existed — and npm 10.x runs workspace `prepare` scripts
+# even under --ignore-scripts (verified on npm 10.9.8; this workflow's first
+# run on PR #39 failed exactly there). Removing `prepare` is what makes fresh
+# installs work; `prepublishOnly` still builds at publish. The
+# --ignore-scripts flag below is defense-in-depth only: it skips dependency
+# install scripts (sharp, unrs-resolver — their platform binaries arrive via
+# optional dependencies, so build/test need no scripts) and would NOT save
+# this workflow if a workspace `prepare` script were reintroduced.
+
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # Root engines require Node >= 22 (packages support >= 18).
+          node-version: 22
+          cache: npm
+
+      - name: Install (--ignore-scripts is defense-in-depth — see header note)
+        run: npm ci --ignore-scripts
+
+      - name: Build verify-core (consumers resolve its built dist)
+        run: npm run build:verify-core
+
+      - name: Build (all workspaces)
+        run: npm run build
+
+      - name: Test (all workspaces)
+        run: npm run test
+
+      - name: Typecheck (all workspaces)
+        run: npm run typecheck
+
+      - name: Lint (produce-core purity config)
+        run: npm run lint --workspace @typedstandards/produce-core
+
+      - name: Dependency-budget checker self-test
+        run: node --test scripts/check-dependency-budget.test.mjs
+
+      - name: Dependency-budget check
+        run: npm run check:budgets
