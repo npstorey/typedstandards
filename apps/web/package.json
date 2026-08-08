@@ -5,6 +5,7 @@
   "description": "typedstandards.org — the Typed Standards site and the client-side evidence verifier.",
   "scripts": {
     "dev": "next dev",
+    "prebuild": "npm run build --workspace @typedstandards/verify-core",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
