@@ -1,6 +1,6 @@
 # Contributing to typedstandards
 
-This repo holds the [typedstandards.org](https://typedstandards.org) site (`apps/web`) and the [`@typedstandards/verify-core`](https://www.npmjs.com/package/@typedstandards/verify-core) verification library (`packages/verify-core`). It is one part of the Civic AI Tools / Typed Standards multi-repo project — the [hub CONTRIBUTING guide](https://github.com/npstorey/civic-ai-tools/blob/main/CONTRIBUTING.md) has the overview of all four repos and where to file what. The Typed Standards Specification itself lives in the hub repo (`docs/architecture/typed-standards-specification.md`), not here.
+This repo holds the [typedstandards.org](https://typedstandards.org) site (`apps/web`) and the [`@typedstandards/verify-core`](https://www.npmjs.com/package/@typedstandards/verify-core) verification library (`packages/verify-core`). It also holds [`@typedstandards/produce-core`](https://www.npmjs.com/package/@typedstandards/produce-core) (`packages/produce-core`), the producer counterpart to `verify-core`. It is one part of the Civic AI Tools / Typed Standards multi-repo project — the [hub CONTRIBUTING guide](https://github.com/npstorey/civic-ai-tools/blob/main/CONTRIBUTING.md) has the overview of all four repos and where to file what. The Typed Standards Specification itself lives in the hub repo (`docs/architecture/typed-standards-specification.md`), not here.
 
 ## Getting started
 
@@ -13,7 +13,7 @@ This repo holds the [typedstandards.org](https://typedstandards.org) site (`apps
 
 - Keep changes focused — one fix or feature per PR
 - `verify-core` is the portable §9.2 verification core consumed by multiple sites — changes there need tests and must stay browser-safe with no host-specific dependencies
-- Be respectful in issues and pull requests
+- Be respectful in issues and pull requests — this repo follows the project's [Code of Conduct](CODE_OF_CONDUCT.md)
 
 ## Legal: sign-off and IPR
 
