@@ -118,6 +118,7 @@ function produceSignedPackage() {
   const sidecar = buildCommitmentView({
     packageHash: envelopeHash,
     packageUrl: 'https://packages.example.org/evidence/example.json',
+    visibility: 'public',
     captureMethod: 'chat-flow-stream',
     producerProfile: pkg.producerProfile,
     type: pkg.type,
