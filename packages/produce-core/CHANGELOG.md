@@ -3,7 +3,7 @@
 Factual record of what changed per published version. Check numbers (#1–#15)
 refer to the Typed Standards specification §9.2 verification sequence.
 
-## Unreleased
+## 0.2.1 — 2026-08-12
 
 - **`buildCommitmentView` no longer defaults `visibility`; an absent value is
   now an error.** **Behavior change:** a caller that omitted the field
