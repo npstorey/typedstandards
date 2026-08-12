@@ -5,6 +5,24 @@ refer to the Typed Standards specification §9.2 verification sequence.
 
 ## Unreleased
 
+- **`buildCommitmentView` no longer defaults `visibility`; an absent value is
+  now an error.** **Behavior change:** a caller that omitted the field
+  previously got `visibility: 'published'` in the returned view and now gets a
+  thrown `Error`. This is a defect fix, not a removed feature: the commitment
+  view is the artifact a third party resolves while verifying (spec §9.2.1),
+  the spec marks `visibility` required and defines no default (§8.8.1), and
+  the old default both asserted a disclosure state nobody supplied and failed
+  *open* — a producer who meant `sealed` and omitted the field emitted a view
+  telling every reader the content was publicly disclosed. Absent is now
+  refused at the call, matching the `trustRegistryUrl` guard beside it; the
+  field stays optional in the TypeScript type, so this is a runtime change
+  only and a future minor makes it required in the type as well. The
+  vocabulary of record is `sealed` / `public`; the pre-ADR-0016 spellings
+  `committed` / `published` remain accepted inputs, carried verbatim — the
+  core still normalizes nothing. `contentProfile`'s `'default'` is unaffected
+  and deliberately kept: §8.8.1 defines that value for a package carrying no
+  profile, so it states an honest not-applicable rather than a fact about the
+  record. The rule is civic-ai-tools ADR-0024.
 - Removed the `prepare` (install-time build) script (typedstandards#39).
   A fresh `npm ci` at the monorepo root previously failed here: npm runs
   workspace `prepare` scripts in location order, so this package's tsc ran

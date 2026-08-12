@@ -8,13 +8,19 @@
 // signed envelope claims, an optional carried lifecycle chain, and the
 // publisher's trust-registry URL.
 //
-// Every value is caller-supplied. `trustRegistryUrl` is per-publisher
-// CONFIGURATION — deliberately a required input, never a constant, so a
-// prospective adopter's registry travels with its proofs. The signature
-// envelope is carried verbatim (including `algorithm` and `kid`): `algorithm`
-// is load-bearing for the verifier's Ed25519/Ed25519ph dispatch, and `kid` is
-// the trust-registry lookup handle; both may be absent on packages signed via
-// an older path and are carried as-is.
+// Every value is caller-supplied, and two are REQUIRED — absent is an error,
+// never a default — because this view is what a third party resolves while
+// verifying, so a value the core invents here is asserted to that reader as
+// one the producer set (civic-ai-tools ADR-0024). `trustRegistryUrl` is
+// per-publisher CONFIGURATION, never a constant, so a prospective adopter's
+// registry travels with its proofs; `visibility` is the disclosure state,
+// which the spec makes required and gives no default, and which defaulted
+// would state a disclosure claim nobody made.
+//
+// The signature envelope is carried verbatim (including `algorithm` and
+// `kid`): `algorithm` is load-bearing for the verifier's Ed25519/Ed25519ph
+// dispatch, and `kid` is the trust-registry lookup handle; both may be absent
+// on packages signed via an older path and are carried as-is.
 //
 // Mapping storage rows / records onto this input is implementation-side
 // adapter work; the core defines the shape and the conditional-emission rules
@@ -48,11 +54,23 @@ export interface CommitmentViewInput {
   packageHash: string;
   /** Where the canonical package JSON is retrievable. Omit when unknown;
    *  never emitted on a redacted view (a non-derivable capability URL must
-   *  not be disclosed for committed-visibility records). */
+   *  not be disclosed for sealed-visibility records). */
   packageUrl?: string;
-  /** Visibility state; defaults to `published` (the shape's legacy default),
-   *  letting a verifier render a committed / not-publicly-located state
-   *  honestly instead of treating a missing packageUrl as an error. */
+  /** REQUIRED disclosure state (spec §8.8.1) — what lets a verifier render a
+   *  sealed / not-publicly-located state honestly instead of treating a
+   *  missing packageUrl as an error. Caller-supplied, never defaulted: the
+   *  spec defines no default, and a default here would assert a disclosure
+   *  state nobody set inside the artifact a verifier resolves.
+   *
+   *  Optional in the TYPE only — absence is a runtime error today, and a
+   *  future minor makes the field required in the type as well.
+   *
+   *  The vocabulary of record is `sealed` / `public`. The core carries
+   *  whatever string it is given VERBATIM and normalizes nothing; mapping the
+   *  pre-ADR-0016 spellings (`committed` / `published`, which remain
+   *  permanently accepted inputs) onto the vocabulary of record is
+   *  implementation-side adapter work, like every other row-to-view mapping
+   *  here. */
   visibility?: string;
   /** Capture-method label; `null` (emitted) when the record predates it. */
   captureMethod?: string | null;
@@ -92,11 +110,11 @@ export interface CommitmentViewInput {
   /** Optional secondary registry path served byte-identical to the canonical
    *  one, for clients that only know an older path. */
   trustRegistryUrlLegacy?: string;
-  /** Content-derived display strings — redacted for committed records. Pass
+  /** Content-derived display strings — redacted for sealed records. Pass
    *  `null` to emit an explicit JSON null. */
   subjectTitle?: string | null;
   subjectSummary?: string | null;
-  /** Committed-record redaction: the commitment is public by design (the
+  /** Sealed-record redaction: the commitment is public by design (the
    *  hash is already on the transparency log), but the content's location and
    *  content-derived strings are not. When set, the view omits `packageUrl`,
    *  `subjectTitle`, and `subjectSummary`; proof-side fields are served
@@ -113,9 +131,16 @@ export interface CommitmentViewInput {
 export function buildCommitmentView(
   input: CommitmentViewInput,
 ): Record<string, unknown> {
+  // One rule, two fields: nothing this view asserts to a verifier may be
+  // supplied by the core on the caller's behalf (civic-ai-tools ADR-0024).
   if (!input.trustRegistryUrl) {
     throw new Error(
       'buildCommitmentView requires trustRegistryUrl — per-publisher configuration is caller-supplied, never a core constant',
+    );
+  }
+  if (!input.visibility) {
+    throw new Error(
+      'buildCommitmentView requires visibility — the disclosure state is caller-supplied, never defaulted: a default asserts a state nobody set inside the view a verifier resolves',
     );
   }
   const redact = input.redactContentSurface === true;
@@ -127,8 +152,11 @@ export function buildCommitmentView(
     ...(redact || input.packageUrl === undefined
       ? {}
       : { packageUrl: input.packageUrl }),
-    visibility: input.visibility ?? 'published',
+    visibility: input.visibility,
     captureMethod: input.captureMethod ?? null,
+    // Spec §8.8.1 defines `"default"` for a package that carries no content
+    // profile: an honest not-applicable, not an assertion about the record —
+    // so this default stays where the visibility one could not (ADR-0024 §B).
     contentProfile: input.contentProfile ?? 'default',
     // Signed envelope claims (spec §8.1.1) — conditionally spread.
     ...(input.producerProfile ? { producerProfile: input.producerProfile } : {}),
@@ -156,7 +184,7 @@ export function buildCommitmentView(
     ...(input.trustRegistryUrlLegacy
       ? { trustRegistryUrlLegacy: input.trustRegistryUrlLegacy }
       : {}),
-    // Content-derived strings — redacted for committed records.
+    // Content-derived strings — redacted for sealed records.
     ...(redact
       ? {}
       : { subjectTitle: input.subjectTitle, subjectSummary: input.subjectSummary }),

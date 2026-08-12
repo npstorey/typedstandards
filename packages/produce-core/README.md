@@ -140,6 +140,9 @@ const registry = {
 const sidecar = buildCommitmentView({
   packageHash: envelopeHash,
   signature: { ...signed },
+  // Required, and never defaulted: the view is what a verifier resolves, so
+  // the core will not assert a disclosure state you did not supply.
+  visibility: 'public',
   captureMethod: 'chat-flow-stream',
   producerProfile: pkg.producerProfile,
   type: pkg.type,
