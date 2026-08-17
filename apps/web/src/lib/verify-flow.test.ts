@@ -462,3 +462,64 @@ test('parseHostSegment: rejects everything a host segment must not carry', () =>
     assert.equal(parseHostSegment(bad), undefined, `${JSON.stringify(bad)} must be rejected`);
   }
 });
+
+// --- www-normalization at the resolution entry points (#50) ----------------
+//
+// A browser fetch dies at a cross-origin redirect hop whose response carries no
+// CORS headers, and a platform-default `www.` → apex redirect commonly carries
+// none (measured live 2026-08-17). So every point where a publisher host enters
+// resolution — a hosted URL's kept origin (deriveCommitmentUrl), the
+// `/verify/<host>/<id>` segment (parseHostSegment), and the bare-identifier host
+// (bareIdCommitmentUrl) — re-spells it canonically, and the verifier fetches the
+// canonical origin directly instead of riding the publisher's domain redirect.
+// canonicalPublisherOrigin itself is unit-tested in host-directory.test.ts.
+
+test('deriveCommitmentUrl: a www commitment URL is fetched on the canonical origin (#50)', () => {
+  assert.equal(
+    deriveCommitmentUrl('https://www.civicaitools.org/api/evidence/some-slug/commitment'),
+    'https://civicaitools.org/api/evidence/some-slug/commitment',
+  );
+  // Only the origin is re-spelled — path and query come through untouched, listed or not.
+  assert.equal(
+    deriveCommitmentUrl('https://www.example-publisher.test/api/evidence/x/commitment?v=2'),
+    'https://example-publisher.test/api/evidence/x/commitment?v=2',
+  );
+});
+
+test('deriveCommitmentUrl: a www evidence-page URL mints its commitment on the canonical origin (#50)', () => {
+  assert.equal(
+    deriveCommitmentUrl('https://www.example-publisher.test/evidence/some-slug'),
+    'https://example-publisher.test/api/evidence/some-slug/commitment',
+  );
+});
+
+test('deriveCommitmentUrl: an opaque www URL is fetched on the canonical origin (#50)', () => {
+  assert.equal(
+    deriveCommitmentUrl('https://www.example-publisher.test/some/page'),
+    'https://example-publisher.test/some/page',
+  );
+});
+
+test('bareIdCommitmentUrl: a www resolution host is normalized before the URL is minted (#50)', () => {
+  assert.equal(
+    bareIdCommitmentUrl('some-slug', 'https://www.civicaitools.org'),
+    `${DEFAULT_HOST}/api/evidence/some-slug/commitment`,
+  );
+});
+
+test('parseHostSegment: a www host segment canonicalizes — resolution, display, and share all see the real origin (#50)', () => {
+  assert.equal(parseHostSegment('www.civicaitools.org'), DEFAULT_HOST);
+  // Canonicalization, NOT roster gating: an unlisted www host normalizes too and
+  // still resolves.
+  assert.equal(parseHostSegment('www.example-publisher.test'), 'https://example-publisher.test');
+});
+
+test('a /verify/www.<host>/<id> link resolves canonically and re-mints the canonical share link (#50)', () => {
+  const parsed = parseVerifyTarget(['www.example-publisher.test', 'some-slug']);
+  assert.equal(parsed?.host, 'https://example-publisher.test');
+  const commitmentUrl = bareIdCommitmentUrl(parsed!.id, parsed!.host);
+  assert.equal(commitmentUrl, 'https://example-publisher.test/api/evidence/some-slug/commitment');
+  // The share link minted from the URL that answered carries the canonical host —
+  // a www link heals to its canonical form on the first round-trip.
+  assert.equal(deriveShareTarget(mkResolved(commitmentUrl)), '/verify/example-publisher.test/some-slug');
+});

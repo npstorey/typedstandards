@@ -16,6 +16,7 @@ import {
   originOf,
   validateHostDirectory,
   bareIdentifierHostOf,
+  canonicalPublisherOrigin,
   HOST_DIRECTORY,
   BARE_ID_ANCHOR,
   type HostDirectory,
@@ -273,4 +274,68 @@ test('B6: anchoring confers NO recognition — the (a)+(b) invariant is untouche
     resolveHostRecognition(unlisted, kt('active', true), HOST_DIRECTORY).status,
     'unknown_publisher',
   );
+});
+
+// --- canonicalPublisherOrigin (#50) ----------------------------------------
+//
+// The verifier must fetch a publisher's CANONICAL origin directly — a browser
+// fetch dies at a cross-origin redirect hop whose response carries no CORS
+// headers, and a platform-default `www.` → apex redirect commonly carries none
+// (measured live 2026-08-17). Directory spelling first, generic www-strip second.
+
+test('canonicalPublisherOrigin: a listed origin is already canonical', () => {
+  assert.equal(canonicalPublisherOrigin(LISTED_ORIGIN), LISTED_ORIGIN);
+  assert.equal(
+    canonicalPublisherOrigin('https://data-concierge.dathere.com'),
+    'https://data-concierge.dathere.com',
+  );
+});
+
+test('canonicalPublisherOrigin: the www variant of a listed publisher → the listed spelling', () => {
+  assert.equal(canonicalPublisherOrigin('https://www.civicaitools.org'), LISTED_ORIGIN);
+  assert.equal(
+    canonicalPublisherOrigin('https://www.data-concierge.dathere.com'),
+    'https://data-concierge.dathere.com',
+  );
+});
+
+test('canonicalPublisherOrigin: the DIRECTORY spelling wins — a listed www-canonical publisher is never stripped', () => {
+  // No such entry exists today; this locks the mechanism that would protect one.
+  const dir: HostDirectory = {
+    version: 1,
+    updated: '',
+    publishers: [{ registryOrigin: 'https://www.example-publisher.test', displayName: 'X' }],
+  };
+  assert.equal(
+    canonicalPublisherOrigin('https://www.example-publisher.test', dir),
+    'https://www.example-publisher.test',
+  );
+  // …and its APEX variant resolves TO the listed www spelling, not away from it.
+  assert.equal(
+    canonicalPublisherOrigin('https://example-publisher.test', dir),
+    'https://www.example-publisher.test',
+  );
+});
+
+test('canonicalPublisherOrigin: an unlisted www host has ONE leading www. label stripped', () => {
+  assert.equal(
+    canonicalPublisherOrigin('https://www.example-publisher.test'),
+    'https://example-publisher.test',
+  );
+  assert.equal(canonicalPublisherOrigin('http://www.example-publisher.test'), 'http://example-publisher.test', 'scheme kept — no silent https upgrade');
+  assert.equal(canonicalPublisherOrigin('https://www.example-publisher.test:8443'), 'https://example-publisher.test:8443', 'explicit port kept');
+  assert.equal(canonicalPublisherOrigin('https://www.www.example-publisher.test'), 'https://www.example-publisher.test', 'one label only');
+});
+
+test('canonicalPublisherOrigin: scheme mismatch never borrows a listed spelling', () => {
+  // http://www.civicaitools.org is NOT a variant of the listed https origin — it
+  // falls to the generic strip, keeping its own scheme.
+  assert.equal(canonicalPublisherOrigin('http://www.civicaitools.org'), 'http://civicaitools.org');
+});
+
+test('canonicalPublisherOrigin: leaves everything else alone', () => {
+  assert.equal(canonicalPublisherOrigin('https://evidence.example-publisher.test'), 'https://evidence.example-publisher.test', 'a non-www subdomain is not touched');
+  assert.equal(canonicalPublisherOrigin('https://wwwexample.test'), 'https://wwwexample.test', 'www without a dot is part of the name');
+  assert.equal(canonicalPublisherOrigin('https://www.com'), 'https://www.com', 'the remainder must stay a dotted name, never a bare TLD');
+  assert.equal(canonicalPublisherOrigin('not a url'), 'not a url', 'non-URL input passes through for callers to validate');
 });

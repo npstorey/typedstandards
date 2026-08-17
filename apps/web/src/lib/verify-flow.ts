@@ -58,6 +58,7 @@ import {
 import {
   BARE_ID_ANCHOR,
   HOST_DIRECTORY_PATH,
+  canonicalPublisherOrigin,
   fetchHostDirectory,
   validateHostDirectory,
   type HostDirectory,
@@ -262,6 +263,12 @@ function classifyHostedUrl(u: URL): HostedUrlKind {
  * anchor unless a link or the picker named one). The UI discloses which host answered
  * and offers the roster to correct it in one click — the same under-determination
  * honesty B6 established. `identifierResolutionKind` is what tells it to.
+ *
+ * Every origin that IS kept is re-spelled canonically first (#50): `www.` is
+ * normalized off (directory-aware — see canonicalPublisherOrigin) so the verifier
+ * fetches the canonical origin directly and never rides a publisher's own domain
+ * redirect, which a browser fetch cannot follow when the redirect response carries
+ * no CORS headers.
  */
 export function deriveCommitmentUrl(input: string, host: string = DEFAULT_HOST): string {
   let u: URL;
@@ -273,15 +280,22 @@ export function deriveCommitmentUrl(input: string, host: string = DEFAULT_HOST):
   const hosted = classifyHostedUrl(u);
   switch (hosted.kind) {
     case 'commitment':
-      return u.toString();
+      return withCanonicalOrigin(u);
     case 'evidence-id':
-      return `${u.origin}/api/evidence/${hosted.id}/commitment`;
+      return `${canonicalPublisherOrigin(u.origin)}/api/evidence/${hosted.id}/commitment`;
     case 'package-blob':
       return bareIdCommitmentUrl(hosted.hash, host);
     default:
       // Last resort: treat the URL itself as the commitment resource.
-      return u.toString();
+      return withCanonicalOrigin(u);
   }
+}
+
+/** The URL re-spelled on its canonical publisher origin (#50) — path, query, and
+ *  fragment untouched. (Userinfo is dropped with the origin rebuild; `fetch`
+ *  rejects credentialed URLs anyway.) */
+function withCanonicalOrigin(u: URL): string {
+  return `${canonicalPublisherOrigin(u.origin)}${u.pathname}${u.search}${u.hash}`;
 }
 
 /** Why an input needs an anchor: it is a bare hash/slug, or it is a package-blob URL
@@ -331,9 +345,12 @@ export function identifierResolutionKind(
 
 /** The commitment URL a bare identifier resolves to on `host` — the single place the
  *  `/api/evidence/<id>/commitment` shape is built, so a minted share link and the
- *  request it later re-issues cannot drift. `host` defaults to the anchor. */
+ *  request it later re-issues cannot drift. `host` defaults to the anchor. The host
+ *  is www-normalized (#50) before the URL is minted — a no-op for the anchor and the
+ *  roster's picker origins, which are canonical already; it matters for a host a
+ *  link named. */
 export function bareIdCommitmentUrl(id: string, host: string = DEFAULT_HOST): string {
-  return `${host}/api/evidence/${encodeURIComponent(id)}/commitment`;
+  return `${canonicalPublisherOrigin(host)}/api/evidence/${encodeURIComponent(id)}/commitment`;
 }
 
 /** Hostname shape: dot-separated LDH labels (1–63 chars, no leading/trailing `-`),
@@ -345,7 +362,7 @@ const HOSTNAME_RE = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-
  * Canonical `https://<host>` origin for a `/verify/<host>/<id>` host segment, or
  * `undefined` when the segment is not a well-formed host.
  *
- * SHAPE ONLY — never roster membership. Resolution and recognition are orthogonal
+ * SHAPE-VALIDATING, never roster GATING. Resolution and recognition are orthogonal
  * dimensions (host-directory.ts), and gating the LINK SHAPE on the directory would
  * rebuild the very privilege this removes: an unlisted publisher would be back to
  * the opaque `?url=` form. An unlisted host resolves normally here and the
@@ -353,6 +370,11 @@ const HOSTNAME_RE = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-
  * — https, no port, no userinfo, no path/query/fragment — so the segment can carry
  * an origin and nothing else; anything richer stays in the `?url=` form, which is
  * where a full URL belongs.
+ *
+ * A well-formed host IS www-normalized (#50) — canonicalization, not gating: a
+ * `/verify/www.<host>/<id>` link resolves against (and the whole flow displays,
+ * shares, and fetches) the canonical origin, never riding the publisher's own
+ * domain redirect.
  *
  * `segment` is the DECODED value (Next.js decodes route params), so `%2F`-style
  * smuggling has already collapsed into characters these checks see.
@@ -370,7 +392,7 @@ export function parseHostSegment(segment: string): string | undefined {
   if (u.username || u.password || u.port) return undefined;
   if (u.pathname !== '/' || u.search || u.hash) return undefined;
   if (!HOSTNAME_RE.test(u.hostname)) return undefined;
-  return u.origin;
+  return canonicalPublisherOrigin(u.origin);
 }
 
 /** What a `/verify/…` path resolves: an identifier, plus the origin to resolve it
