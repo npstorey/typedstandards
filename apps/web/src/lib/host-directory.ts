@@ -232,6 +232,72 @@ export function lookupPublisher(
   return directory.publishers.find((p) => p.registryOrigin === origin);
 }
 
+// --- Resolution-origin canonicalization (#50) ------------------------------
+
+/** True when one hostname is exactly `www.` + the other (hostnames arrive
+ *  lower-cased from the URL parser). */
+function wwwVariantOf(a: string, b: string): boolean {
+  return a === `www.${b}` || b === `www.${a}`;
+}
+
+/**
+ * Canonicalize an origin that is about to be used as a PUBLISHER RESOLUTION host —
+ * the origin a commitment-endpoint URL is minted on (#50).
+ *
+ * WHY: a browser fetch cannot follow a cross-origin redirect whose response lacks
+ * CORS headers (the Fetch spec checks the redirect response itself), and a
+ * platform-default `www.` → apex redirect commonly carries none — measured live on
+ * a publisher 2026-08-17 (308, no `access-control-allow-origin`). So the verifier
+ * must fetch the canonical origin DIRECTLY and never ride a publisher's own domain
+ * redirect.
+ *
+ * Two rules, directory first:
+ *   1. If the origin — or its `www.`/apex counterpart with the same scheme and
+ *      port — is a listed publisher's `registryOrigin`, the DIRECTORY'S spelling
+ *      wins. This is also what protects a hypothetical www-canonical listed
+ *      publisher from the generic strip below.
+ *   2. Otherwise strip ONE leading `www.` label, keeping scheme and port, provided
+ *      the remainder is still a dotted name (`www.com` must not become the bare
+ *      TLD `com`). The trade-off is explicit: an UNLISTED publisher whose canonical
+ *      host really is `www.…` loses its direct spelling here — its remedies are
+ *      serving CORS headers on the apex redirect, or directory listing (rule 1).
+ *
+ * Consults the SHIPPED {@link HOST_DIRECTORY} by default (injectable for tests):
+ * resolution URLs are minted before any runtime directory fetch resolves, and
+ * resolution must not depend on the network. This is canonicalization, never
+ * roster GATING — an unlisted origin still resolves, just www-stripped.
+ *
+ * A string that is not an absolute URL passes through unchanged (callers
+ * validate); a well-formed one comes back as a canonical `URL.origin`.
+ */
+export function canonicalPublisherOrigin(
+  origin: string,
+  directory: HostDirectory = HOST_DIRECTORY,
+): string {
+  let u: URL;
+  try {
+    u = new URL(origin);
+  } catch {
+    return origin;
+  }
+  for (const p of directory.publishers) {
+    let pu: URL;
+    try {
+      pu = new URL(p.registryOrigin);
+    } catch {
+      continue;
+    }
+    if (pu.protocol !== u.protocol || pu.port !== u.port) continue;
+    if (pu.hostname === u.hostname) return u.origin; // listed as-is — already canonical
+    if (wwwVariantOf(pu.hostname, u.hostname)) return pu.origin; // the directory's spelling wins
+  }
+  const stripped = u.hostname.replace(/^www\./, '');
+  if (stripped !== u.hostname && stripped.includes('.')) {
+    u.hostname = stripped;
+  }
+  return u.origin;
+}
+
 /**
  * Fetch the host directory from `url` (default: same-origin {@link
  * HOST_DIRECTORY_PATH}). Returns `'unavailable'` on any failure — a missing or
