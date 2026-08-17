@@ -17,6 +17,7 @@ import {
   deriveShareTarget,
   deriveCommitmentUrl,
   bareIdCommitmentUrl,
+  identifierResolutionKind,
   parseHostSegment,
   parseVerifyTarget,
   DEFAULT_HOST,
@@ -144,30 +145,119 @@ test('buildPreview: an unavailable preview reports WHY (private vs. unfetchable)
   assert.equal(missing.unavailableReason, 'unfetchable');
 });
 
-// deriveCommitmentUrl — B5 regression (#44). The package-blob branch must derive
-// the commitment URL on the BLOB'S OWN origin, exactly like the adjacent
-// `/evidence/<id>` branch one line above it does. Before the fix, this branch
-// discarded the URL's origin and re-pointed at DEFAULT_HOST (civicaitools.org),
-// so a badge deep-link for a package blob hosted by any OTHER publisher would
-// resolve against the wrong host and 404. Two hosts are used so the fix is
-// proven independent of host-directory roster membership: one listed publisher
-// (data-concierge.dathere.com) and one that is not listed anywhere.
-test('deriveCommitmentUrl: package-blob URL preserves origin — a directory-listed second host (B5)', () => {
+// deriveCommitmentUrl — B5 (#44), REWRITTEN from the premise these two tests were
+// originally written to.
+//
+// THE ORIGINAL PREMISE, and why it was wrong. The audit read the package-blob branch
+// as a neutrality bug — it re-pointed every blob at the anchor host, so P1 was
+// contracted to make it "preserve the blob's own origin, exactly like the adjacent
+// `/evidence/<id>` branch". These two tests asserted that, with two hosts, to prove
+// the behavior independent of roster membership. The neutrality complaint was real.
+// The prescribed fix rested on a false premise: that a package blob's origin IS its
+// publisher's origin. It is not, wherever object storage is detached from the app —
+// Vercel Blob, S3, R2, GCS, and the reference publisher's own setup — where the blob
+// origin has no evidence API at all. Measured on the live deployment: the blob itself
+// returns 200, `<blob-host>/api/evidence/<hash>/commitment` returns 404, and the
+// anchor's returns 200. So origin-preservation 404s for detached storage, while the
+// pre-P1 anchor-pinning 404s for a self-hosting publisher. NEITHER is right, because
+// a bare blob URL does not determine its publisher.
+//
+// THE RULING: a blob filename's 64-hex hash is an ORIGIN-LESS IDENTIFIER, resolved
+// like any other — against the declared anchor, with the disclosure line and the host
+// picker available to correct it. These tests now lock that, so the false premise
+// cannot come back. The roster-independence the originals were protecting is intact
+// and is asserted directly below.
+test('deriveCommitmentUrl: package-blob URL resolves against the ANCHOR, not the blob origin (B5)', () => {
   const hash = 'a1'.repeat(32); // 64 hex chars
   const url = `https://data-concierge.dathere.com/blobs/${hash}.json`;
-  assert.equal(
+  assert.equal(deriveCommitmentUrl(url), `${DEFAULT_HOST}/api/evidence/${hash}/commitment`);
+  // The old assertion, now the thing being ruled out: the blob's own origin.
+  assert.notEqual(
     deriveCommitmentUrl(url),
     `https://data-concierge.dathere.com/api/evidence/${hash}/commitment`,
   );
 });
 
-test('deriveCommitmentUrl: package-blob URL preserves origin — a host absent from the directory (B5)', () => {
-  const hash = 'b2'.repeat(32); // 64 hex chars
-  const url = `https://example-publisher.test/blobs/${hash}.json`;
+test('deriveCommitmentUrl: package-blob resolution does not depend on roster membership (B5)', () => {
+  // What the original two-host pair was really protecting. A blob on a host that is
+  // in the directory and one on a host that is not resolve identically — the anchor
+  // decides, and it consults no roster.
+  const listed = 'a1'.repeat(32);
+  const unlisted = 'b2'.repeat(32);
   assert.equal(
-    deriveCommitmentUrl(url),
+    deriveCommitmentUrl(`https://data-concierge.dathere.com/blobs/${listed}.json`),
+    `${DEFAULT_HOST}/api/evidence/${listed}/commitment`,
+  );
+  assert.equal(
+    deriveCommitmentUrl(`https://example-publisher.test/blobs/${unlisted}.json`),
+    `${DEFAULT_HOST}/api/evidence/${unlisted}/commitment`,
+  );
+});
+
+test('deriveCommitmentUrl: DETACHED STORAGE — a blob host with no evidence API resolves to the anchor (B5)', () => {
+  // The case the original premise could not survive, and the reference publisher's
+  // actual deployment shape: package bytes on third-party object storage whose origin
+  // serves no evidence API. Preserving that origin produced a guaranteed 404.
+  const hash = 'c3'.repeat(32);
+  for (const blobUrl of [
+    `https://abcdef0123456789.public.blob.vercel-storage.com/evidence-packages/${hash}.json`,
+    // A bucket layout whose path contains an `/evidence/` SEGMENT. This one caught a
+    // real branch-ordering hazard: the `/evidence/<id>` probe used to match first and
+    // captured an id of literally `<hash>.json`, yielding `…/api/evidence/<hash>.json
+    // /commitment`. The `<64-hex>.json` filename is the more specific signal and now
+    // wins — see classifyHostedUrl.
+    `https://packages.s3.amazonaws.com/evidence/${hash}.json`,
+    `https://cdn.example-storage.test/${hash}.json`,
+  ]) {
+    assert.equal(
+      deriveCommitmentUrl(blobUrl),
+      `${DEFAULT_HOST}/api/evidence/${hash}/commitment`,
+      `${blobUrl} must resolve against the anchor, not its storage origin`,
+    );
+    // …and the UI must DISCLOSE that, exactly as it does for a bare hash: this input
+    // looks like it carries an origin and does not.
+    assert.equal(identifierResolutionKind('url', blobUrl), 'package-blob');
+  }
+});
+
+test('deriveCommitmentUrl: a blob URL resolves against a PICKED host when one is named (B5)', () => {
+  // The correction path. The anchor is a default, not a verdict — a self-hosting
+  // publisher's blob is one picker click (or a /verify/<host>/<id> link) away.
+  const hash = 'd4'.repeat(32);
+  assert.equal(
+    deriveCommitmentUrl(
+      `https://cdn.example-storage.test/${hash}.json`,
+      'https://example-publisher.test',
+    ),
     `https://example-publisher.test/api/evidence/${hash}/commitment`,
   );
+});
+
+test('deriveCommitmentUrl: URLs that DO carry a publisher origin still keep it (B5)', () => {
+  // The other three branches are unchanged. A publisher's own evidence URL and an
+  // already-resolved commitment URL both name their publisher, so nothing is
+  // re-anchored — the fix is scoped to the one shape that does not.
+  const commitment = 'https://example-publisher.test/api/evidence/some-slug/commitment';
+  assert.equal(deriveCommitmentUrl(commitment), commitment);
+  assert.equal(
+    deriveCommitmentUrl('https://example-publisher.test/evidence/some-slug'),
+    'https://example-publisher.test/api/evidence/some-slug/commitment',
+  );
+  // Neither is origin-less, so neither triggers the disclosure line.
+  assert.equal(identifierResolutionKind('url', commitment), undefined);
+  assert.equal(
+    identifierResolutionKind('url', 'https://example-publisher.test/evidence/some-slug'),
+    undefined,
+  );
+});
+
+test('identifierResolutionKind: bare identifiers disclose, origin-carrying inputs do not', () => {
+  assert.equal(identifierResolutionKind('hash', 'e'.repeat(64)), 'bare');
+  assert.equal(identifierResolutionKind('hash', 'noise-trends-in-nyc-2026'), 'bare');
+  assert.equal(identifierResolutionKind('hash', '   '), undefined, 'empty input discloses nothing');
+  assert.equal(identifierResolutionKind('bundle', '{"packageHash":"x"}'), undefined);
+  assert.equal(identifierResolutionKind('url', 'not a url'), undefined);
+  assert.equal(identifierResolutionKind('url', 'https://example-publisher.test/some/page'), undefined);
 });
 
 // deriveShareTarget — the shareable link is rebuilt from the URL that ACTUALLY
@@ -239,6 +329,33 @@ test('deriveShareTarget: cross-host id needing encoding round-trips through the 
   // Next.js hands the route the DECODED segments.
   const parsed = parseVerifyTarget(['publisher.test', 'a b']);
   assert.equal(bareIdCommitmentUrl(parsed!.id, parsed!.host), url);
+});
+
+test('deriveShareTarget: a package-blob deep-link ends in a clean short link (B5 + B7)', () => {
+  // The whole B5 path, end to end. A badge `?url=<package-blob-url>` resolves through
+  // the anchor, and the URL that answered is what the share link is rebuilt from — so
+  // the opaque storage URL collapses to `/verify/<hash>`, which round-trips back to
+  // the same commitment URL. Nothing downstream has to know a blob was involved.
+  const hash = 'c3'.repeat(32);
+  const blobUrl = `https://abcdef0123456789.public.blob.vercel-storage.com/evidence-packages/${hash}.json`;
+  const commitmentUrl = deriveCommitmentUrl(blobUrl);
+  assert.equal(commitmentUrl, `${DEFAULT_HOST}/api/evidence/${hash}/commitment`);
+  const target = deriveShareTarget(mkResolved(commitmentUrl));
+  assert.equal(target, `/verify/${hash}`);
+  const parsed = parseVerifyTarget([hash]);
+  assert.equal(bareIdCommitmentUrl(parsed!.id, parsed!.host ?? DEFAULT_HOST), commitmentUrl);
+});
+
+test('deriveShareTarget: a blob resolved on a PICKED host shares as /verify/<host>/<id> (B5 + B7)', () => {
+  const hash = 'd4'.repeat(32);
+  const commitmentUrl = deriveCommitmentUrl(
+    `https://cdn.example-storage.test/${hash}.json`,
+    'https://example-publisher.test',
+  );
+  assert.equal(
+    deriveShareTarget(mkResolved(commitmentUrl)),
+    `/verify/example-publisher.test/${hash}`,
+  );
 });
 
 test('deriveShareTarget: undefined url (bundle) → null', () => {

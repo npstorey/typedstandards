@@ -77,7 +77,14 @@ export function BadgeBuilder() {
             </span>
           </span>
           {kind === "url" && (
-            <span>Hosted URL — works for any publisher (host-independent).</span>
+            // A commitment or detail URL carries its publisher's origin. A stored-package
+            // URL does not — its origin is object storage — so the verifier resolves the
+            // package hash in its filename against the declared anchor (#44 B5).
+            <span>
+              Hosted URL — works for any publisher. A commitment or detail URL carries
+              its publisher&apos;s origin; a stored-package URL names storage, so its
+              hash resolves against {anchorHost}.
+            </span>
           )}
           {kind === "hash" && (
             // Read from the directory's declared bare-identifier anchor rather than

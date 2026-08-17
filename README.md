@@ -71,6 +71,18 @@ a non-https origin, an explicit port, an identifier containing `/` — use
 `/verify?url=<encoded>`, which is also what the embeddable badge's `?url=`
 form produces.
 
+Which inputs carry a publisher origin, and which do not:
+
+| input | resolved against |
+| --- | --- |
+| a `…/commitment` URL | itself |
+| a publisher's `…/evidence/<id>…` URL | that URL's origin — the origin serving the page is the publisher |
+| a **stored-package URL** (`…/<64-hex>.json`) | `bareIdentifierHost` — the origin is object storage, not a publisher, so the filename's package hash is treated as an origin-less identifier |
+| a bare hash or slug | `bareIdentifierHost` |
+
+The verifier states which host answered whenever the input had no origin of
+its own, and offers the roster to re-resolve it elsewhere in one click.
+
 ## Packages
 
 | Package | Description |

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   detectInputMode,
   describeMode,
+  identifierResolutionKind,
   resolveInput,
   buildVerifyInput,
   runVerify,
@@ -21,6 +22,7 @@ import {
   HOST_DIRECTORY,
   type CheckRow as CheckRowData,
   type HostRecognition,
+  type IdentifierResolution,
   type InputMode,
   type KeyTrustRecheck,
   type PagePreview as PreviewData,
@@ -204,6 +206,9 @@ export function Verifier({
 
   const running = phase === "resolving" || phase === "verifying" || phase === "revealing";
   const mode: InputMode = detectInputMode(raw);
+  // Set when this input has no publisher origin of its own — a bare hash/slug, OR a
+  // package-blob URL, whose origin names storage rather than a publisher (#44 B5).
+  const identifierResolution = identifierResolutionKind(mode, raw);
 
   return (
     <div>
@@ -262,8 +267,13 @@ export function Verifier({
             {running ? "Verifying…" : "Verify"}
           </button>
         </div>
-        {mode === "hash" && raw.trim() && (
-          <BareIdAnchorNote host={host} onPick={onPickHost} disabled={running} />
+        {identifierResolution && (
+          <IdentifierResolutionNote
+            kind={identifierResolution}
+            host={host}
+            onPick={onPickHost}
+            disabled={running}
+          />
         )}
       </form>
 
@@ -336,11 +346,18 @@ export function Verifier({
 }
 
 /**
- * The bare-identifier resolution disclosure (#44 B6) — shown exactly when it is
- * load-bearing: the input is a hash or slug, which carries no origin of its own, so
- * SOMETHING has to decide where to look it up. That decision used to be invisible
- * (whichever publisher was listed first in the directory); this names it, and offers
- * the roster as alternatives.
+ * The identifier-resolution disclosure (#44 B6/B5) — shown exactly when it is
+ * load-bearing: the input carries no publisher origin of its own, so SOMETHING has to
+ * decide where to look it up. That decision used to be invisible (whichever publisher
+ * was listed first in the directory); this names it, and offers the roster as
+ * alternatives.
+ *
+ * TWO inputs are origin-less, and the second is the non-obvious one:
+ *   - `bare`         — a hash or slug. Visibly carries no origin.
+ *   - `package-blob` — a package-blob URL. LOOKS like it carries an origin, but that
+ *                      origin is object storage, not a publisher (B5). Detached
+ *                      storage is the common pattern, so the appearance is misleading
+ *                      precisely when the user most needs to know which host answered.
  *
  * Deliberately not host-management UI: one sentence and a row of publisher names. No
  * free-text origin entry (a full URL already goes in the main box, host and all), no
@@ -353,11 +370,13 @@ export function Verifier({
  * The directory schema has no separate resolution-origin field per publisher; see the
  * phase report for why that stayed out of scope here.
  */
-function BareIdAnchorNote({
+function IdentifierResolutionNote({
+  kind,
   host,
   onPick,
   disabled,
 }: {
+  kind: IdentifierResolution;
   host: string;
   onPick: (origin: string) => void;
   disabled: boolean;
@@ -378,10 +397,12 @@ function BareIdAnchorNote({
 
   return (
     <p className="mt-3 border-t border-border pt-3 text-xs leading-relaxed text-muted">
-      A hash or slug carries no origin, so it is resolved against{" "}
+      {kind === "bare"
+        ? "A hash or slug carries no origin, so it is resolved against "
+        : "That URL points at stored package bytes, which name a storage location rather than a publisher — so the package hash in its filename is resolved against "}
       <span className="font-mono text-foreground">{hostOf(host)}</span>
       {isAnchor
-        ? " — the host the published directory names for bare identifiers."
+        ? " — the host the published directory names for identifiers with no origin of their own."
         : " — the host this link named."}{" "}
       {alternatives.length > 0 && (
         <>

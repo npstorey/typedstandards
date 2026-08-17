@@ -209,23 +209,105 @@ async function getJson(url: string, signal?: AbortSignal): Promise<unknown> {
   return res.json();
 }
 
-/** Build the commitment-endpoint URL for a hosted URL input. Handles a direct
- *  commitment URL, an evidence detail/api URL, and a package-blob URL (the badge
- *  deep-link passes `?url=<package-url>`, whose filename is the hash). */
-export function deriveCommitmentUrl(input: string): string {
+/** How a hosted URL names the commitment to fetch. One classifier, used by BOTH
+ *  `deriveCommitmentUrl` (which resolves) and `identifierResolutionKind` (which tells
+ *  the UI whether to disclose an anchor), so the two cannot disagree about whether an
+ *  input carries a publisher origin. */
+type HostedUrlKind =
+  | { kind: 'commitment' }
+  | { kind: 'evidence-id'; id: string }
+  | { kind: 'package-blob'; hash: string }
+  | { kind: 'opaque' };
+
+function classifyHostedUrl(u: URL): HostedUrlKind {
+  if (u.pathname.endsWith('/commitment')) return { kind: 'commitment' };
+  // PACKAGE-BLOB IS TESTED BEFORE `/evidence/<id>`, and the order is load-bearing.
+  // A `<64-hex>.json` FILENAME is an unambiguous package blob wherever it sits, while
+  // the `/evidence/` probe matches any path SEGMENT — so a storage URL that merely
+  // happens to contain that segment (`…/evidence/<hash>.json`, a real bucket layout)
+  // was previously captured as an evidence id of literally `<hash>.json` and produced
+  // the nonsense `…/api/evidence/<hash>.json/commitment`. The more specific signal
+  // must win. No publisher's `/evidence/<id>` page URL ends in `<64-hex>.json`, so
+  // nothing that genuinely carries a publisher origin is diverted by this.
+  const blobHash = u.pathname.match(/([0-9a-f]{64})\.json$/i);
+  if (blobHash) return { kind: 'package-blob', hash: blobHash[1] };
+  const idMatch = u.pathname.match(/\/evidence\/([^/]+)/);
+  if (idMatch) return { kind: 'evidence-id', id: idMatch[1] };
+  return { kind: 'opaque' };
+}
+
+/**
+ * Build the commitment-endpoint URL for a hosted URL input.
+ *
+ * Three shapes carry a PUBLISHER ORIGIN and keep it:
+ *   - a direct `…/commitment` URL — already the resource;
+ *   - a publisher's own `…/evidence/<id>…` URL — the origin serving that page IS the
+ *     publisher, so `${u.origin}/api/evidence/<id>/commitment` is its commitment;
+ *   - anything else, used as-is.
+ *
+ * One shape does NOT, and this is the B5 correction (#44). A PACKAGE-BLOB URL — the
+ * badge deep-link's `?url=<package-url>`, whose filename is the 64-hex package hash —
+ * names a STORAGE location, not a publisher. Detached object storage is the common
+ * pattern (Vercel Blob, S3, R2, GCS) and is the reference publisher's own setup, so
+ * the blob's origin routinely has no evidence API at all. Preserving that origin 404s
+ * there; re-pointing every blob at the anchor 404s for a self-hosting publisher.
+ * Neither is right, because a bare blob URL does not determine its publisher.
+ *
+ * So the filename hash is treated as exactly what it is — an ORIGIN-LESS IDENTIFIER —
+ * and resolved through the same path a bare hash takes: against `host` (the declared
+ * anchor unless a link or the picker named one). The UI discloses which host answered
+ * and offers the roster to correct it in one click — the same under-determination
+ * honesty B6 established. `identifierResolutionKind` is what tells it to.
+ */
+export function deriveCommitmentUrl(input: string, host: string = DEFAULT_HOST): string {
   let u: URL;
   try {
     u = new URL(input);
   } catch {
     throw new VerifyFlowError(`"${input}" is not a valid URL.`);
   }
-  if (u.pathname.endsWith('/commitment')) return u.toString();
-  const idMatch = u.pathname.match(/\/evidence\/([^/]+)/);
-  if (idMatch) return `${u.origin}/api/evidence/${idMatch[1]}/commitment`;
-  const blobHash = u.pathname.match(/([0-9a-f]{64})\.json$/i);
-  if (blobHash) return `${u.origin}/api/evidence/${blobHash[1]}/commitment`;
-  // Last resort: treat the URL itself as the commitment resource.
-  return u.toString();
+  const hosted = classifyHostedUrl(u);
+  switch (hosted.kind) {
+    case 'commitment':
+      return u.toString();
+    case 'evidence-id':
+      return `${u.origin}/api/evidence/${hosted.id}/commitment`;
+    case 'package-blob':
+      return bareIdCommitmentUrl(hosted.hash, host);
+    default:
+      // Last resort: treat the URL itself as the commitment resource.
+      return u.toString();
+  }
+}
+
+/** Why an input needs an anchor: it is a bare hash/slug, or it is a package-blob URL
+ *  whose origin names storage rather than a publisher. Both are origin-less. */
+export type IdentifierResolution = 'bare' | 'package-blob';
+
+/**
+ * Whether this input resolves BY IDENTIFIER rather than by an origin it carries, and
+ * which kind — `undefined` when the input names its own publisher.
+ *
+ * The verifier's disclosure line renders exactly on this predicate. A package-blob
+ * URL looks like it carries an origin and does not, which is precisely why the
+ * disclosure has to cover it: the user is owed the name of the host that answered and
+ * a way to change it, in the case where the input's own appearance is misleading.
+ */
+export function identifierResolutionKind(
+  mode: InputMode,
+  raw: string,
+): IdentifierResolution | undefined {
+  const s = raw.trim();
+  if (!s) return undefined;
+  if (mode === 'hash') return 'bare';
+  if (mode !== 'url') return undefined;
+  let u: URL;
+  try {
+    u = new URL(s);
+  } catch {
+    return undefined;
+  }
+  return classifyHostedUrl(u).kind === 'package-blob' ? 'package-blob' : undefined;
 }
 
 // --- Share links + the /verify/… route shape ------------------------------
@@ -237,10 +319,11 @@ export function deriveCommitmentUrl(input: string): string {
 //
 // `deriveShareTarget` mints these and `parseVerifyTarget` reads them back; the pair
 // is closed by `bareIdCommitmentUrl`, which both sides use to build the one URL an
-// identifier resolves to. The two-segment form is what gives EVERY publisher the
-// clean short link: it used to be earned only by a commitment URL on the anchor
-// origin, so a second publisher's result could only ever be shared as an opaque
-// `?url=<encoded>` blob.
+// identifier resolves to — and which `deriveCommitmentUrl` also routes package-blob
+// URLs through, so every origin-less input takes one path. The two-segment form is
+// what gives EVERY publisher the clean short link: it used to be earned only by a
+// commitment URL on the anchor origin, so a second publisher's result could only ever
+// be shared as an opaque `?url=<encoded>` blob.
 
 /** The commitment URL a bare identifier resolves to on `host` — the single place the
  *  `/api/evidence/<id>/commitment` shape is built, so a minted share link and the
@@ -321,9 +404,14 @@ export function parseVerifyTarget(segments: string[]): VerifyTarget | undefined 
 /**
  * Build the root-relative share link that re-resolves the SAME commitment that just
  * verified. It is rebuilt from `sources.commitment.url` — the exact request URL that
- * returned 200 — never from `commitment.packageHash` (a hash that the slug-indexed
- * `/api/evidence/<id>/commitment` endpoint does NOT resolve, so a hash-keyed link
- * 404s).
+ * returned 200 — never from `commitment.packageHash`. The URL that answered is the
+ * resolved FACT; `packageHash` is an inference about how a publisher indexes its
+ * commitment endpoint, which nothing requires. (An earlier version of this comment
+ * justified the rule by claiming the endpoint does not resolve a raw hash at all.
+ * That premise was wrong — the reference publisher's endpoint resolves both a slug
+ * and a 64-hex hash — but it is one publisher's implementation detail either way,
+ * which is exactly why the link cannot be built on it. The rule stands; only its
+ * reason changed.)
  *
  * - `null` when no commitment URL exists (inline / bundle — nothing hosted to link to).
  * - A canonical `^/api/evidence/<id>/commitment$` URL collapses to a clean short
@@ -398,7 +486,11 @@ export async function resolveCommitment(
     }
     return { commitment };
   }
-  const url = mode === 'hash' ? bareIdCommitmentUrl(s, opts.host ?? DEFAULT_HOST) : deriveCommitmentUrl(s);
+  // `host` reaches BOTH branches: a bare identifier carries no origin, and a
+  // package-blob URL's origin is storage rather than a publisher (see
+  // deriveCommitmentUrl), so each resolves against it.
+  const host = opts.host ?? DEFAULT_HOST;
+  const url = mode === 'hash' ? bareIdCommitmentUrl(s, host) : deriveCommitmentUrl(s, host);
   const commitment = (await getJson(url, signal)) as Commitment;
   if (!commitment?.packageHash) {
     throw new VerifyFlowError(`${shortUrl(url)} did not return a commitment (no \`packageHash\`).`);
