@@ -61,6 +61,26 @@ export interface HostDirectory {
   version: number;
   /** ISO date the roster was last edited (editorial provenance, not a proof). */
   updated: string;
+  /**
+   * The origin a BARE IDENTIFIER (a package hash or an evidence slug, which carries
+   * no origin of its own) is resolved against — a DECLARED editorial choice by
+   * whoever publishes this directory, not a property of any listed publisher.
+   *
+   * OPTIONAL by design. A fork's roster or a stale cached copy predating this field
+   * simply omits it; such a document still validates, and consumers fall back to
+   * their OWN anchor (see {@link bareIdentifierHostOf}). The fallback is deliberately
+   * NOT `publishers[0]` — resolving by array position is the exact defect this field
+   * replaces, so re-deriving it on a document's behalf would re-mint it.
+   *
+   * Distinct from every `publishers[].registryOrigin`: those identify publishers by
+   * where their TRUST REGISTRY lives; this names where an origin-less identifier is
+   * LOOKED UP. They coincide for the current anchor, but nothing requires it.
+   *
+   * Additive to the public well-known schema: a consumer that does not know the
+   * field ignores it (it is JSON), and a consumer that does gets a stated answer
+   * instead of an inferred one.
+   */
+  bareIdentifierHost?: string;
   publishers: HostDirectoryEntry[];
 }
 
@@ -83,10 +103,18 @@ export const HOST_DIRECTORY_PATH = '/.well-known/typed-host-directory.json';
  * governance-at-scale), to land before the RFC. Until then, listing stays a curated,
  * hand-reviewed JSON roster (a directory entry grants only condition (a) of the
  * impersonation-safety rule above; the green badge still requires (b)).
+ *
+ * `publishers` ORDER CARRIES NO MEANING. It is a roster, not a ranking: nothing in
+ * the verifier reads a position, and the bare-identifier anchor is the declared
+ * `bareIdentifierHost` below. Typed so that field cannot be dropped from the
+ * published document without a compile error, while parsed documents may omit it.
  */
-export const HOST_DIRECTORY: HostDirectory = {
+export const HOST_DIRECTORY: HostDirectory & { bareIdentifierHost: string } = {
   version: 1,
+  // Unchanged: `updated` is defined above as the date the ROSTER was last edited,
+  // and this phase edits no roster entry — only the document's anchor declaration.
   updated: '2026-06-16',
+  bareIdentifierHost: 'https://civicaitools.org',
   publishers: [
     {
       registryOrigin: 'https://civicaitools.org',
@@ -101,12 +129,39 @@ export const HOST_DIRECTORY: HostDirectory = {
   ],
 };
 
-/** The verifier's bare-hash RESOLUTION anchor — the directory's first listed host.
- *  A bare hash / slug has no origin of its own, so it is resolved against this
- *  host's commitment endpoint. Derived from {@link HOST_DIRECTORY} rather than a
- *  separate hardcoded constant, so the directory is the one source of truth for
- *  which host is "the default". */
-export const PRIMARY_HOST: string = HOST_DIRECTORY.publishers[0].registryOrigin;
+/**
+ * The verifier's bare-identifier RESOLUTION anchor. A bare hash / slug has no origin
+ * of its own, so it is resolved against this host's commitment endpoint.
+ *
+ * Read from the directory's DECLARED {@link HostDirectory.bareIdentifierHost}. It
+ * was previously `publishers[0].registryOrigin` — selected by array position at
+ * build time, which made "the default host" an accident of roster ordering rather
+ * than a stated decision, and quietly re-used a publisher's trust-registry origin as
+ * a commitment-API origin. Both are gone: the anchor is now an editorial choice the
+ * published directory states out loud, and roster order carries no meaning.
+ *
+ * Anchoring is ORTHOGONAL to recognition, exactly as recognition is orthogonal to
+ * validity: being the anchor confers no trust, and recognition never consults this
+ * constant (see resolveHostRecognition). Any publisher's package verifies the same
+ * whether or not its origin is the anchor — the anchor only answers "resolve this
+ * origin-less identifier where?".
+ */
+export const BARE_ID_ANCHOR: string = HOST_DIRECTORY.bareIdentifierHost;
+
+/**
+ * The bare-identifier anchor DECLARED by a parsed directory document, or `undefined`
+ * when it declares none (a fork's roster, or a copy cached before the field existed).
+ *
+ * `undefined` is the honest answer, not a bug: a document that states no anchor has
+ * made no editorial choice, and inventing one for it — `publishers[0]`, say — is the
+ * positional default this charter removed. A caller that needs an anchor anyway
+ * falls back to its own {@link BARE_ID_ANCHOR}, which is what the verifier does: the
+ * fetched directory drives recognition, while resolution stays anchored to the
+ * directory this deployment ships and serves.
+ */
+export function bareIdentifierHostOf(directory: HostDirectory): string | undefined {
+  return directory.bareIdentifierHost;
+}
 
 // --- Validation + lookup --------------------------------------------------
 
@@ -127,11 +182,27 @@ export function originOf(url: string | undefined | null): string | undefined {
  * offline bundle snapshot — never trust either blindly). Drops entries that are
  * not well-formed and canonicalizes each `registryOrigin` so lookups are exact.
  * Returns `undefined` when the document is not a directory at all.
+ *
+ * `bareIdentifierHost` is OPTIONAL here and its absence is not a validation failure:
+ * a fork's roster or a copy cached before the field existed still validates in full,
+ * just without a declared anchor (see {@link bareIdentifierHostOf} for what callers
+ * do then). Present-but-unparseable is treated the same as absent — a malformed
+ * declaration states nothing, and a document is not rejected wholesale over a field
+ * no existing consumer reads. When it IS a valid absolute URL it is canonicalized
+ * with {@link originOf}, so it compares equal to a `registryOrigin` spelled
+ * differently.
  */
 export function validateHostDirectory(data: unknown): HostDirectory | undefined {
   if (typeof data !== 'object' || data === null) return undefined;
-  const d = data as { version?: unknown; updated?: unknown; publishers?: unknown };
+  const d = data as {
+    version?: unknown;
+    updated?: unknown;
+    bareIdentifierHost?: unknown;
+    publishers?: unknown;
+  };
   if (!Array.isArray(d.publishers)) return undefined;
+  const anchor =
+    typeof d.bareIdentifierHost === 'string' ? originOf(d.bareIdentifierHost) : undefined;
   const publishers: HostDirectoryEntry[] = [];
   for (const raw of d.publishers) {
     if (typeof raw !== 'object' || raw === null) continue;
@@ -147,6 +218,7 @@ export function validateHostDirectory(data: unknown): HostDirectory | undefined 
   return {
     version: typeof d.version === 'number' ? d.version : 1,
     updated: typeof d.updated === 'string' ? d.updated : '',
+    ...(anchor ? { bareIdentifierHost: anchor } : {}),
     publishers,
   };
 }
@@ -165,7 +237,7 @@ export function lookupPublisher(
  * HOST_DIRECTORY_PATH}). Returns `'unavailable'` on any failure — a missing or
  * unreachable directory degrades to a calm "recognition unavailable", never an
  * error, so the cryptographic verdict is unaffected (Q47 / #119 staleness
- * caveat). Plain GET, no custom headers (same 307/preflight reasoning as the
+ * caveat). Plain GET, no custom headers (same CORS-preflight reasoning as the
  * other verifier fetches).
  */
 export async function fetchHostDirectory(
