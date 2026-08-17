@@ -15,6 +15,7 @@ import {
   buildVerifyInput,
   buildPreview,
   deriveShareTarget,
+  deriveCommitmentUrl,
   DEFAULT_HOST,
   type Commitment,
   type ResolvedInput,
@@ -138,6 +139,32 @@ test('buildPreview: an unavailable preview reports WHY (private vs. unfetchable)
   });
   assert.equal(missing.available, false);
   assert.equal(missing.unavailableReason, 'unfetchable');
+});
+
+// deriveCommitmentUrl — B5 regression (#44). The package-blob branch must derive
+// the commitment URL on the BLOB'S OWN origin, exactly like the adjacent
+// `/evidence/<id>` branch one line above it does. Before the fix, this branch
+// discarded the URL's origin and re-pointed at DEFAULT_HOST (civicaitools.org),
+// so a badge deep-link for a package blob hosted by any OTHER publisher would
+// resolve against the wrong host and 404. Two hosts are used so the fix is
+// proven independent of host-directory roster membership: one listed publisher
+// (data-concierge.dathere.com) and one that is not listed anywhere.
+test('deriveCommitmentUrl: package-blob URL preserves origin — a directory-listed second host (B5)', () => {
+  const hash = 'a1'.repeat(32); // 64 hex chars
+  const url = `https://data-concierge.dathere.com/blobs/${hash}.json`;
+  assert.equal(
+    deriveCommitmentUrl(url),
+    `https://data-concierge.dathere.com/api/evidence/${hash}/commitment`,
+  );
+});
+
+test('deriveCommitmentUrl: package-blob URL preserves origin — a host absent from the directory (B5)', () => {
+  const hash = 'b2'.repeat(32); // 64 hex chars
+  const url = `https://example-publisher.test/blobs/${hash}.json`;
+  assert.equal(
+    deriveCommitmentUrl(url),
+    `https://example-publisher.test/api/evidence/${hash}/commitment`,
+  );
 });
 
 // deriveShareTarget — the shareable link is rebuilt from the URL that ACTUALLY
