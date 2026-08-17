@@ -17,6 +17,8 @@ import {
   canRecheckKeyTrust,
   recheckKeyTrustLive,
   VerifyFlowError,
+  DEFAULT_HOST,
+  HOST_DIRECTORY,
   type CheckRow as CheckRowData,
   type HostRecognition,
   type InputMode,
@@ -38,12 +40,17 @@ const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export function Verifier({
   initialInput = "",
+  initialHost,
   autoStart = false,
 }: {
   initialInput?: string;
+  /** The origin a BARE IDENTIFIER resolves against, when the link named one
+   *  (`/verify/<host>/<id>`). Absent ⇒ the directory's declared anchor. */
+  initialHost?: string;
   autoStart?: boolean;
 }) {
   const [raw, setRaw] = useState(initialInput);
+  const [host, setHost] = useState<string>(initialHost ?? DEFAULT_HOST);
   const [phase, setPhase] = useState<Phase>("idle");
   const [steps, setSteps] = useState<ResolveStep[]>([]);
   const [rows, setRows] = useState<CheckRowData[]>([]);
@@ -63,7 +70,9 @@ export function Verifier({
   const [copied, setCopied] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
 
-  const run = useCallback(async (input: string) => {
+  // `resolveHost` is passed in rather than read from state so a picker click can set
+  // the host and kick off the run in the same tick without racing the state update.
+  const run = useCallback(async (input: string, resolveHost: string) => {
     const s = input.trim();
     if (!s) return;
     abortRef.current?.abort();
@@ -86,8 +95,13 @@ export function Verifier({
 
     const mode = detectInputMode(s);
     try {
-      const resolvedInput = await resolveInput(mode, s, ac.signal, (step) =>
-        setSteps((prev) => [...prev, step]),
+      const resolvedInput = await resolveInput(
+        mode,
+        s,
+        ac.signal,
+        (step) => setSteps((prev) => [...prev, step]),
+        // Only consulted for a bare identifier; 'url'/'bundle' carry their own origin.
+        { host: resolveHost },
       );
       if (ac.signal.aborted) return;
       setResolved(resolvedInput);
@@ -153,7 +167,7 @@ export function Verifier({
     if (!autoStart || !initialInput.trim()) return;
     // Defer the kickoff out of the synchronous effect body so the first setState
     // doesn't cascade a render during commit; the deep-link runs on next tick.
-    const id = setTimeout(() => void run(initialInput), 0);
+    const id = setTimeout(() => void run(initialInput, initialHost ?? DEFAULT_HOST), 0);
     return () => clearTimeout(id);
     // run is stable; only fire for the initial deep-link.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -162,8 +176,18 @@ export function Verifier({
   const onFile = async (file: File) => {
     const text = await file.text();
     setRaw(text);
-    void run(text);
+    void run(text, host);
   };
+
+  /** Roster-driven "try another host": re-resolve the SAME bare identifier against a
+   *  different publisher. */
+  const onPickHost = useCallback(
+    (next: string) => {
+      setHost(next);
+      void run(raw, next);
+    },
+    [raw, run],
+  );
 
   // Online recheck (#119 P4): re-run the registry-dependent #5 check against the
   // LIVE registry, closing the offline-revocation gap a carried snapshot leaves.
@@ -187,7 +211,7 @@ export function Verifier({
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          void run(raw);
+          void run(raw, host);
         }}
         className="rounded-lg border border-border bg-surface p-4"
       >
@@ -201,7 +225,7 @@ export function Verifier({
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey && !raw.includes("\n")) {
               e.preventDefault();
-              void run(raw);
+              void run(raw, host);
             }
           }}
           rows={raw.includes("\n") ? 6 : 1}
@@ -238,6 +262,9 @@ export function Verifier({
             {running ? "Verifying…" : "Verify"}
           </button>
         </div>
+        {mode === "hash" && raw.trim() && (
+          <BareIdAnchorNote host={host} onPick={onPickHost} disabled={running} />
+        )}
       </form>
 
       {/* Results */}
@@ -305,6 +332,77 @@ export function Verifier({
         </section>
       )}
     </div>
+  );
+}
+
+/**
+ * The bare-identifier resolution disclosure (#44 B6) — shown exactly when it is
+ * load-bearing: the input is a hash or slug, which carries no origin of its own, so
+ * SOMETHING has to decide where to look it up. That decision used to be invisible
+ * (whichever publisher was listed first in the directory); this names it, and offers
+ * the roster as alternatives.
+ *
+ * Deliberately not host-management UI: one sentence and a row of publisher names. No
+ * free-text origin entry (a full URL already goes in the main box, host and all), no
+ * persistence, no per-host settings. Picking a host re-resolves the SAME identifier
+ * there and the share link updates to the two-segment form.
+ *
+ * The roster lists publishers by TRUST-REGISTRY origin, and this offers those origins
+ * as resolution hosts — an inference that holds while a publisher serves its registry
+ * and its commitment endpoints on one origin (true for every listed publisher today).
+ * The directory schema has no separate resolution-origin field per publisher; see the
+ * phase report for why that stayed out of scope here.
+ */
+function BareIdAnchorNote({
+  host,
+  onPick,
+  disabled,
+}: {
+  host: string;
+  onPick: (origin: string) => void;
+  disabled: boolean;
+}) {
+  const isAnchor = host === DEFAULT_HOST;
+  // Every listed publisher except the one in use, plus a way back to the anchor when
+  // it is not itself listed. De-duplicated by origin.
+  const alternatives: { origin: string; label: string }[] = [];
+  const seen = new Set<string>([host]);
+  for (const p of HOST_DIRECTORY.publishers) {
+    if (seen.has(p.registryOrigin)) continue;
+    seen.add(p.registryOrigin);
+    alternatives.push({ origin: p.registryOrigin, label: p.displayName });
+  }
+  if (!seen.has(DEFAULT_HOST)) {
+    alternatives.unshift({ origin: DEFAULT_HOST, label: hostOf(DEFAULT_HOST) });
+  }
+
+  return (
+    <p className="mt-3 border-t border-border pt-3 text-xs leading-relaxed text-muted">
+      A hash or slug carries no origin, so it is resolved against{" "}
+      <span className="font-mono text-foreground">{hostOf(host)}</span>
+      {isAnchor
+        ? " — the host the published directory names for bare identifiers."
+        : " — the host this link named."}{" "}
+      {alternatives.length > 0 && (
+        <>
+          Try another host:{" "}
+          {alternatives.map((a, i) => (
+            <span key={a.origin}>
+              {i > 0 && " · "}
+              <button
+                type="button"
+                disabled={disabled}
+                onClick={() => onPick(a.origin)}
+                className="underline decoration-dotted hover:text-accent disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {a.label}
+              </button>
+            </span>
+          ))}
+          .
+        </>
+      )}
+    </p>
   );
 }
 
@@ -431,13 +529,16 @@ function IndependenceNote({ resolved }: { resolved: ResolvedInput }) {
   );
 }
 
-/** A glanceable label for the share path: a truncated `/verify/<id>` for the clean
- *  short link, or a collapsed `/verify?url=…` for the cross-host fallback. The full
- *  path lives in the `title` tooltip and is what the Copy button actually copies. */
+/** A glanceable label for the share path: a truncated `/verify/<id>` or
+ *  `/verify/<host>/<id>` for the clean short link — which every publisher now gets —
+ *  or a collapsed `/verify?url=…` for the shapes a path segment cannot carry. The
+ *  full path lives in the `title` tooltip and is what the Copy button copies. */
 function shareLabel(path: string): string {
   if (path.startsWith("/verify?url=")) return "/verify?url=…";
-  const id = path.slice("/verify/".length);
-  return `/verify/${id.length > 12 ? `${id.slice(0, 12)}…` : id}`;
+  const segments = path.slice("/verify/".length).split("/");
+  const id = segments[segments.length - 1];
+  const short = id.length > 12 ? `${id.slice(0, 12)}…` : id;
+  return segments.length > 1 ? `/verify/${segments[0]}/${short}` : `/verify/${short}`;
 }
 
 function ShareLink({

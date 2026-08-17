@@ -19,6 +19,58 @@ This is an npm-workspaces monorepo.
 > `/.well-known/typed-host-directory.json`. The "later phase" note below
 > predates that and is retained pending a fuller README revision.
 
+## The host directory
+
+`/.well-known/typed-host-directory.json` is the public, CORS-open document the
+verifier reads. It is served verbatim from one constant in
+[`apps/web/src/lib/host-directory.ts`](apps/web/src/lib/host-directory.ts),
+which is where the schema is specified in full.
+
+```json
+{
+  "version": 1,
+  "updated": "2026-06-16",
+  "bareIdentifierHost": "https://civicaitools.org",
+  "publishers": [
+    {
+      "registryOrigin": "https://civicaitools.org",
+      "displayName": "Civic AI Tools",
+      "profileUrl": "https://civicaitools.org"
+    }
+  ]
+}
+```
+
+| field | meaning |
+| --- | --- |
+| `version` | Schema version of the document. |
+| `updated` | ISO date the roster was last edited — editorial provenance, not a proof. |
+| `bareIdentifierHost` | **Optional.** The origin a *bare identifier* — a package hash or slug, which carries no origin of its own — is resolved against. A declared editorial choice by whoever publishes the directory, not a property of any listed publisher. |
+| `publishers[]` | The recognition roster: `registryOrigin` (the identity key — the origin of that publisher's trust registry), `displayName`, and an optional `profileUrl`. **Order carries no meaning.** |
+
+Two properties the schema is meant to keep:
+
+- **Additive.** A consumer that does not know a field ignores it, and the
+  verifier's own parser drops fields it does not know rather than rejecting the
+  document. `bareIdentifierHost` was added this way: a fork's roster or a copy
+  cached before it existed still validates in full, just without a declared
+  anchor, and consumers then fall back to their own.
+- **Listing is not validation.** A roster entry grants only *recognition* —
+  and only condition (a) of it; the "known publisher" badge additionally
+  requires the signing key to be confirmed in that publisher's registry. An
+  unlisted publisher's package verifies exactly the same, resolves through the
+  same short links, and is expected rather than faulted.
+
+### Verifier links
+
+`/verify/<id>` resolves a bare identifier against `bareIdentifierHost`.
+`/verify/<host>/<id>` resolves it against `https://<host>` instead, so every
+publisher gets the same clean share link; the host segment is validated for
+shape only, never for roster membership. Shapes a path segment cannot carry —
+a non-https origin, an explicit port, an identifier containing `/` — use
+`/verify?url=<encoded>`, which is also what the embeddable badge's `?url=`
+form produces.
+
 ## Packages
 
 | Package | Description |

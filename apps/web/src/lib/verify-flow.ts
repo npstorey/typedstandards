@@ -5,10 +5,11 @@
 //   →  verifyEvidence (the SAME @typedstandards/verify-core both sites run)
 //   →  build the per-check "show the math" rows + the rolled-up verdict.
 //
-// All network I/O is a plain GET with no custom request headers, so the fetch
-// follows civicaitools.org's site-wide 307 to its canonical host transparently
-// (a custom header would trigger a CORS preflight whose OPTIONS hits the 307 and
-// can be rejected). Verification depth MATCHES verify-core / the civicaitools.org
+// All network I/O is a plain GET with no custom request headers — a custom header
+// makes the request non-simple and triggers a CORS preflight; a preflight `OPTIONS`
+// against a host that redirects can be rejected there, so a plain GET is what
+// follows a redirect transparently — e.g. civicaitools.org's site-wide 307 to its
+// canonical host. Verification depth MATCHES verify-core / the civicaitools.org
 // server: full client-side crypto for #1–#6/#9/#12–#15; #7 (RFC 3161) is the TSA
 // signature + cert chain verified offline to the pinned FreeTSA root; #8 (Rekor) is
 // the RFC 6962 Merkle inclusion proof recomputed against a signed checkpoint when one
@@ -52,7 +53,7 @@ import {
   LIFECYCLE_SOURCE_SIGNALS,
 } from './trust-signal.ts';
 import {
-  PRIMARY_HOST,
+  BARE_ID_ANCHOR,
   HOST_DIRECTORY_PATH,
   fetchHostDirectory,
   validateHostDirectory,
@@ -61,8 +62,10 @@ import {
 
 // Re-export the host-recognition surface (Phase D / Q47) so the verifier UI pulls
 // the whole verification flow — cryptographic checks AND publisher recognition —
-// from this one module.
-export { resolveHostRecognition } from './host-directory.ts';
+// from this one module. `HOST_DIRECTORY` comes along so the UI can render the
+// roster-driven "try another host" affordance from the same source of truth the
+// well-known route serves.
+export { resolveHostRecognition, HOST_DIRECTORY } from './host-directory.ts';
 export type {
   HostDirectory,
   HostDirectoryEntry,
@@ -70,13 +73,14 @@ export type {
   HostRecognitionStatus,
 } from './host-directory.ts';
 
-/** The host a bare hash / slug is resolved against — there is no origin in a bare
- *  identifier, so it is looked up on the directory's anchor host. Derived from the
- *  published host directory (Phase D / Q47) rather than a standalone hardcoded
- *  constant, so the directory is the single source of truth for which hosts the
- *  verifier knows about. Recognition itself is directory-driven (see
- *  resolveHostRecognition), never keyed off this constant. */
-export const DEFAULT_HOST = PRIMARY_HOST;
+/** The host a bare hash / slug is resolved against when the caller names none —
+ *  there is no origin in a bare identifier, so it is looked up on the anchor the
+ *  published host directory DECLARES (`bareIdentifierHost`), not on whichever
+ *  publisher happens to be listed first. Recognition is directory-driven (see
+ *  resolveHostRecognition) and never keyed off this constant, so being the anchor
+ *  confers nothing. A share link or picker choice that names a host overrides it —
+ *  see {@link bareIdCommitmentUrl}. */
+export const DEFAULT_HOST = BARE_ID_ANCHOR;
 
 /** The §9.2.1 commitment sidecar shape (what the WS1 endpoint returns). A bundle
  *  may additionally carry `package` / `trustRegistry` inline for offline use. */
@@ -179,7 +183,7 @@ export interface ResolvedInput {
 async function getJson(url: string, signal?: AbortSignal): Promise<unknown> {
   let res: Awaited<ReturnType<typeof fetch>>;
   try {
-    // Plain GET, no custom headers (see the module header re: the 307 / preflight).
+    // Plain GET, no custom headers (see the module header re: the CORS preflight).
     res = await fetch(url, { signal });
   } catch (err) {
     throw new VerifyFlowError(
@@ -224,6 +228,96 @@ export function deriveCommitmentUrl(input: string): string {
   return u.toString();
 }
 
+// --- Share links + the /verify/… route shape ------------------------------
+//
+// One identifier, two link depths, one round-trip:
+//
+//   /verify/<id>          → resolve <id> against the directory's declared anchor
+//   /verify/<host>/<id>   → resolve <id> against https://<host>
+//
+// `deriveShareTarget` mints these and `parseVerifyTarget` reads them back; the pair
+// is closed by `bareIdCommitmentUrl`, which both sides use to build the one URL an
+// identifier resolves to. The two-segment form is what gives EVERY publisher the
+// clean short link: it used to be earned only by a commitment URL on the anchor
+// origin, so a second publisher's result could only ever be shared as an opaque
+// `?url=<encoded>` blob.
+
+/** The commitment URL a bare identifier resolves to on `host` — the single place the
+ *  `/api/evidence/<id>/commitment` shape is built, so a minted share link and the
+ *  request it later re-issues cannot drift. `host` defaults to the anchor. */
+export function bareIdCommitmentUrl(id: string, host: string = DEFAULT_HOST): string {
+  return `${host}/api/evidence/${encodeURIComponent(id)}/commitment`;
+}
+
+/** Hostname shape: dot-separated LDH labels (1–63 chars, no leading/trailing `-`),
+ *  253 chars max. Rejects the shapes `new URL()` accepts but no publisher can have —
+ *  bare `.`/`..`, a leading-hyphen label, a trailing-dot FQDN, an IPv6 literal. */
+const HOSTNAME_RE = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)*$/i;
+
+/**
+ * Canonical `https://<host>` origin for a `/verify/<host>/<id>` host segment, or
+ * `undefined` when the segment is not a well-formed host.
+ *
+ * SHAPE ONLY — never roster membership. Resolution and recognition are orthogonal
+ * dimensions (host-directory.ts), and gating the LINK SHAPE on the directory would
+ * rebuild the very privilege this removes: an unlisted publisher would be back to
+ * the opaque `?url=` form. An unlisted host resolves normally here and the
+ * recognition banner does its job on the result. The shape is deliberately narrow
+ * — https, no port, no userinfo, no path/query/fragment — so the segment can carry
+ * an origin and nothing else; anything richer stays in the `?url=` form, which is
+ * where a full URL belongs.
+ *
+ * `segment` is the DECODED value (Next.js decodes route params), so `%2F`-style
+ * smuggling has already collapsed into characters these checks see.
+ */
+export function parseHostSegment(segment: string): string | undefined {
+  if (!segment) return undefined;
+  let u: URL;
+  try {
+    u = new URL(`https://${segment}`);
+  } catch {
+    return undefined;
+  }
+  // `new URL` silently absorbs userinfo (`a@b.com` → host b.com), a port, and a
+  // path (`x/y` → host x), so each is rejected explicitly rather than trusted away.
+  if (u.username || u.password || u.port) return undefined;
+  if (u.pathname !== '/' || u.search || u.hash) return undefined;
+  if (!HOSTNAME_RE.test(u.hostname)) return undefined;
+  return u.origin;
+}
+
+/** What a `/verify/…` path resolves: an identifier, plus the origin to resolve it
+ *  against when the link named one. `host` absent ⇒ the anchor (`DEFAULT_HOST`). */
+export interface VerifyTarget {
+  id: string;
+  host?: string;
+}
+
+/**
+ * Read a `/verify/…` path back into the identifier it names. `segments` is the
+ * DECODED catch-all param.
+ *
+ *   ['<id>']          → { id }                    — resolved against the anchor
+ *   ['<host>','<id>'] → { id, host: origin }      — resolved against that origin
+ *
+ * `undefined` for anything else: no segments, more than two, an empty id, or a first
+ * segment that is not a well-formed host. BACK-COMPAT IS THE POINT of the
+ * one-segment branch — every `/verify/<id>` link minted before the two-segment form
+ * existed still resolves exactly as it did, against the declared anchor.
+ */
+export function parseVerifyTarget(segments: string[]): VerifyTarget | undefined {
+  if (segments.length === 1) {
+    const id = segments[0];
+    return id ? { id } : undefined;
+  }
+  if (segments.length === 2) {
+    const host = parseHostSegment(segments[0]);
+    const id = segments[1];
+    return host && id ? { id, host } : undefined;
+  }
+  return undefined;
+}
+
 /**
  * Build the root-relative share link that re-resolves the SAME commitment that just
  * verified. It is rebuilt from `sources.commitment.url` — the exact request URL that
@@ -232,15 +326,16 @@ export function deriveCommitmentUrl(input: string): string {
  * 404s).
  *
  * - `null` when no commitment URL exists (inline / bundle — nothing hosted to link to).
- * - A clean `/verify/<id>` short link only for a same-host (`DEFAULT_HOST`), canonical
- *   `^/api/evidence/<id>/commitment$` URL, which round-trips through `detectInputMode`'s
- *   'hash' mode (it rebuilds that exact URL). The captured segment is decoded then
- *   re-`encodeURIComponent`'d so it survives the extra encode 'hash' mode applies; a
- *   decoded `/` (an escaped `%2F`) would break the single-segment `/verify/[hash]`
- *   route, so it falls through to the `?url=` form.
- * - Otherwise (cross-host origin, or an unusual same-host path) →
- *   `/verify?url=<encoded>`, which re-resolves against the ORIGINAL origin via 'url'
- *   mode (`deriveCommitmentUrl` is idempotent for a `/commitment`-terminated URL).
+ * - A canonical `^/api/evidence/<id>/commitment$` URL collapses to a clean short
+ *   link, which round-trips through `parseVerifyTarget` + `bareIdCommitmentUrl` back
+ *   to this exact URL: `/verify/<id>` on the anchor origin, `/verify/<host>/<id>`
+ *   anywhere else. Both segments are `encodeURIComponent`'d; the id is decoded first
+ *   so it survives the extra encode the rebuild applies.
+ * - Falls back to `/verify?url=<encoded>` — which re-resolves against the ORIGINAL
+ *   origin via 'url' mode (`deriveCommitmentUrl` is idempotent for a
+ *   `/commitment`-terminated URL) — for an unusual path, a decoded `/` in the id
+ *   (which no single path segment can carry), or an origin a host segment cannot
+ *   express: non-https, or carrying an explicit port.
  *
  * The only residual risk — a backend slug alias that later expires — is outside the
  * verifier's control and no worse than the id the user just verified with.
@@ -256,15 +351,28 @@ export function deriveShareTarget(resolved: ResolvedInput): string | null {
     return null;
   }
 
-  if (u.origin === DEFAULT_HOST) {
-    const m = u.pathname.match(/^\/api\/evidence\/([^/]+)\/commitment$/);
-    if (m) {
-      const id = decodeURIComponent(m[1]);
-      if (!id.includes('/')) return `/verify/${encodeURIComponent(id)}`;
+  const m = u.pathname.match(/^\/api\/evidence\/([^/]+)\/commitment$/);
+  if (m) {
+    const id = decodeURIComponent(m[1]);
+    if (!id.includes('/')) {
+      if (u.origin === DEFAULT_HOST) return `/verify/${encodeURIComponent(id)}`;
+      // Any other publisher gets the same clean link, with its origin carried in the
+      // first segment. Roster membership is NOT consulted — see parseHostSegment.
+      if (u.protocol === 'https:' && !u.port && HOSTNAME_RE.test(u.hostname)) {
+        return `/verify/${encodeURIComponent(u.host)}/${encodeURIComponent(id)}`;
+      }
     }
   }
 
   return `/verify?url=${encodeURIComponent(commitmentUrl)}`;
+}
+
+/** Options shared by the resolution entry points. `host` names the origin a BARE
+ *  IDENTIFIER resolves against, overriding the declared anchor — set by a
+ *  `/verify/<host>/<id>` link or the host picker. Ignored for 'url' and 'bundle'
+ *  input, which carry their own origin (or none at all). */
+export interface ResolveOptions {
+  host?: string;
 }
 
 /** Step 1 — resolve the commitment for hash / URL / bundle input. */
@@ -272,6 +380,7 @@ export async function resolveCommitment(
   mode: InputMode,
   raw: string,
   signal?: AbortSignal,
+  opts: ResolveOptions = {},
 ): Promise<{ commitment: Commitment; url?: string }> {
   const s = raw.trim();
   if (mode === 'bundle') {
@@ -289,10 +398,7 @@ export async function resolveCommitment(
     }
     return { commitment };
   }
-  const url =
-    mode === 'hash'
-      ? `${DEFAULT_HOST}/api/evidence/${encodeURIComponent(s)}/commitment`
-      : deriveCommitmentUrl(s);
+  const url = mode === 'hash' ? bareIdCommitmentUrl(s, opts.host ?? DEFAULT_HOST) : deriveCommitmentUrl(s);
   const commitment = (await getJson(url, signal)) as Commitment;
   if (!commitment?.packageHash) {
     throw new VerifyFlowError(`${shortUrl(url)} did not return a commitment (no \`packageHash\`).`);
@@ -320,8 +426,9 @@ export async function resolveInput(
   raw: string,
   signal?: AbortSignal,
   onStep?: (step: ResolveStep) => void,
+  opts: ResolveOptions = {},
 ): Promise<ResolvedInput> {
-  const { commitment, url: commitmentUrl } = await resolveCommitment(mode, raw, signal);
+  const { commitment, url: commitmentUrl } = await resolveCommitment(mode, raw, signal, opts);
   const commitmentKind: SourceKind = mode === 'bundle' ? 'inline' : 'fetched';
   onStep?.({
     key: 'commitment',

@@ -14,7 +14,11 @@ import assert from 'node:assert/strict';
 import {
   resolveHostRecognition,
   originOf,
+  validateHostDirectory,
+  bareIdentifierHostOf,
   HOST_DIRECTORY,
+  BARE_ID_ANCHOR,
+  type HostDirectory,
   type HostRecognition,
 } from './host-directory.ts';
 import type { KeyTrustResult, KeyTrustStatus } from '@typedstandards/verify-core';
@@ -147,4 +151,126 @@ test('spoofed origins + active key → unknown_publisher (never green)', () => {
     assert.notEqual(r.status, 'known_publisher');
     assert.equal(mentionsBrand(r), false);
   }
+});
+
+// --- B6: the bare-identifier anchor is DECLARED, not positional (#44) -----
+//
+// `BARE_ID_ANCHOR` used to be `HOST_DIRECTORY.publishers[0].registryOrigin` — the
+// resolution host for an origin-less identifier chosen by array position at build
+// time, so the reference publisher won by being listed first. It is now an explicit
+// field in the directory document, additive to the public well-known schema.
+
+test('B6: the published directory DECLARES its anchor, and the constant reads it', () => {
+  assert.equal(typeof HOST_DIRECTORY.bareIdentifierHost, 'string');
+  assert.ok(HOST_DIRECTORY.bareIdentifierHost.length > 0);
+  assert.equal(BARE_ID_ANCHOR, HOST_DIRECTORY.bareIdentifierHost);
+  // Well-formed origin: no path, no trailing slash.
+  assert.equal(originOf(BARE_ID_ANCHOR), BARE_ID_ANCHOR);
+});
+
+test('B6: roster ORDER no longer decides the anchor', () => {
+  // The lock on the removed defect. Reversing the roster leaves the anchor alone;
+  // under the old positional derivation this would have handed it to another host.
+  const reversed: HostDirectory = {
+    ...HOST_DIRECTORY,
+    publishers: [...HOST_DIRECTORY.publishers].reverse(),
+  };
+  assert.equal(bareIdentifierHostOf(reversed), BARE_ID_ANCHOR);
+  assert.notEqual(reversed.publishers[0].registryOrigin, HOST_DIRECTORY.publishers[0].registryOrigin);
+});
+
+test('B6: the SERVED document carries the field and reads back through validation', () => {
+  // The well-known route serves `JSON.stringify(HOST_DIRECTORY)` verbatim, so this is
+  // the served bytes' round-trip: serialize → parse → validate → anchor intact.
+  const served = JSON.parse(JSON.stringify(HOST_DIRECTORY)) as unknown;
+  assert.equal((served as { bareIdentifierHost?: string }).bareIdentifierHost, BARE_ID_ANCHOR);
+  const validated = validateHostDirectory(served);
+  assert.ok(validated);
+  assert.equal(bareIdentifierHostOf(validated!), BARE_ID_ANCHOR);
+  assert.equal(validated!.publishers.length, HOST_DIRECTORY.publishers.length);
+});
+
+test('B6: BACK-COMPAT — a directory document LACKING the field still validates', () => {
+  // A fork's roster, or a copy cached before the field existed. It must validate in
+  // full; only the anchor is absent.
+  const withoutAnchor = {
+    version: 1,
+    updated: '2026-06-16',
+    publishers: [
+      { registryOrigin: 'https://example-publisher.test', displayName: 'A Prospective Adopter' },
+    ],
+  };
+  const validated = validateHostDirectory(withoutAnchor);
+  assert.ok(validated, 'the document must still validate');
+  assert.equal(validated!.publishers.length, 1);
+  assert.equal(validated!.publishers[0].displayName, 'A Prospective Adopter');
+  assert.equal(bareIdentifierHostOf(validated!), undefined, 'no declaration ⇒ no anchor');
+  // NOT publishers[0] — re-deriving positionally is the defect this replaced.
+  assert.notEqual(bareIdentifierHostOf(validated!), validated!.publishers[0].registryOrigin);
+});
+
+test('B6: a malformed anchor is dropped, not fatal', () => {
+  for (const bad of [42, null, '', 'not a url', {}]) {
+    const validated = validateHostDirectory({
+      version: 1,
+      updated: '2026-06-16',
+      bareIdentifierHost: bad,
+      publishers: [{ registryOrigin: 'https://example-publisher.test', displayName: 'X' }],
+    });
+    assert.ok(validated, `document must survive bareIdentifierHost=${JSON.stringify(bad)}`);
+    assert.equal(bareIdentifierHostOf(validated!), undefined);
+  }
+});
+
+test('B6: a declared anchor is canonicalized to an origin', () => {
+  const validated = validateHostDirectory({
+    version: 1,
+    updated: '2026-06-16',
+    bareIdentifierHost: 'https://EXAMPLE-publisher.test/some/path?q=1',
+    publishers: [{ registryOrigin: 'https://example-publisher.test', displayName: 'X' }],
+  });
+  assert.equal(bareIdentifierHostOf(validated!), 'https://example-publisher.test');
+});
+
+test('B6: unknown fields are tolerated — the schema addition is additive', () => {
+  // The consumer-compatibility claim in both directions: a parser that does not know
+  // `bareIdentifierHost` ignores it (it is JSON), and this parser ignores fields a
+  // future directory adds.
+  const validated = validateHostDirectory({
+    version: 2,
+    updated: '2026-06-16',
+    bareIdentifierHost: 'https://example-publisher.test',
+    somethingNobodyHasShippedYet: { nested: true },
+    publishers: [
+      {
+        registryOrigin: 'https://example-publisher.test',
+        displayName: 'X',
+        futurePublisherField: 'ignored',
+      },
+    ],
+  });
+  assert.ok(validated);
+  assert.equal(validated!.version, 2);
+  assert.equal(bareIdentifierHostOf(validated!), 'https://example-publisher.test');
+  assert.equal(validated!.publishers[0].displayName, 'X');
+  assert.equal(
+    (validated!.publishers[0] as unknown as Record<string, unknown>).futurePublisherField,
+    undefined,
+    'validation returns a known-shape entry, unknown keys dropped',
+  );
+});
+
+test('B6: anchoring confers NO recognition — the (a)+(b) invariant is untouched', () => {
+  // Being the anchor is a resolution decision, not a trust one. A commitment whose
+  // registry origin happens to equal the anchor still needs both conditions, and a
+  // commitment on an unlisted origin is unaffected by what the anchor is.
+  const atAnchor = { trustRegistryUrl: `${BARE_ID_ANCHOR}/.well-known/typed-publisher.json` };
+  assert.equal(
+    resolveHostRecognition(atAnchor, kt('unknown_key', false), HOST_DIRECTORY).status,
+    'unknown_publisher',
+  );
+  assert.equal(
+    resolveHostRecognition(unlisted, kt('active', true), HOST_DIRECTORY).status,
+    'unknown_publisher',
+  );
 });

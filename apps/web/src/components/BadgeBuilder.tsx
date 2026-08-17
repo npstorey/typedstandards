@@ -13,9 +13,21 @@ import {
   classifyBadgeInput,
   type BadgeTheme,
 } from "@/lib/badge-asset";
+// Imported from host-directory, NOT verify-flow: this page has no reason to pull the
+// verification core into its bundle (see badge-asset.ts's dependency-free note).
+import { BARE_ID_ANCHOR } from "@/lib/host-directory";
 
 // A working example so the page is illustrative on load; the user replaces it.
 const EXAMPLE = "median-household-income-for-manhattan-255b8e";
+
+/** The bare-identifier anchor as a bare hostname, for prose. */
+const anchorHost = (() => {
+  try {
+    return new URL(BARE_ID_ANCHOR).host;
+  } catch {
+    return BARE_ID_ANCHOR;
+  }
+})();
 
 /** The embed builder: paste a package URL/hash/slug → live WYSIWYG badge preview
  *  (same-origin, so a preview deployment shows its own asset) + copy-paste HTML and
@@ -68,7 +80,14 @@ export function BadgeBuilder() {
             <span>Hosted URL — works for any publisher (host-independent).</span>
           )}
           {kind === "hash" && (
-            <span>Hash or slug — resolved against the default host (civicaitools.org).</span>
+            // Read from the directory's declared bare-identifier anchor rather than
+            // naming a host inline, so this copy cannot drift from what the verifier
+            // actually resolves against (#44 B6).
+            <span>
+              Hash or slug — carries no origin, so it resolves against{" "}
+              {anchorHost}. A reader can re-resolve it on another listed host from the
+              verifier.
+            </span>
           )}
           {kind === "bundle" && (
             <span style={{ color: "var(--trust-attention)" }}>
