@@ -16,6 +16,20 @@ in).
   then `npm run build`; CI does the same). Published tarballs are unchanged —
   `prepublishOnly` still builds at publish — but installing this package from
   git no longer auto-builds `dist`.
+- Docs only, no behavior change: removed reference-deployment framing from
+  published JSDoc/README (typedstandards#44 P3, findings B10/B11). Four
+  sites — `verifyBlobRef`'s JSDoc, the exported `FetchLike` type's JSDoc, the
+  README's Fetch note, and `trust-registry.ts` — no longer treat
+  civicaitools.org as the rule's rationale or "the platform" as the sole
+  publisher. The plain-GET/no-custom-headers requirement now derives from
+  CORS behavior itself (a custom header triggers a preflight, rejectable at
+  a redirecting host), with the reference redirect kept as a named example;
+  `trust-registry.ts`'s header states its actual contract (pure, registry
+  passed in, loading is the caller's job) instead of pointing at an unshipped
+  server file; each publisher is understood to have its own registry, named
+  by `trustRegistryUrl`. No exported type, signature, or runtime behavior
+  changed — most consumer-visible via `FetchLike`'s JSDoc in the published
+  `.d.ts`.
 
 ## 0.8.0 — 2026-08-01
 

@@ -97,9 +97,12 @@ function resolveFetch(options: BlobFetchOptions): FetchLike {
  * Fetch a blob and verify that its SHA-256 matches the reference hash and that
  * its byte size matches the metadata. Returns a structured result; never throws.
  *
- * Fetches over HTTPS without auth (Vercel Blob public access is the storage
- * default for evidence content). A plain GET with no custom headers, so it
- * follows civicaitools.org's canonical-host 307 without a CORS preflight.
+ * Fetches over HTTPS with no auth and no custom request headers — evidence
+ * content is expected to be publicly readable, and a custom header would make
+ * the request non-simple, triggering a CORS preflight. A preflight `OPTIONS`
+ * against a host that redirects can be rejected there, so a plain GET is what
+ * follows a redirect transparently — e.g. civicaitools.org's canonical-host
+ * 307.
  */
 export async function verifyBlobRef(
   ref: BlobRef,

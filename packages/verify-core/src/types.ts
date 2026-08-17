@@ -35,10 +35,12 @@ export type CaptureMethod =
  * never reaches for `node:*` or a hardcoded global — see the ESLint
  * `no-restricted-imports` guard scoped to this directory.
  *
- * Per the WS1 prod smoke test: the injected fetcher should issue plain GETs with
- * NO custom request headers (a custom header triggers a CORS preflight, and a
- * preflight OPTIONS hitting civicaitools.org's site-wide 307 to its canonical
- * host can be rejected). A simple GET follows the 307 transparently.
+ * Per the WS1 prod smoke test: the injected fetcher should issue plain GETs
+ * with NO custom request headers — a custom header makes the request
+ * non-simple and triggers a CORS preflight; a preflight `OPTIONS` against a
+ * host that redirects can be rejected there, so a plain GET is what follows a
+ * redirect transparently — e.g. civicaitools.org's site-wide 307 to its
+ * canonical host.
  */
 export type FetchLike = (
   input: string,

@@ -34,9 +34,10 @@ edge, and in Node.
   injects its `fetch`, the browser injects `window.fetch`, tests inject a stub.
 
 > **Fetch note.** A `FetchLike` should issue **plain GETs with no custom request
-> headers**. A custom header triggers a CORS preflight, and a preflight `OPTIONS`
-> hitting civicaitools.org's site-wide 307 to its canonical host can be rejected.
-> A simple GET follows the 307 transparently.
+> headers**. A custom header makes the request non-simple and triggers a CORS
+> preflight; a preflight `OPTIONS` against a host that redirects can be rejected
+> there, so a plain GET is what follows a redirect transparently — e.g.
+> civicaitools.org's site-wide 307 to its canonical host.
 
 ## Usage
 

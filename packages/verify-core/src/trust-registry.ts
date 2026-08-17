@@ -1,16 +1,19 @@
 // Trust registry types + key-trust evaluation (spec §8.3.3, §9.2 check #5) —
 // browser-safe.
 //
-// The platform publishes its authorized signing keys at a `/.well-known/*`
-// registry. Verification treats it as the source of truth for which
-// `(kid, publicKey)` pairs are allowed and their rotation state: keys absent or
-// revoked fail verification regardless of cryptographic correctness — a locally
-// valid signature from an unrecognised key is still not "trusted evidence".
+// Each publisher publishes its own authorized signing keys at a
+// `/.well-known/*` registry, named by the package's declared
+// `trustRegistryUrl`. Verification treats the resolved registry as the source
+// of truth for which `(kid, publicKey)` pairs are allowed and their rotation
+// state: keys absent or revoked fail verification regardless of cryptographic
+// correctness — a locally valid signature from an unrecognised key is still
+// not "trusted evidence".
 //
-// These functions are pure (registry passed IN as data). The server `verify.ts`
-// keeps the registry LOADER (build-time embedded import + fs + fetch fallback,
-// all server-only); WS3's browser client fetches the registry from the sidecar's
-// `trustRegistryUrl`. Both then hand the parsed registry to `verifyKeyTrust`.
+// These functions are pure: the registry is passed IN as already-parsed data.
+// Loading it — however a caller chooses to (a build-time embed, a filesystem
+// read, a network fetch, or some mix) — is entirely the caller's job; this
+// module has no opinion on how a registry was obtained, only on what it means
+// once handed to `verifyKeyTrust`.
 
 import type { SignerIdentity } from './types.ts';
 
@@ -71,8 +74,8 @@ export function legacyEmbeddedKeyTrust(): KeyTrustResult {
 }
 
 /**
- * Verify that a `(kid, publicKey)` pair is trusted by the platform registry,
- * applying the rotation semantics documented in the P5 plan:
+ * Verify that a `(kid, publicKey)` pair is trusted by the registry, applying
+ * the rotation semantics documented in the P5 plan:
  *   - `active` → trusted.
  *   - `deprecated` → trusted only when `packageIntegratedTime` precedes
  *     `deprecatedAt` (preventive rotation — pre-deprecation signatures remain
