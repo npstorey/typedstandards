@@ -284,7 +284,7 @@ export async function resolveCommitment(
     const commitment = parsed as Commitment;
     if (!commitment || typeof commitment !== 'object' || !commitment.packageHash) {
       throw new VerifyFlowError(
-        'That JSON is not a commitment bundle (it has no `packageHash`). Paste a §9.2.1 commitment sidecar — for example, the output of a publisher’s `/api/evidence/<id>/commitment` endpoint (one publisher’s route shape, not the only one a commitment can be served from).',
+        'That JSON is not a commitment bundle (it has no `packageHash`). Paste a §9.2.1 commitment sidecar — for example, what a publisher’s `/api/evidence/<id>/commitment` endpoint returns.',
       );
     }
     return { commitment };

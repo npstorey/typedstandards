@@ -263,7 +263,7 @@ export const KEY_TRUST_SIGNALS: Record<KeyTrustStatus, TrustSignalDescriptor> = 
   active: {
     tier: 'verified',
     label: 'Signed with an active registered key',
-    detail: 'The signing key is listed and active in the published trust registry.',
+    detail: 'The signing key is listed and active in the publisher’s trust registry.',
   },
   deprecated_valid: {
     tier: 'normal',
@@ -285,7 +285,7 @@ export const KEY_TRUST_SIGNALS: Record<KeyTrustStatus, TrustSignalDescriptor> = 
     tier: 'attention',
     label: 'Signing key not in the trust registry',
     detail:
-      'The signing key is not listed in the published trust registry, so the registry cannot vouch for it.',
+      'The signing key is not listed in the publisher’s trust registry, so it cannot vouch for it.',
   },
   registry_unavailable: {
     tier: 'attention',
@@ -302,7 +302,7 @@ export const KEY_TRUST_SIGNALS: Record<KeyTrustStatus, TrustSignalDescriptor> = 
     tier: 'normal',
     label: 'Signed with an embedded key (not in the trust registry)',
     detail:
-      'The signature uses an embedded public key that is not listed in the published trust registry, so the registry cannot vouch for it.',
+      'The signature uses an embedded public key that is not listed in the publisher’s trust registry, so it cannot vouch for it.',
   },
 };
 
@@ -616,7 +616,7 @@ export const SIGNER_IDENTITY_SIGNALS: Record<SignerIdentityCheckStatus, TrustSig
     tier: 'verified',
     label: 'Signer identity matches the registry',
     detail:
-      'The stated signer matches the identity the registry records for the signing key.',
+      'The stated signer matches the identity the publisher’s trust registry records for the signing key.',
   },
   signer_identity_mismatch: {
     tier: 'alarm',
