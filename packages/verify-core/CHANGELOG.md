@@ -6,7 +6,7 @@ references are to `npstorey/civic-ai-tools-website` (#119 is the offline-crypto
 hardening arc; #116 is the standalone-verifier arc this package was extracted
 in).
 
-## Unreleased
+## 0.8.1 — 2026-08-17
 
 - Removed the `prepare` (install-time build) script (typedstandards#39).
   A fresh `npm ci` at the monorepo root previously failed in workspace
