@@ -16,6 +16,25 @@ in).
   then `npm run build`; CI does the same). Published tarballs are unchanged —
   `prepublishOnly` still builds at publish — but installing this package from
   git no longer auto-builds `dist`.
+- Docs only, no behavior change: removed reference-deployment framing from
+  published JSDoc/README (typedstandards#44 P3, findings B10/B11).
+  `verifyBlobRef`'s JSDoc and the README's Fetch note now derive the
+  plain-GET/no-custom-headers requirement from CORS behavior itself (a custom
+  header makes a request non-simple and triggers a preflight, which a
+  redirecting host can reject) instead of citing one deployment's redirect as
+  the reason; that deployment's 307 survives as a named example, not the
+  rationale. `verifyBlobRef`'s JSDoc no longer asserts one storage vendor's
+  public-access default as the format's general default. The
+  `trust-registry.ts` module header and `verifyKeyTrust`'s JSDoc no longer say
+  "the platform" as though the package presumed a single publisher's
+  registry — each publisher has its own, named by the package's
+  `trustRegistryUrl`; the header's pointer to a specific server-only loader
+  file this package does not ship is replaced with a description of the
+  actual contract (the module is pure, the registry arrives as already-parsed
+  data, and loading it is entirely the caller's job). These edits are
+  comments and JSDoc only — no exported type, signature, or runtime behavior
+  changed — but they are consumer-visible via the published `.d.ts` and the
+  npm README.
 
 ## 0.8.0 — 2026-08-01
 
