@@ -237,8 +237,9 @@ export function lookupPublisher(
  * HOST_DIRECTORY_PATH}). Returns `'unavailable'` on any failure — a missing or
  * unreachable directory degrades to a calm "recognition unavailable", never an
  * error, so the cryptographic verdict is unaffected (Q47 / #119 staleness
- * caveat). Plain GET, no custom headers (same CORS-preflight reasoning as the
- * other verifier fetches).
+ * caveat). Plain GET, no custom headers (same CORS reasoning — preflight and,
+ * in a browser, the redirect response's own headers — as the other verifier
+ * fetches).
  */
 export async function fetchHostDirectory(
   fetchImpl: FetchLike,

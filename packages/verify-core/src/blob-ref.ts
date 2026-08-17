@@ -100,9 +100,12 @@ function resolveFetch(options: BlobFetchOptions): FetchLike {
  * Fetches over HTTPS with no auth and no custom request headers — evidence
  * content is expected to be publicly readable, and a custom header would make
  * the request non-simple, triggering a CORS preflight. A preflight `OPTIONS`
- * against a host that redirects can be rejected there, so a plain GET is what
- * follows a redirect transparently — e.g. civicaitools.org's canonical-host
- * 307.
+ * against a host that redirects can be rejected there, so a plain GET avoids
+ * that failure mode — e.g. civicaitools.org's canonical-host 307. That's
+ * necessary but not sufficient in a browser, though: a cross-origin redirect
+ * response must itself carry CORS headers, or the fetch fails regardless of
+ * the request's simplicity. Server-side/Node fetches follow redirects
+ * without that constraint.
  */
 export async function verifyBlobRef(
   ref: BlobRef,

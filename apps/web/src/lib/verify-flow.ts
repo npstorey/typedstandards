@@ -7,9 +7,12 @@
 //
 // All network I/O is a plain GET with no custom request headers — a custom header
 // makes the request non-simple and triggers a CORS preflight; a preflight `OPTIONS`
-// against a host that redirects can be rejected there, so a plain GET is what
-// follows a redirect transparently — e.g. civicaitools.org's site-wide 307 to its
-// canonical host. Verification depth MATCHES verify-core / the civicaitools.org
+// against a host that redirects can be rejected there, so a plain GET avoids that
+// failure mode — e.g. civicaitools.org's site-wide 307 to its canonical host. In a
+// browser that's necessary but not sufficient: a cross-origin redirect response
+// must itself carry CORS headers, or the fetch fails regardless of the request's
+// simplicity. Server-side/Node fetches follow redirects without that constraint.
+// Verification depth MATCHES verify-core / the civicaitools.org
 // server: full client-side crypto for #1–#6/#9/#12–#15; #7 (RFC 3161) is the TSA
 // signature + cert chain verified offline to the pinned FreeTSA root; #8 (Rekor) is
 // the RFC 6962 Merkle inclusion proof recomputed against a signed checkpoint when one
@@ -183,7 +186,8 @@ export interface ResolvedInput {
 async function getJson(url: string, signal?: AbortSignal): Promise<unknown> {
   let res: Awaited<ReturnType<typeof fetch>>;
   try {
-    // Plain GET, no custom headers (see the module header re: the CORS preflight).
+    // Plain GET, no custom headers (see the module header re: CORS — preflight and,
+    // in a browser, the redirect response's own headers).
     res = await fetch(url, { signal });
   } catch (err) {
     throw new VerifyFlowError(

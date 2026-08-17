@@ -36,8 +36,11 @@ edge, and in Node.
 > **Fetch note.** A `FetchLike` should issue **plain GETs with no custom request
 > headers**. A custom header makes the request non-simple and triggers a CORS
 > preflight; a preflight `OPTIONS` against a host that redirects can be rejected
-> there, so a plain GET is what follows a redirect transparently — e.g.
-> civicaitools.org's site-wide 307 to its canonical host.
+> there, so a plain GET avoids that failure mode — e.g. civicaitools.org's
+> site-wide 307 to its canonical host. That's necessary but not sufficient in a
+> browser, though: a cross-origin redirect response must itself carry CORS
+> headers, or the fetch fails regardless of the request's simplicity.
+> Server-side/Node fetches follow redirects without that constraint.
 
 ## Usage
 
