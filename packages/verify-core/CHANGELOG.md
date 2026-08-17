@@ -17,24 +17,19 @@ in).
   `prepublishOnly` still builds at publish — but installing this package from
   git no longer auto-builds `dist`.
 - Docs only, no behavior change: removed reference-deployment framing from
-  published JSDoc/README (typedstandards#44 P3, findings B10/B11).
-  `verifyBlobRef`'s JSDoc and the README's Fetch note now derive the
-  plain-GET/no-custom-headers requirement from CORS behavior itself (a custom
-  header makes a request non-simple and triggers a preflight, which a
-  redirecting host can reject) instead of citing one deployment's redirect as
-  the reason; that deployment's 307 survives as a named example, not the
-  rationale. `verifyBlobRef`'s JSDoc no longer asserts one storage vendor's
-  public-access default as the format's general default. The
-  `trust-registry.ts` module header and `verifyKeyTrust`'s JSDoc no longer say
-  "the platform" as though the package presumed a single publisher's
-  registry — each publisher has its own, named by the package's
-  `trustRegistryUrl`; the header's pointer to a specific server-only loader
-  file this package does not ship is replaced with a description of the
-  actual contract (the module is pure, the registry arrives as already-parsed
-  data, and loading it is entirely the caller's job). These edits are
-  comments and JSDoc only — no exported type, signature, or runtime behavior
-  changed — but they are consumer-visible via the published `.d.ts` and the
-  npm README.
+  published JSDoc/README (typedstandards#44 P3, findings B10/B11). Four
+  sites — `verifyBlobRef`'s JSDoc, the exported `FetchLike` type's JSDoc, the
+  README's Fetch note, and `trust-registry.ts` — no longer treat
+  civicaitools.org as the rule's rationale or "the platform" as the sole
+  publisher. The plain-GET/no-custom-headers requirement now derives from
+  CORS behavior itself (a custom header triggers a preflight, rejectable at
+  a redirecting host), with the reference redirect kept as a named example;
+  `trust-registry.ts`'s header states its actual contract (pure, registry
+  passed in, loading is the caller's job) instead of pointing at an unshipped
+  server file; each publisher is understood to have its own registry, named
+  by `trustRegistryUrl`. No exported type, signature, or runtime behavior
+  changed — most consumer-visible via `FetchLike`'s JSDoc in the published
+  `.d.ts`.
 
 ## 0.8.0 — 2026-08-01
 
