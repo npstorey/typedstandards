@@ -219,7 +219,7 @@ export function deriveCommitmentUrl(input: string): string {
   const idMatch = u.pathname.match(/\/evidence\/([^/]+)/);
   if (idMatch) return `${u.origin}/api/evidence/${idMatch[1]}/commitment`;
   const blobHash = u.pathname.match(/([0-9a-f]{64})\.json$/i);
-  if (blobHash) return `${DEFAULT_HOST}/api/evidence/${blobHash[1]}/commitment`;
+  if (blobHash) return `${u.origin}/api/evidence/${blobHash[1]}/commitment`;
   // Last resort: treat the URL itself as the commitment resource.
   return u.toString();
 }
@@ -284,7 +284,7 @@ export async function resolveCommitment(
     const commitment = parsed as Commitment;
     if (!commitment || typeof commitment !== 'object' || !commitment.packageHash) {
       throw new VerifyFlowError(
-        'That JSON is not a commitment bundle (it has no `packageHash`). Paste the output of an /api/evidence/<id>/commitment endpoint.',
+        'That JSON is not a commitment bundle (it has no `packageHash`). Paste a §9.2.1 commitment sidecar — for example, what a publisher’s `/api/evidence/<id>/commitment` endpoint returns.',
       );
     }
     return { commitment };
