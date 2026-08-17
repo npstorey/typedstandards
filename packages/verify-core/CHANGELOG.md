@@ -30,6 +30,25 @@ in).
   by `trustRegistryUrl`. No exported type, signature, or runtime behavior
   changed — most consumer-visible via `FetchLike`'s JSDoc in the published
   `.d.ts`.
+- Docs correction, no behavior change: scopes the plain-GET/CORS claim above
+  by execution environment (typedstandards#44 P4). The unscoped version was
+  disproved during a live browser session: a cross-origin redirect response
+  must itself carry CORS headers, or a browser's fetch fails regardless of
+  how simple the triggering request was — a plain GET only avoids the
+  *preflight* rejection, it does not make a redirect chain transparent in a
+  browser. The claim had been verified only from Node/curl, where that
+  constraint does not exist, then stated unconditionally. Now scoped: a
+  plain GET avoids the preflight failure mode (kept, unchanged); a browser
+  additionally needs the redirect response itself to carry CORS headers
+  (the missing half, now stated); server-side/Node fetches follow redirects
+  without that constraint (why the unscoped claim read true when written).
+  Same three verify-core sites P3 touched for this class — `verifyBlobRef`'s
+  JSDoc (`blob-ref.ts`), the exported `FetchLike` type's JSDoc (`types.ts`),
+  and the README's Fetch note — plus the equivalent explanation and its
+  cross-reference in typedstandards.org's client-side verify flow
+  (`apps/web`, outside this published package). No exported type, signature,
+  or runtime behavior changed — consumer-visible via `FetchLike`'s JSDoc in
+  the published `.d.ts` and the README.
 
 ## 0.8.0 — 2026-08-01
 

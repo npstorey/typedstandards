@@ -38,9 +38,12 @@ export type CaptureMethod =
  * Per the WS1 prod smoke test: the injected fetcher should issue plain GETs
  * with NO custom request headers — a custom header makes the request
  * non-simple and triggers a CORS preflight; a preflight `OPTIONS` against a
- * host that redirects can be rejected there, so a plain GET is what follows a
- * redirect transparently — e.g. civicaitools.org's site-wide 307 to its
- * canonical host.
+ * host that redirects can be rejected there, so a plain GET avoids that
+ * failure mode — e.g. civicaitools.org's site-wide 307 to its canonical
+ * host. That's necessary but not sufficient in a browser, though: per the
+ * Fetch spec, a cross-origin redirect response must itself carry CORS
+ * headers, or the fetch fails regardless of the request's simplicity.
+ * Server-side/Node fetches follow redirects without that constraint.
  */
 export type FetchLike = (
   input: string,
