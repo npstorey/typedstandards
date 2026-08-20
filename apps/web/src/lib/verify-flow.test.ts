@@ -16,7 +16,11 @@ import {
   buildPreview,
   deriveShareTarget,
   deriveCommitmentUrl,
+  deriveCommitmentUrlCandidates,
   bareIdCommitmentUrl,
+  bareIdCommitmentUrlCandidates,
+  resolveCommitment,
+  VerifyFlowError,
   identifierResolutionKind,
   parseHostSegment,
   parseVerifyTarget,
@@ -170,11 +174,11 @@ test('buildPreview: an unavailable preview reports WHY (private vs. unfetchable)
 test('deriveCommitmentUrl: package-blob URL resolves against the ANCHOR, not the blob origin (B5)', () => {
   const hash = 'a1'.repeat(32); // 64 hex chars
   const url = `https://data-concierge.dathere.com/blobs/${hash}.json`;
-  assert.equal(deriveCommitmentUrl(url), `${DEFAULT_HOST}/api/evidence/${hash}/commitment`);
+  assert.equal(deriveCommitmentUrl(url), `${DEFAULT_HOST}/api/records/${hash}/commitment`);
   // The old assertion, now the thing being ruled out: the blob's own origin.
   assert.notEqual(
     deriveCommitmentUrl(url),
-    `https://data-concierge.dathere.com/api/evidence/${hash}/commitment`,
+    `https://data-concierge.dathere.com/api/records/${hash}/commitment`,
   );
 });
 
@@ -186,11 +190,11 @@ test('deriveCommitmentUrl: package-blob resolution does not depend on roster mem
   const unlisted = 'b2'.repeat(32);
   assert.equal(
     deriveCommitmentUrl(`https://data-concierge.dathere.com/blobs/${listed}.json`),
-    `${DEFAULT_HOST}/api/evidence/${listed}/commitment`,
+    `${DEFAULT_HOST}/api/records/${listed}/commitment`,
   );
   assert.equal(
     deriveCommitmentUrl(`https://example-publisher.test/blobs/${unlisted}.json`),
-    `${DEFAULT_HOST}/api/evidence/${unlisted}/commitment`,
+    `${DEFAULT_HOST}/api/records/${unlisted}/commitment`,
   );
 });
 
@@ -202,16 +206,22 @@ test('deriveCommitmentUrl: DETACHED STORAGE — a blob host with no evidence API
   for (const blobUrl of [
     `https://abcdef0123456789.public.blob.vercel-storage.com/evidence-packages/${hash}.json`,
     // A bucket layout whose path contains an `/evidence/` SEGMENT. This one caught a
-    // real branch-ordering hazard: the `/evidence/<id>` probe used to match first and
+    // real branch-ordering hazard: the record-page probe used to match first and
     // captured an id of literally `<hash>.json`, yielding `…/api/evidence/<hash>.json
     // /commitment`. The `<64-hex>.json` filename is the more specific signal and now
     // wins — see classifyHostedUrl.
     `https://packages.s3.amazonaws.com/evidence/${hash}.json`,
+    // The same hazard under the settlement-era segment. The 2026-08-19 vocabulary
+    // settlement widened the page probe to `/records/` as well, so there are now TWO
+    // bucket-layout segment names that can collide with a blob path — which makes the
+    // package-blob-first ordering MORE load-bearing, not less. A `records/` bucket
+    // prefix is an entirely ordinary storage layout.
+    `https://packages.s3.amazonaws.com/records/${hash}.json`,
     `https://cdn.example-storage.test/${hash}.json`,
   ]) {
     assert.equal(
       deriveCommitmentUrl(blobUrl),
-      `${DEFAULT_HOST}/api/evidence/${hash}/commitment`,
+      `${DEFAULT_HOST}/api/records/${hash}/commitment`,
       `${blobUrl} must resolve against the anchor, not its storage origin`,
     );
     // …and the UI must DISCLOSE that, exactly as it does for a bare hash: this input
@@ -229,25 +239,82 @@ test('deriveCommitmentUrl: a blob URL resolves against a PICKED host when one is
       `https://cdn.example-storage.test/${hash}.json`,
       'https://example-publisher.test',
     ),
-    `https://example-publisher.test/api/evidence/${hash}/commitment`,
+    `https://example-publisher.test/api/records/${hash}/commitment`,
   );
 });
 
 test('deriveCommitmentUrl: URLs that DO carry a publisher origin still keep it (B5)', () => {
-  // The other three branches are unchanged. A publisher's own evidence URL and an
+  // The other three branches are unchanged. A publisher's own record-page URL and an
   // already-resolved commitment URL both name their publisher, so nothing is
   // re-anchored — the fix is scoped to the one shape that does not.
-  const commitment = 'https://example-publisher.test/api/evidence/some-slug/commitment';
+  const commitment = 'https://example-publisher.test/api/records/some-slug/commitment';
   assert.equal(deriveCommitmentUrl(commitment), commitment);
   assert.equal(
-    deriveCommitmentUrl('https://example-publisher.test/evidence/some-slug'),
-    'https://example-publisher.test/api/evidence/some-slug/commitment',
+    deriveCommitmentUrl('https://example-publisher.test/records/some-slug'),
+    'https://example-publisher.test/api/records/some-slug/commitment',
   );
   // Neither is origin-less, so neither triggers the disclosure line.
   assert.equal(identifierResolutionKind('url', commitment), undefined);
   assert.equal(
+    identifierResolutionKind('url', 'https://example-publisher.test/records/some-slug'),
+    undefined,
+  );
+});
+
+// --- Vocabulary eras: recognition is symmetric, construction is ordered ----
+//
+// The 2026-08-19 vocabulary settlement (spec Appendix J) makes `records` canonical
+// and keeps `evidence` as a PERMANENT alias. These tests pin the asymmetry that
+// makes the migration safe, and they are the ones that fail loudly if a later
+// phase "finishes the rename" by dropping prior-era acceptance.
+
+test('eras: a PRIOR-ERA commitment URL is already the resource and is used verbatim', () => {
+  // The single most important non-regression in the settlement. Every commitment URL
+  // in the wild today carries `/api/evidence/`; the verifier must fetch exactly what
+  // it was handed, not rewrite the caller's resource onto a segment the publisher may
+  // not serve.
+  const priorEra = 'https://example-publisher.test/api/evidence/some-slug/commitment';
+  assert.equal(deriveCommitmentUrl(priorEra), priorEra);
+  assert.deepEqual(
+    deriveCommitmentUrlCandidates(priorEra),
+    [priorEra],
+    'a complete resource URL is ONE candidate — rewriting it would invent a resource',
+  );
+});
+
+test('eras: a prior-era record-page URL is recognized and re-resolved canonical-first', () => {
+  // A page URL is not a resource URL: we extract the id and mint the endpoint path
+  // ourselves. So the page's own era says nothing — a publisher can cut over pages
+  // and routes independently, and both candidates are tried in order.
+  assert.deepEqual(deriveCommitmentUrlCandidates('https://example-publisher.test/evidence/some-slug'), [
+    'https://example-publisher.test/api/records/some-slug/commitment',
+    'https://example-publisher.test/api/evidence/some-slug/commitment',
+  ]);
+  // Same input under the settlement-era page segment ⇒ identical candidate list.
+  assert.deepEqual(
+    deriveCommitmentUrlCandidates('https://example-publisher.test/records/some-slug'),
+    deriveCommitmentUrlCandidates('https://example-publisher.test/evidence/some-slug'),
+    'era is not a signal: both page segments resolve identically',
+  );
+  // And neither is origin-less, so neither triggers the disclosure line.
+  assert.equal(
     identifierResolutionKind('url', 'https://example-publisher.test/evidence/some-slug'),
     undefined,
+  );
+});
+
+test('eras: a bare identifier mints BOTH segments, canonical FIRST', () => {
+  // The ordering is the whole phase. Canonical-first is what adopts the new
+  // vocabulary; the prior-era fallback is what keeps every publisher that has not
+  // cut over — which today is all of them — verifying without interruption.
+  assert.deepEqual(bareIdCommitmentUrlCandidates('some-slug'), [
+    `${DEFAULT_HOST}/api/records/some-slug/commitment`,
+    `${DEFAULT_HOST}/api/evidence/some-slug/commitment`,
+  ]);
+  assert.equal(
+    bareIdCommitmentUrlCandidates('some-slug')[0],
+    bareIdCommitmentUrl('some-slug'),
+    'the canonical single-URL helper must agree with candidate[0]',
   );
 });
 
@@ -299,9 +366,17 @@ test('deriveShareTarget: cross-host → /verify/<host>/<id>, carrying its own or
   const target = deriveShareTarget(mkResolved(url));
   assert.equal(target, '/verify/data-concierge.dathere.com/some-slug');
   // The origin is preserved, which is what the old `doesNotMatch` was protecting:
-  // reading the link back must rebuild the SAME URL, not the anchor's.
+  // reading the link back must rebuild THIS host's commitment URL, not the anchor's.
+  //
+  // Post-settlement the rebuild is a candidate LIST rather than a single URL, and the
+  // prior-era URL this link was minted from is still in it — as the fallback. So the
+  // round-trip lands on the same commitment whether or not the publisher has cut
+  // over: canonical first, and the exact original URL second.
   const parsed = parseVerifyTarget(['data-concierge.dathere.com', 'some-slug']);
-  assert.equal(bareIdCommitmentUrl(parsed!.id, parsed!.host), url);
+  assert.deepEqual(bareIdCommitmentUrlCandidates(parsed!.id, parsed!.host), [
+    'https://data-concierge.dathere.com/api/records/some-slug/commitment',
+    url,
+  ]);
   assert.notEqual(parsed!.host, DEFAULT_HOST);
 });
 
@@ -326,9 +401,13 @@ test('deriveShareTarget: cross-host id needing encoding round-trips through the 
   const url = 'https://publisher.test/api/evidence/a%20b/commitment';
   const target = deriveShareTarget(mkResolved(url));
   assert.equal(target, '/verify/publisher.test/a%20b');
-  // Next.js hands the route the DECODED segments.
+  // Next.js hands the route the DECODED segments. Re-encoding survives the era
+  // widening: the original prior-era URL is still the fallback candidate, byte-exact.
   const parsed = parseVerifyTarget(['publisher.test', 'a b']);
-  assert.equal(bareIdCommitmentUrl(parsed!.id, parsed!.host), url);
+  assert.deepEqual(bareIdCommitmentUrlCandidates(parsed!.id, parsed!.host), [
+    'https://publisher.test/api/records/a%20b/commitment',
+    url,
+  ]);
 });
 
 test('deriveShareTarget: a package-blob deep-link ends in a clean short link (B5 + B7)', () => {
@@ -339,7 +418,7 @@ test('deriveShareTarget: a package-blob deep-link ends in a clean short link (B5
   const hash = 'c3'.repeat(32);
   const blobUrl = `https://abcdef0123456789.public.blob.vercel-storage.com/evidence-packages/${hash}.json`;
   const commitmentUrl = deriveCommitmentUrl(blobUrl);
-  assert.equal(commitmentUrl, `${DEFAULT_HOST}/api/evidence/${hash}/commitment`);
+  assert.equal(commitmentUrl, `${DEFAULT_HOST}/api/records/${hash}/commitment`);
   const target = deriveShareTarget(mkResolved(commitmentUrl));
   assert.equal(target, `/verify/${hash}`);
   const parsed = parseVerifyTarget([hash]);
@@ -392,30 +471,38 @@ test('parseVerifyTarget: BACK-COMPAT — a pre-existing /verify/<id> link still 
   const parsed = parseVerifyTarget(['noise-trends-in-nyc-2026']);
   assert.deepEqual(parsed, { id: 'noise-trends-in-nyc-2026' });
   assert.equal(parsed?.host, undefined, 'no host in the link ⇒ the anchor decides');
-  assert.equal(
-    bareIdCommitmentUrl(parsed!.id, parsed!.host ?? DEFAULT_HOST),
+  // Post-settlement the link resolves canonical-first, with the URL it was originally
+  // minted against still reachable as the fallback — so the pre-existing link keeps
+  // working against a publisher at EITHER stage of its cutover.
+  assert.deepEqual(bareIdCommitmentUrlCandidates(parsed!.id, parsed!.host ?? DEFAULT_HOST), [
+    `${DEFAULT_HOST}/api/records/noise-trends-in-nyc-2026/commitment`,
     `${DEFAULT_HOST}/api/evidence/noise-trends-in-nyc-2026/commitment`,
-  );
+  ]);
 });
 
 test('parseVerifyTarget: BACK-COMPAT — a 64-hex hash link still resolves against the anchor', () => {
   const hash = 'e'.repeat(64);
   const parsed = parseVerifyTarget([hash]);
   assert.deepEqual(parsed, { id: hash });
-  assert.equal(
-    bareIdCommitmentUrl(parsed!.id, parsed!.host ?? DEFAULT_HOST),
+  assert.deepEqual(bareIdCommitmentUrlCandidates(parsed!.id, parsed!.host ?? DEFAULT_HOST), [
+    `${DEFAULT_HOST}/api/records/${hash}/commitment`,
     `${DEFAULT_HOST}/api/evidence/${hash}/commitment`,
-  );
+  ]);
 });
 
 test('parseVerifyTarget: BACK-COMPAT — the old share link round-trips end to end', () => {
-  // Mint with today's code from an anchor-origin commitment URL, read back, rebuild.
+  // Mint with today's code from an anchor-origin PRIOR-ERA commitment URL — which is
+  // what every publisher answers with today — read back, rebuild. The link shape is
+  // unchanged, and the URL it was minted from is still in the rebuilt candidate list.
   const url = `${DEFAULT_HOST}/api/evidence/noise-trends-in-nyc-2026/commitment`;
   const target = deriveShareTarget(mkResolved(url));
   assert.equal(target, '/verify/noise-trends-in-nyc-2026', 'still the single-segment form');
   const segments = target!.slice('/verify/'.length).split('/').map(decodeURIComponent);
   const parsed = parseVerifyTarget(segments);
-  assert.equal(bareIdCommitmentUrl(parsed!.id, parsed!.host ?? DEFAULT_HOST), url);
+  assert.ok(
+    bareIdCommitmentUrlCandidates(parsed!.id, parsed!.host ?? DEFAULT_HOST).includes(url),
+    'the URL the link was minted from must still be reachable from the rebuilt link',
+  );
 });
 
 test('parseVerifyTarget: two segments name the host to resolve against', () => {
@@ -486,10 +573,19 @@ test('deriveCommitmentUrl: a www commitment URL is fetched on the canonical orig
   );
 });
 
-test('deriveCommitmentUrl: a www evidence-page URL mints its commitment on the canonical origin (#50)', () => {
+test('deriveCommitmentUrl: a www record-page URL mints its commitment on the canonical origin (#50)', () => {
   assert.equal(
-    deriveCommitmentUrl('https://www.example-publisher.test/evidence/some-slug'),
-    'https://example-publisher.test/api/evidence/some-slug/commitment',
+    deriveCommitmentUrl('https://www.example-publisher.test/records/some-slug'),
+    'https://example-publisher.test/api/records/some-slug/commitment',
+  );
+  // www-normalization applies to the prior-era page segment too, and to BOTH
+  // candidates — a `www.` host must never leak into either era's fallback.
+  assert.deepEqual(
+    deriveCommitmentUrlCandidates('https://www.example-publisher.test/evidence/some-slug'),
+    [
+      'https://example-publisher.test/api/records/some-slug/commitment',
+      'https://example-publisher.test/api/evidence/some-slug/commitment',
+    ],
   );
 });
 
@@ -503,8 +599,13 @@ test('deriveCommitmentUrl: an opaque www URL is fetched on the canonical origin 
 test('bareIdCommitmentUrl: a www resolution host is normalized before the URL is minted (#50)', () => {
   assert.equal(
     bareIdCommitmentUrl('some-slug', 'https://www.civicaitools.org'),
-    `${DEFAULT_HOST}/api/evidence/some-slug/commitment`,
+    `${DEFAULT_HOST}/api/records/some-slug/commitment`,
   );
+  // Both candidates, not just the canonical one.
+  assert.deepEqual(bareIdCommitmentUrlCandidates('some-slug', 'https://www.civicaitools.org'), [
+    `${DEFAULT_HOST}/api/records/some-slug/commitment`,
+    `${DEFAULT_HOST}/api/evidence/some-slug/commitment`,
+  ]);
 });
 
 test('parseHostSegment: a www host segment canonicalizes — resolution, display, and share all see the real origin (#50)', () => {
@@ -518,8 +619,218 @@ test('a /verify/www.<host>/<id> link resolves canonically and re-mints the canon
   const parsed = parseVerifyTarget(['www.example-publisher.test', 'some-slug']);
   assert.equal(parsed?.host, 'https://example-publisher.test');
   const commitmentUrl = bareIdCommitmentUrl(parsed!.id, parsed!.host);
-  assert.equal(commitmentUrl, 'https://example-publisher.test/api/evidence/some-slug/commitment');
+  assert.equal(commitmentUrl, 'https://example-publisher.test/api/records/some-slug/commitment');
   // The share link minted from the URL that answered carries the canonical host —
   // a www link heals to its canonical form on the first round-trip.
   assert.equal(deriveShareTarget(mkResolved(commitmentUrl)), '/verify/example-publisher.test/some-slug');
+});
+
+// --- New-then-old RESOLUTION against a live publisher (spec Appendix J) ----
+//
+// The candidate-list tests above pin what is CONSTRUCTED. These pin what is
+// FETCHED, which is the property the settlement actually promises: a verifier
+// that adopts the canonical vocabulary today, against publishers that serve only
+// the prior-era one today, with nothing ceasing to resolve on either side of any
+// publisher's cutover.
+//
+// Each test stands up a synthetic publisher that serves exactly the segments it
+// names and 404s everything else, then records the request order.
+
+const PUBLISHER = 'https://example-publisher.test';
+/** Minimal §9.2.1 commitment body — `packageHash` is what makes it a commitment.
+ *  Hex-letter range, no digit runs (the repo's guard-safe fixture convention). */
+const COMMITMENT_BODY = { protocolVersion: '0.1.0', packageHash: 'ab'.repeat(32) };
+
+/** Serve `served` (200 JSON commitment) and 404 everything else, recording the
+ *  URL of every request in order. Returns the log and a restore function. */
+function stubPublisher(
+  served: RegExp,
+  body: unknown = COMMITMENT_BODY,
+): { requested: string[]; restore: () => void } {
+  const requested: string[] = [];
+  const real = globalThis.fetch;
+  globalThis.fetch = ((input: unknown) => {
+    const url = String(input);
+    requested.push(url);
+    return Promise.resolve(
+      served.test(url)
+        ? new Response(JSON.stringify(body), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          })
+        : new Response('<!doctype html><title>404</title>', {
+            status: 404,
+            headers: { 'content-type': 'text/html' },
+          }),
+    );
+  }) as typeof globalThis.fetch;
+  return { requested, restore: () => { globalThis.fetch = real; } };
+}
+
+test('resolution: a publisher serving ONLY prior-era segments still verifies (the phase’s core guarantee)', async () => {
+  // TODAY'S WORLD, including the reference publisher: `/api/records/` does not exist
+  // anywhere yet. A canonical-only verifier would break every verification on earth
+  // the day it shipped; this is the fallback that makes the expand safe to land
+  // before any publisher has cut over.
+  const pub = stubPublisher(/\/api\/evidence\//);
+  try {
+    const { commitment, url } = await resolveCommitment('hash', 'some-slug', undefined, {
+      host: PUBLISHER,
+    });
+    assert.equal(commitment.packageHash, COMMITMENT_BODY.packageHash, 'the commitment resolved');
+    assert.deepEqual(
+      pub.requested,
+      [
+        `${PUBLISHER}/api/records/some-slug/commitment`,
+        `${PUBLISHER}/api/evidence/some-slug/commitment`,
+      ],
+      'canonical is tried FIRST, prior-era is the fallback',
+    );
+    assert.equal(
+      url,
+      `${PUBLISHER}/api/evidence/some-slug/commitment`,
+      'the reported URL is the one that ANSWERED, not the one first tried',
+    );
+    // …and that URL is what the share link is rebuilt from, so a result verified
+    // through the fallback is as shareable as one verified through the canonical form.
+    assert.equal(
+      deriveShareTarget(mkResolved(url)),
+      '/verify/example-publisher.test/some-slug',
+    );
+  } finally {
+    pub.restore();
+  }
+});
+
+test('resolution: a publisher that HAS cut over answers on the first request', async () => {
+  // The other side of the migration. No wasted request, and no lingering preference
+  // for the prior era once a publisher has moved.
+  const pub = stubPublisher(/\/api\/records\//);
+  try {
+    const { url } = await resolveCommitment('hash', 'some-slug', undefined, { host: PUBLISHER });
+    assert.equal(url, `${PUBLISHER}/api/records/some-slug/commitment`);
+    assert.equal(pub.requested.length, 1, 'the canonical form answered — no fallback request');
+  } finally {
+    pub.restore();
+  }
+});
+
+test('resolution: when a publisher serves BOTH, the canonical segment wins', async () => {
+  // The ordering assertion proper. A publisher mid-cutover serves both segments; the
+  // verifier must settle on the canonical one, or the rename never actually lands.
+  const pub = stubPublisher(/\/api\/(records|evidence)\//);
+  try {
+    const { url } = await resolveCommitment('hash', 'some-slug', undefined, { host: PUBLISHER });
+    assert.equal(url, `${PUBLISHER}/api/records/some-slug/commitment`);
+    assert.deepEqual(pub.requested, [`${PUBLISHER}/api/records/some-slug/commitment`]);
+  } finally {
+    pub.restore();
+  }
+});
+
+test('resolution: a canonical-segment 200 that is NOT a commitment falls through', async () => {
+  // `/api/records/…` is a plausible path for an unrelated records API on some
+  // publisher, and such a path can answer 200 with perfectly valid JSON. Treating
+  // only 404 as "not here" would abort a verification that the prior-era segment
+  // would have completed — so "no `packageHash`" is a candidate failure too.
+  const real = globalThis.fetch;
+  const requested: string[] = [];
+  globalThis.fetch = ((input: unknown) => {
+    const url = String(input);
+    requested.push(url);
+    const body = url.includes('/api/records/') ? { items: [] } : COMMITMENT_BODY;
+    return Promise.resolve(
+      new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+  }) as typeof globalThis.fetch;
+  try {
+    const { commitment, url } = await resolveCommitment('hash', 'some-slug', undefined, {
+      host: PUBLISHER,
+    });
+    assert.equal(commitment.packageHash, COMMITMENT_BODY.packageHash);
+    assert.equal(url, `${PUBLISHER}/api/evidence/some-slug/commitment`);
+    assert.equal(requested.length, 2, 'the non-commitment 200 was tried and fell through');
+  } finally {
+    globalThis.fetch = real;
+  }
+});
+
+test('resolution: when NO segment answers, the prior-era error surfaces (today’s message, unchanged)', async () => {
+  // The canonical-form 404 is expected migration traffic and must never reach the
+  // user. What they see is the message about the endpoint that actually exists —
+  // byte-for-byte what they saw before this change.
+  const pub = stubPublisher(/\/api\/nothing\//);
+  try {
+    await assert.rejects(
+      resolveCommitment('hash', 'no-such-id', undefined, { host: PUBLISHER }),
+      (err: unknown) => {
+        assert.ok(err instanceof VerifyFlowError);
+        assert.match(err.message, /\/api\/evidence\/no-such-id\/commitment/);
+        assert.doesNotMatch(
+          err.message,
+          /\/api\/records\//,
+          'the canonical-form miss is migration noise, not a user-facing failure',
+        );
+        return true;
+      },
+    );
+    assert.equal(pub.requested.length, 2, 'both candidates were tried before giving up');
+  } finally {
+    pub.restore();
+  }
+});
+
+test('resolution: a prior-era PAGE URL resolves through the same ordered fallback', async () => {
+  // Not just bare identifiers: a publisher's own record-page URL carries its origin
+  // but not its API era, so it takes the identical canonical-first path.
+  const pub = stubPublisher(/\/api\/evidence\//);
+  try {
+    const { url } = await resolveCommitment('url', `${PUBLISHER}/evidence/some-slug`);
+    assert.equal(url, `${PUBLISHER}/api/evidence/some-slug/commitment`);
+    assert.deepEqual(pub.requested, [
+      `${PUBLISHER}/api/records/some-slug/commitment`,
+      `${PUBLISHER}/api/evidence/some-slug/commitment`,
+    ]);
+  } finally {
+    pub.restore();
+  }
+});
+
+test('resolution: a complete commitment URL is fetched verbatim — one request, no era rewrite', async () => {
+  // A caller-supplied resource URL is never re-segmented. Every commitment URL in the
+  // wild today is prior-era, and rewriting one onto a segment its publisher may not
+  // serve would break the input that works best.
+  const pub = stubPublisher(/\/api\/evidence\//);
+  try {
+    const direct = `${PUBLISHER}/api/evidence/some-slug/commitment`;
+    const { url } = await resolveCommitment('url', direct);
+    assert.equal(url, direct);
+    assert.deepEqual(pub.requested, [direct], 'exactly what was handed to us, once');
+  } finally {
+    pub.restore();
+  }
+});
+
+test('resolution: a cancelled verification does not issue the fallback request', async () => {
+  // Abort is not "this segment did not answer" — trying the next candidate would
+  // issue a request the user already asked us to stop making.
+  const controller = new AbortController();
+  const requested: string[] = [];
+  const real = globalThis.fetch;
+  globalThis.fetch = ((input: unknown) => {
+    requested.push(String(input));
+    controller.abort();
+    return Promise.reject(new DOMException('The operation was aborted.', 'AbortError'));
+  }) as typeof globalThis.fetch;
+  try {
+    await assert.rejects(
+      resolveCommitment('hash', 'some-slug', controller.signal, { host: PUBLISHER }),
+    );
+    assert.equal(requested.length, 1, 'no fallback request after cancellation');
+  } finally {
+    globalThis.fetch = real;
+  }
 });

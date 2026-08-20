@@ -1,4 +1,4 @@
-// @typedstandards/verify-core (in-repo) — the portable, browser-safe evidence
+// @typedstandards/verify-core (in-repo) — the portable, browser-safe record
 // verification core (civic-ai-tools-website#116 WS2).
 //
 // Pure functions over provided data: no `node:crypto` / `fs` / `path` / `process`

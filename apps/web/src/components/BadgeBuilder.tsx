@@ -66,7 +66,7 @@ export function BadgeBuilder() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           spellCheck={false}
-          placeholder="https://…/api/evidence/<id>/commitment — or a 64-char hash / slug"
+          placeholder="https://…/api/records/<id>/commitment — or a 64-char hash / slug"
           className="mt-2 w-full rounded-md border border-border bg-white px-3 py-2 font-mono text-sm outline-none focus:border-accent"
         />
         <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-xs text-muted">

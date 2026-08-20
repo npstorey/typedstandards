@@ -1,4 +1,4 @@
-// Content-addressable blob references for evidence package fields (spec §9.2
+// Content-addressable blob references for record package fields (spec §9.2
 // check #9) — browser-safe.
 //
 // Large fields (full output text, trace JSON, composed skill guidance) can be

@@ -1,6 +1,6 @@
 # @typedstandards/produce-core
 
-The portable, **I/O-free** producer core for [Typed Standards][ts] evidence
+The portable, **I/O-free** producer core for [Typed Standards][ts] record
 packages — envelope and attestation assembly (spec §8.1, §8.12), the Ed25519ph
 signing mechanism (§8.3.1), pure external-proof codecs (RFC 3161
 `TimeStampReq`, Rekor `hashedrekord`), the §8.8.1 commitment view, and generic
@@ -29,6 +29,27 @@ The verify-core primitives a producer-side layer consumes (`sha256Hex`,
 `isBlobRef`, the canonicalization-rule URIs, the Q32 captureMethod vocabulary
 table) are re-exported here, so such a layer needs a single declared
 dependency.
+
+## Vocabulary (2026-08-19 settlement)
+
+The artifact this core builds is a **record package**. "Evidence" is retired
+from the artifact/infrastructure brand role — a signed record shows *how* an
+answer was produced, not that it is correct — and retained only for the
+epistemic Question/Evidence/Claim role (spec §6.3, Appendix J).
+
+Nothing existing breaks:
+
+| Prior-era name | Canonical name | Status |
+|---|---|---|
+| `EvidencePackage` (type) | `RecordPackage` | `EvidencePackage` remains a **deprecated type alias** of `RecordPackage` — interchangeable in every position; removed no earlier than the next MAJOR. |
+| `verifyEvidence` (verify-core) | `verifyRecord` | Still exported as a deprecated alias of the same function object. |
+
+`buildCommitmentView` emits the §8.8.1 version field under its settlement-era
+key, `protocolVersion`. Views published before a producer adopted this version
+carry the same value under `evidenceProtocolVersion`, and that key stays valid
+**forever** — it is frozen inside already-signed artifacts, where rewriting it
+would invalidate the signature. Conformant verifiers accept either key, so a
+mixed corpus verifies uniformly.
 
 ## Install
 
@@ -70,7 +91,7 @@ import {
   signEnvelopeHash,
   buildCommitmentView,
 } from '@typedstandards/produce-core';
-import { verifyEvidence } from '@typedstandards/verify-core';
+import { verifyRecord } from '@typedstandards/verify-core';
 
 // 1. The adopter's key and identity (custody is yours; the core never reads
 //    an environment or embeds a default).
@@ -153,7 +174,7 @@ const sidecar = buildCommitmentView({
 });
 
 // 5. Verify — any consumer runs the same §9.2 checks offline.
-const result = await verifyEvidence(
+const result = await verifyRecord(
   { package: JSON.parse(JSON.stringify(pkg)), packageHash: sidecar.packageHash, signature: sidecar.signature },
   { registry },
 );

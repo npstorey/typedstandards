@@ -1,6 +1,6 @@
 // Portable verification orchestrator (spec §9.2) — browser-safe.
 //
-// `verifyEvidence` runs the §9.2 check suite over an already-resolved package +
+// `verifyRecord` runs the §9.2 check suite over an already-resolved package +
 // its proofs, returning one structured verdict. It is the SINGLE orchestration
 // both consumers run: the civicaitools.org server route (which injects its
 // `fetch`, its loaded trust registry, and — to preserve its current output — its
@@ -11,8 +11,13 @@
 // test pins this.
 //
 // `VerifyInput` is shaped to align field-for-field with the WS1 commitment
-// sidecar (`buildCommitmentView`) so WS3 can wire sidecar → verifyEvidence with
+// sidecar (`buildCommitmentView`) so WS3 can wire sidecar → verifyRecord with
 // no glue. The server route adapts its DB row to the same shape.
+//
+// The entry point was named `verifyEvidence` before the 2026-08-19 vocabulary
+// settlement (spec Appendix J, migration class `alias-and-deprecate`). That
+// name is still exported, still the same function object, and still works;
+// see the deprecated alias at the bottom of this file.
 //
 // Check depth: fully client-side for #1/#2/#3/#4/#5/#6/#9/#12/#13/#14/#15; #7 (RFC
 // 3161) is PRESENCE (`hasTimestamp`) AND, when a token is present, cryptographic TSA
@@ -107,7 +112,7 @@ export interface CommitmentLifecycleState {
 }
 
 /**
- * Everything `verifyEvidence` needs, aligned to the WS1 commitment sidecar +
+ * Everything `verifyRecord` needs, aligned to the WS1 commitment sidecar +
  * the package JSON the sidecar's `packageUrl` resolves to.
  */
 export interface VerifyInput {
@@ -209,8 +214,11 @@ export interface VerifyResult {
  * Run the §9.2 check suite. The step order mirrors the server route exactly
  * (notably: Rekor before key-trust, because a deprecated-key trust decision is
  * time-bounded by the Rekor `integratedTime`).
+ *
+ * Named `verifyEvidence` before the 2026-08-19 vocabulary settlement; that
+ * name remains exported as a deprecated alias of this exact function.
  */
-export async function verifyEvidence(
+export async function verifyRecord(
   input: VerifyInput,
   deps: VerifyDeps,
 ): Promise<VerifyResult> {
@@ -375,3 +383,16 @@ export async function verifyEvidence(
     lifecycle,
   };
 }
+
+/**
+ * @deprecated Renamed to {@link verifyRecord} in the 2026-08-19 vocabulary
+ * settlement — "evidence" is retired from the artifact/infrastructure brand
+ * role and retained only for the epistemic Question/Evidence/Claim role (spec
+ * §6.3, Appendix J; migration class `alias-and-deprecate`).
+ *
+ * This is the SAME function object, not a wrapper: `verifyEvidence ===
+ * verifyRecord`. Existing callers keep working unchanged and get identical
+ * results; the alias is removed no earlier than this package's next MAJOR
+ * version. New code should import `verifyRecord`.
+ */
+export const verifyEvidence = verifyRecord;

@@ -3,6 +3,42 @@
 Factual record of what changed per published version. Check numbers (#1–#15)
 refer to the Typed Standards specification §9.2 verification sequence.
 
+## Unreleased
+
+Vocabulary settlement (spec v0.1.5 Appendix J; registry Q50/Q66, ADR-0025,
+anchored at `civic-ai-tools#160`). "Evidence" is retired from the artifact and
+infrastructure brand role and retained only for the epistemic
+Question/Evidence/Claim role. **A minor bump** — a new export plus one wire-key
+change on newly built views; nothing already published is affected.
+
+- **`RecordPackage` is the canonical envelope type.** `EvidencePackage` remains
+  exported as a **deprecated type alias** of it — a pure alias, so the two names
+  are interchangeable in every position and no consumer typed against the old
+  name has to change. Removed no earlier than the next MAJOR version. Migration
+  class `alias-and-deprecate` (Appendix J). A compile-time assertion in
+  `envelope.ts` fails `tsc` if the two names ever stop being the same type.
+- **`buildCommitmentView` emits `protocolVersion`** instead of
+  `evidenceProtocolVersion` (spec §8.8.1). **Wire change on NEW emissions
+  only.** The key is `frozen-in-signed-artifacts`: every already-published view
+  keeps `evidenceProtocolVersion` forever — rewriting it would change the
+  envelope hash and invalidate the signature — and conformant verifiers MUST
+  accept both keys for both eras (Appendix J §J.4 rules 1–2), so a corpus mixing
+  the two verifies uniformly. New emissions carry the new key **alone**, not
+  both: emitting both would place a redundant second assertion inside every
+  freshly signed artifact and give the prior-era key an indefinite life on the
+  producing side. Value unchanged (`0.1.0`); field position in the view
+  unchanged (still first); no other key moved. A consumer that reads the field
+  by its literal old name from a view built by THIS version will not find it —
+  the fix is to accept either key, which the spec already requires. Reaches
+  production only when a publisher adopts this minor.
+- Package `description` and one `keywords` entry now say "record packages"
+  rather than "evidence packages"; the README gains a vocabulary section with
+  the old→new table and imports `verifyRecord` in its walkthrough.
+- New regression guard in `commitment.test.ts`: a built view must carry
+  `protocolVersion` and must NOT carry `evidenceProtocolVersion`.
+- No change to envelope assembly, hashing, canonicalization, signing, or the
+  external-proof codecs. Every byte-golden fixture passes unchanged.
+
 ## 0.2.1 — 2026-08-12
 
 - **`buildCommitmentView` no longer defaults `visibility`; an absent value is
