@@ -3,7 +3,7 @@
 Factual record of what changed per published version. Check numbers (#1–#15)
 refer to the Typed Standards specification §9.2 verification sequence.
 
-## Unreleased
+## 0.3.0 — 2026-08-19
 
 Vocabulary settlement (spec v0.1.5 Appendix J; registry Q50/Q66, ADR-0025,
 anchored at `civic-ai-tools#160`). "Evidence" is retired from the artifact and

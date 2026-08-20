@@ -1,6 +1,6 @@
 {
   "name": "@typedstandards/verify-core",
-  "version": "0.8.1",
+  "version": "0.9.0",
   "description": "Portable, browser-safe verification core for Typed Standards record packages — the §9.2 check suite, single-sourced so it verifies identically on a server and in the browser.",
   "license": "MIT",
   "author": "Nathan Storey",

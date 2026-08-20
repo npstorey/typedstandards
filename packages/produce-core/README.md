@@ -170,7 +170,7 @@ const sidecar = buildCommitmentView({
   signer: pkg.signer,
   contentHash: pkg.contentHash,
   contentCanonicalization: pkg.contentCanonicalization,
-  trustRegistryUrl: 'https://your-host.example/.well-known/evidence-keys.json',
+  trustRegistryUrl: 'https://your-host.example/.well-known/typed-publisher.json',
 });
 
 // 5. Verify — any consumer runs the same §9.2 checks offline.
