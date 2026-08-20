@@ -63,7 +63,7 @@ function fullInput(overrides: Partial<CommitmentViewInput> = {}): CommitmentView
 test('buildCommitmentView: full input emits the §8.8.1 shape in reference order', () => {
   const view = buildCommitmentView(fullInput());
   assert.deepEqual(Object.keys(view), [
-    'evidenceProtocolVersion',
+    'protocolVersion',
     'packageHash',
     'packageUrl',
     'visibility',
@@ -87,9 +87,33 @@ test('buildCommitmentView: full input emits the §8.8.1 shape in reference order
     'subjectTitle',
     'subjectSummary',
   ]);
-  assert.equal(view.evidenceProtocolVersion, '0.1.0');
+  assert.equal(view.protocolVersion, '0.1.0');
   assert.equal(view.packageHash, PACKAGE_HASH);
   assert.equal(view.trustRegistryUrl, TRUST_REGISTRY_URL);
+});
+
+// The 2026-08-19 vocabulary settlement (spec §8.8.1, Appendix J): the wire key
+// is `frozen-in-signed-artifacts`, so already-published views keep
+// `evidenceProtocolVersion` forever and verifiers MUST accept both keys — but
+// a NEW emission mints the new key ONLY. Emitting both would put a second,
+// redundant assertion inside every freshly signed artifact and give the old
+// key an indefinite life on the producing side, which is the outcome the
+// settlement exists to end.
+test('wire key: new emissions carry `protocolVersion` alone, never the prior-era key', () => {
+  for (const view of [
+    buildCommitmentView(fullInput()),
+    buildCommitmentView({
+      packageHash: PACKAGE_HASH,
+      visibility: 'public',
+      trustRegistryUrl: TRUST_REGISTRY_URL,
+    }),
+  ]) {
+    assert.equal(view.protocolVersion, '0.1.0', 'the settlement-era key carries the version');
+    assert.ok(
+      !('evidenceProtocolVersion' in view),
+      'the prior-era key `evidenceProtocolVersion` must NOT appear in a new emission',
+    );
+  }
 });
 
 test('signature envelope is carried VERBATIM (algorithm + kid intact)', () => {
@@ -110,7 +134,7 @@ test('minimal input: absent proofs are OMITTED, defaults fill the base fields', 
     trustRegistryUrl: TRUST_REGISTRY_URL,
   });
   assert.deepEqual(Object.keys(view), [
-    'evidenceProtocolVersion',
+    'protocolVersion',
     'packageHash',
     'visibility',
     'captureMethod',

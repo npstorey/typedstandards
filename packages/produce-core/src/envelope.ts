@@ -155,11 +155,14 @@ export interface EnvelopeInput {
 }
 
 /**
- * A conformant `content/*` evidence-package envelope (spec §8.1.1). Field
- * order in this type mirrors emission order, which on the legacy chain IS the
- * byte contract (`JSON.stringify` preserves insertion order).
+ * A conformant `content/*` record-package envelope (spec §8.1). Field order in
+ * this type mirrors emission order, which on the legacy chain IS the byte
+ * contract (`JSON.stringify` preserves insertion order).
+ *
+ * Named `EvidencePackage` before the 2026-08-19 vocabulary settlement; that
+ * name is still exported as a deprecated alias of this type (see below).
  */
-export interface EvidencePackage {
+export interface RecordPackage {
   metadata: {
     schemaVersion: string;
     packageId: string;
@@ -214,7 +217,33 @@ export interface EvidencePackage {
 }
 
 /**
- * Assemble a structured evidence package from caller-supplied data. Returns
+ * @deprecated Renamed to {@link RecordPackage} in the 2026-08-19 vocabulary
+ * settlement — "evidence" is retired from the artifact/infrastructure brand
+ * role and retained only for the epistemic Question/Evidence/Claim role (spec
+ * §6.3, Appendix J; migration class `alias-and-deprecate`).
+ *
+ * A pure type alias, so the two names are interchangeable in every position
+ * and no consumer typed against the old name has to change. The alias is
+ * removed no earlier than this package's next MAJOR version. New code should
+ * use `RecordPackage`.
+ */
+export type EvidencePackage = RecordPackage;
+
+/** Compile-time guard for the alias above (spec Appendix J requires the old
+ *  name to keep working, not merely to exist). Both directions are asserted,
+ *  so narrowing either name to a subset of the other fails `tsc` here rather
+ *  than in a consumer's build. Type-only — erases entirely at emit. */
+type AssertTrue<T extends true> = T;
+type _EvidencePackageAliasHolds = AssertTrue<
+  EvidencePackage extends RecordPackage
+    ? RecordPackage extends EvidencePackage
+      ? true
+      : false
+    : false
+>;
+
+/**
+ * Assemble a structured record package from caller-supplied data. Returns
  * the package object and its envelope hash (spec §8.2) — and NO signature:
  * an unsigned envelope is a complete, first-class result.
  *
@@ -230,7 +259,7 @@ export interface EvidencePackage {
  */
 export function buildEnvelope(
   input: EnvelopeInput,
-): { pkg: EvidencePackage; envelopeHash: string } {
+): { pkg: RecordPackage; envelopeHash: string } {
   const promptHash = sha256Hex(input.prompt);
 
   // Re-emit caller-supplied query entries in the envelope's fixed key order.
@@ -256,7 +285,7 @@ export function buildEnvelope(
   const contentCanonicalization =
     input.contentCanonicalization ?? LEGACY_JSON_CANONICALIZATION;
 
-  const pkgBase: EvidencePackage = {
+  const pkgBase: RecordPackage = {
     metadata: {
       schemaVersion: PACKAGE_SCHEMA_VERSION,
       packageId: input.packageId,
@@ -322,7 +351,7 @@ export function buildEnvelope(
   // carries `contentCanonicalization` but not yet `contentHash`) and spread
   // on last; legacy callers leave `pkgBase` untouched so their canonical JSON
   // is byte-identical to the pre-v0.1 shape.
-  const pkg: EvidencePackage = isV01Envelope
+  const pkg: RecordPackage = isV01Envelope
     ? {
         ...pkgBase,
         contentHash: {

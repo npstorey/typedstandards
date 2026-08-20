@@ -1,7 +1,7 @@
 {
   "name": "@typedstandards/produce-core",
   "version": "0.2.1",
-  "description": "Portable, I/O-free producer core for Typed Standards evidence packages — format-neutral envelope and attestation assembly, the Ed25519ph signing mechanism, and pure external-proof codecs, sharing one canonicalization/hash chain with @typedstandards/verify-core.",
+  "description": "Portable, I/O-free producer core for Typed Standards record packages — format-neutral envelope and attestation assembly, the Ed25519ph signing mechanism, and pure external-proof codecs, sharing one canonicalization/hash chain with @typedstandards/verify-core.",
   "license": "MIT",
   "author": "Nathan Storey",
   "type": "module",
@@ -57,7 +57,7 @@
   },
   "keywords": [
     "typed-standards",
-    "evidence",
+    "record-package",
     "provenance",
     "producer",
     "ed25519",

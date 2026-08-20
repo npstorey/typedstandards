@@ -1,5 +1,5 @@
 // @typedstandards/produce-core — the format-neutral, I/O-free producer core
-// for Typed Standards evidence packages: envelope + attestation assembly
+// for Typed Standards record packages: envelope + attestation assembly
 // (spec §8.1, §8.12), the Ed25519ph signing mechanism (§8.3.1), pure
 // external-proof codecs (RFC 3161 / Rekor hashedrekord), the §8.8.1
 // commitment view, and generic PROV-O helpers (§8.9). The verification

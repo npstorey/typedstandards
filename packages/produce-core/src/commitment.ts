@@ -31,7 +31,14 @@ import type {
   SignerIdentity,
 } from '@typedstandards/verify-core';
 
-const EVIDENCE_PROTOCOL_VERSION = '0.1.0';
+// The schema version this view is published against, emitted as §8.8.1's
+// `protocolVersion`. The wire key was `evidenceProtocolVersion` before the
+// 2026-08-19 vocabulary settlement (spec Appendix J, migration class
+// `frozen-in-signed-artifacts`): already-signed views keep the old key
+// forever — rewriting it would change the envelope hash — and a conformant
+// verifier MUST accept both keys. New emissions mint the new key only; this
+// constant carries the value, unchanged, under either.
+const PROTOCOL_VERSION = '0.1.0';
 
 /**
  * Current lifecycle state of the content node, surfaced alongside the proofs
@@ -146,7 +153,7 @@ export function buildCommitmentView(
   const redact = input.redactContentSurface === true;
 
   return {
-    evidenceProtocolVersion: EVIDENCE_PROTOCOL_VERSION,
+    protocolVersion: PROTOCOL_VERSION,
     packageHash: input.packageHash,
     // The content's location is never emitted on a redacted view.
     ...(redact || input.packageUrl === undefined

@@ -11,7 +11,7 @@
 // verification logic (factored from the server `verify.ts`). The DB + blob fetch
 // orchestration that assembles the chain stays in the server `lifecycle.ts`,
 // which imports these. WS2's portable orchestrator (`verify.ts` →
-// `verifyEvidence`) consumes lifecycle at STATE depth (the sidecar's
+// `verifyRecord`) consumes lifecycle at STATE depth (the sidecar's
 // status/withdrawnAt/reason) rather than re-running the chain — verifying the
 // signed attestation chain independently in the browser is civic-ai-tools-website#119.
 

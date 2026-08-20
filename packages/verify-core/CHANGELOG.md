@@ -6,6 +6,32 @@ references are to `npstorey/civic-ai-tools-website` (#119 is the offline-crypto
 hardening arc; #116 is the standalone-verifier arc this package was extracted
 in).
 
+## Unreleased
+
+Vocabulary settlement (spec v0.1.5 Appendix J; registry Q50/Q66, ADR-0025,
+anchored at `civic-ai-tools#160`). "Evidence" is retired from the artifact and
+infrastructure brand role and retained only for the epistemic
+Question/Evidence/Claim role. **A minor bump** — a new export, no removals, no
+behavior change.
+
+- **`verifyRecord` is the canonical §9.2 entry point.** `verifyEvidence` remains
+  exported as a **deprecated alias**, and it is the same function object
+  (`verifyEvidence === verifyRecord`), not a wrapper — every existing caller
+  keeps working unchanged and gets byte-identical results. The alias is removed
+  no earlier than the next MAJOR version. Migration class `alias-and-deprecate`
+  (Appendix J).
+- Package `description` and one `keywords` entry now say "record packages"
+  rather than "evidence packages"; the README's usage example imports
+  `verifyRecord` and states the alias explicitly. Present-tense references to
+  the entry point in published JSDoc (`VerifyInput`, `lifecycle.ts`) name
+  `verifyRecord`; past-tense historical narration of what the function did at
+  earlier versions is left as written, since it remains accurate.
+- New regression guard in `package-exports.test.ts`: both names must resolve
+  and must be the same function object, so the alias cannot silently become a
+  second implementation or disappear.
+- No wire, algorithm, check-depth, or result-shape change. Already-signed
+  packages are byte-identical and verify exactly as before.
+
 ## 0.8.1 — 2026-08-17
 
 - Removed the `prepare` (install-time build) script (typedstandards#39).

@@ -1,6 +1,6 @@
 # @typedstandards/verify-core
 
-The portable, **browser-safe** verification core for [Typed Standards][ts] evidence
+The portable, **browser-safe** verification core for [Typed Standards][ts] record
 packages — the spec §9.2 check suite, factored so it runs **identically** on a
 server (e.g. civicaitools.org's verify route) and in the browser (the
 typedstandards.org client-side verifier). One implementation, so a tampered
@@ -45,7 +45,7 @@ edge, and in Node.
 ## Usage
 
 ```ts
-import { verifyEvidence, type VerifyInput, type TrustRegistry } from '@typedstandards/verify-core';
+import { verifyRecord, type VerifyInput, type TrustRegistry } from '@typedstandards/verify-core';
 
 const input: VerifyInput = {
   package: pkg,            // the parsed package JSON
@@ -56,13 +56,21 @@ const input: VerifyInput = {
   lifecycle,              // optional sidecar lifecycle state
 };
 
-const result = await verifyEvidence(input, {
+const result = await verifyRecord(input, {
   registry,               // a TrustRegistry (fetched from the package's trustRegistryUrl)
   fetch: globalThis.fetch,
 });
 // result carries the per-check verdicts: hashMatch, signatureValid, keyTrust,
 // contentHash, typeResolution, signerIdentity, lifecycle, ...
 ```
+
+> **`verifyEvidence` is the same function.** The 2026-08-19 vocabulary settlement
+> renamed the entry point to `verifyRecord` (spec Appendix J) — "evidence" is
+> retired from the artifact/infrastructure brand role and kept only for the
+> epistemic Question/Evidence/Claim role. `verifyEvidence` is still exported as a
+> **deprecated alias of this exact function object**, so existing code keeps
+> working unchanged and returns identical results. The alias is removed no
+> earlier than the next MAJOR version; new code should use `verifyRecord`.
 
 The barrel (`.`) also exports the individual check functions
 (`recomputePackageHash`, `verifySignature`, `verifyKeyTrust`, `verifyContentHash`,

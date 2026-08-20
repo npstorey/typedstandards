@@ -2,8 +2,14 @@
 // Phase C). Pure helpers the <Verifier> client component sequences:
 //
 //   detect input  →  resolve the WS1 commitment  →  fetch package + registry
-//   →  verifyEvidence (the SAME @typedstandards/verify-core both sites run)
+//   →  verifyRecord (the SAME @typedstandards/verify-core both sites run)
 //   →  build the per-check "show the math" rows + the rolled-up verdict.
+//
+// Vocabulary eras (spec Appendix J, the 2026-08-19 settlement). The commitment
+// endpoint's canonical path segment is `/api/records/`; `/api/evidence/` is a
+// PERMANENT alias, because links minted under it are published in the wild.
+// This module therefore RECOGNIZES both segments everywhere it parses, and
+// RESOLVES new-then-old everywhere it constructs — see COMMITMENT_API_SEGMENTS.
 //
 // All network I/O is a plain GET with no custom request headers — a custom header
 // makes the request non-simple and triggers a CORS preflight; a preflight `OPTIONS`
@@ -20,7 +26,7 @@
 // signed attestation chain when present (#119 P1/P2b/P3).
 
 import {
-  verifyEvidence,
+  verifyRecord,
   validateRegistry,
   verifyLifecycleChain,
   verifyKeyTrust,
@@ -89,6 +95,19 @@ export const DEFAULT_HOST = BARE_ID_ANCHOR;
 /** The §9.2.1 commitment sidecar shape (what the WS1 endpoint returns). A bundle
  *  may additionally carry `package` / `trustRegistry` inline for offline use. */
 export interface Commitment {
+  /** The schema version this view was published against (spec §8.8.1). The
+   *  DUAL-ERA key pair of the 2026-08-19 settlement (Appendix J,
+   *  `frozen-in-signed-artifacts`): views minted after a publisher's cutover
+   *  carry `protocolVersion`; views minted before it carry the same value
+   *  under `evidenceProtocolVersion`, which stays valid FOREVER — the key is
+   *  frozen inside already-signed artifacts and rewriting it would invalidate
+   *  the signature. Both are optional and neither is read by this flow (the
+   *  verification depth comes from the proofs, not from a declared version),
+   *  so era is not a trust signal here in the strongest possible sense: there
+   *  is no code path that can branch on it. */
+  protocolVersion?: string;
+  /** Prior-era spelling of {@link Commitment.protocolVersion}. Accepted
+   *  forever; see the note there. */
   evidenceProtocolVersion?: string;
   packageHash: string;
   packageUrl?: string;
@@ -214,47 +233,104 @@ async function getJson(url: string, signal?: AbortSignal): Promise<unknown> {
   return res.json();
 }
 
+// --- Vocabulary eras: the commitment path segment -------------------------
+//
+// The 2026-08-19 vocabulary settlement (spec Appendix J) makes `records` the
+// canonical route/page segment and keeps `evidence` as a PERMANENT alias — not
+// a deprecation window, because links minted under the old segment are already
+// published. Two asymmetric rules follow, and this module implements both:
+//
+//   RECOGNITION is symmetric and immediate. Every parse accepts either segment,
+//   with no preference: an `/evidence/<id>` page URL and a `/records/<id>` page
+//   URL are the same input, and a commitment URL under either segment collapses
+//   to the same clean share link. Era is not a trust signal.
+//
+//   CONSTRUCTION is ordered: NEW FIRST, OLD AS FALLBACK. The verifier is
+//   neutral infrastructure that must keep working against publishers at BOTH
+//   stages of their own cutover, and today that is every publisher — including
+//   the reference one, whose new segments deploy in a later phase. Emitting the
+//   new form ONLY would break verification for every publisher in the world on
+//   the day this ships; emitting the old form only would never adopt the
+//   canonical name. So resolution TRIES the canonical form and falls back to
+//   the prior-era form when it does not answer (see `resolveCommitment`). The
+//   cost is one extra 404 per hosted resolution until publishers cut over, and
+//   the guarantee is spec Appendix J rule 4: nothing stops resolving.
+//
+// Order is load-bearing — `COMMITMENT_API_SEGMENTS[0]` is the canonical form.
+
+/** The settlement-era canonical API/page path segment (spec Appendix J). */
+const CANONICAL_PATH_SEGMENT = 'records';
+/** The prior-era segment, served as a permanent alias. */
+const PRIOR_ERA_PATH_SEGMENT = 'evidence';
+
+/** Commitment-endpoint path segments in RESOLUTION ORDER: canonical first,
+ *  prior-era as the fallback. Never reorder — see the note above. */
+const COMMITMENT_API_SEGMENTS = [CANONICAL_PATH_SEGMENT, PRIOR_ERA_PATH_SEGMENT] as const;
+
+/** Matches a publisher's own record-page URL under EITHER era's segment. */
+const RECORD_PAGE_RE = new RegExp(
+  `/(?:${CANONICAL_PATH_SEGMENT}|${PRIOR_ERA_PATH_SEGMENT})/([^/]+)`,
+);
+
+/** Matches a canonical commitment-endpoint pathname under EITHER era's segment. */
+const COMMITMENT_PATH_RE = new RegExp(
+  `^/api/(?:${CANONICAL_PATH_SEGMENT}|${PRIOR_ERA_PATH_SEGMENT})/([^/]+)/commitment$`,
+);
+
 /** How a hosted URL names the commitment to fetch. One classifier, used by BOTH
  *  `deriveCommitmentUrl` (which resolves) and `identifierResolutionKind` (which tells
  *  the UI whether to disclose an anchor), so the two cannot disagree about whether an
  *  input carries a publisher origin. */
 type HostedUrlKind =
   | { kind: 'commitment' }
-  | { kind: 'evidence-id'; id: string }
+  | { kind: 'record-id'; id: string }
   | { kind: 'package-blob'; hash: string }
   | { kind: 'opaque' };
 
 function classifyHostedUrl(u: URL): HostedUrlKind {
   if (u.pathname.endsWith('/commitment')) return { kind: 'commitment' };
-  // PACKAGE-BLOB IS TESTED BEFORE `/evidence/<id>`, and the order is load-bearing.
-  // A `<64-hex>.json` FILENAME is an unambiguous package blob wherever it sits, while
-  // the `/evidence/` probe matches any path SEGMENT — so a storage URL that merely
-  // happens to contain that segment (`…/evidence/<hash>.json`, a real bucket layout)
-  // was previously captured as an evidence id of literally `<hash>.json` and produced
-  // the nonsense `…/api/evidence/<hash>.json/commitment`. The more specific signal
-  // must win. No publisher's `/evidence/<id>` page URL ends in `<64-hex>.json`, so
-  // nothing that genuinely carries a publisher origin is diverted by this.
+  // PACKAGE-BLOB IS TESTED BEFORE the record-page probe, and the order is
+  // load-bearing. A `<64-hex>.json` FILENAME is an unambiguous package blob wherever
+  // it sits, while the record-page probe matches any `/records/` or `/evidence/` path
+  // SEGMENT — so a storage URL that merely happens to contain one (`…/evidence/
+  // <hash>.json`, a real bucket layout) was previously captured as a record id of
+  // literally `<hash>.json` and produced the nonsense `…/api/evidence/<hash>.json
+  // /commitment`. The more specific signal must win. No publisher's `/records/<id>`
+  // or `/evidence/<id>` page URL ends in `<64-hex>.json`, so nothing that genuinely
+  // carries a publisher origin is diverted by this. The settlement widened the probe
+  // to both segments, which makes this ordering MORE load-bearing, not less: there
+  // are now two bucket-layout segment names that can collide with a blob path.
   const blobHash = u.pathname.match(/([0-9a-f]{64})\.json$/i);
   if (blobHash) return { kind: 'package-blob', hash: blobHash[1] };
-  const idMatch = u.pathname.match(/\/evidence\/([^/]+)/);
-  if (idMatch) return { kind: 'evidence-id', id: idMatch[1] };
+  const idMatch = u.pathname.match(RECORD_PAGE_RE);
+  if (idMatch) return { kind: 'record-id', id: idMatch[1] };
   return { kind: 'opaque' };
 }
 
 /**
- * Build the commitment-endpoint URL for a hosted URL input.
+ * Build the commitment-endpoint URL for a hosted URL input — the CANONICAL
+ * (settlement-era) form. For the ordered candidate list a fetch should actually
+ * walk, use {@link deriveCommitmentUrlCandidates}; this returns its first entry,
+ * which is what a caller wants when it needs one URL to display or compare.
  *
  * Three shapes carry a PUBLISHER ORIGIN and keep it:
  *   - a direct `…/commitment` URL — already the resource;
- *   - a publisher's own `…/evidence/<id>…` URL — the origin serving that page IS the
- *     publisher, so `${u.origin}/api/evidence/<id>/commitment` is its commitment;
+ *   - a publisher's own `…/records/<id>…` (or prior-era `…/evidence/<id>…`) URL —
+ *     the origin serving that page IS the publisher, so
+ *     `${u.origin}/api/records/<id>/commitment` is its commitment;
  *   - anything else, used as-is.
+ *
+ * The PAGE segment a publisher happens to use says nothing about which API
+ * segment it serves — a publisher can cut over its pages and routes at
+ * different times, and the reference publisher will. So the page URL's own
+ * segment is deliberately NOT copied into the API URL: the id is extracted and
+ * re-resolved new-then-old like any other identifier.
  *
  * One shape does NOT, and this is the B5 correction (#44). A PACKAGE-BLOB URL — the
  * badge deep-link's `?url=<package-url>`, whose filename is the 64-hex package hash —
  * names a STORAGE location, not a publisher. Detached object storage is the common
  * pattern (Vercel Blob, S3, R2, GCS) and is the reference publisher's own setup, so
- * the blob's origin routinely has no evidence API at all. Preserving that origin 404s
+ * the blob's origin routinely has no commitment API at all. Preserving that origin 404s
  * there; re-pointing every blob at the anchor 404s for a self-hosting publisher.
  * Neither is right, because a bare blob URL does not determine its publisher.
  *
@@ -271,6 +347,31 @@ function classifyHostedUrl(u: URL): HostedUrlKind {
  * no CORS headers.
  */
 export function deriveCommitmentUrl(input: string, host: string = DEFAULT_HOST): string {
+  return deriveCommitmentUrlCandidates(input, host)[0];
+}
+
+/**
+ * The commitment URLs a hosted input resolves to, in RESOLUTION ORDER —
+ * canonical (settlement-era) first, prior-era second. `resolveCommitment` walks
+ * this list and takes the first that answers with a commitment.
+ *
+ * Two of the four shapes produce a single candidate rather than two, and the
+ * distinction is exact: a list is emitted only where THIS module builds the
+ * path, never where it merely passes one through.
+ *   - `commitment` / `opaque` — the caller handed us a complete resource URL.
+ *     Rewriting its path to a different segment would be inventing a resource
+ *     the caller did not name, so it is used exactly as given (one candidate).
+ *     Both segments are already RECOGNIZED here, so a prior-era commitment URL
+ *     is not second-class — it is simply already resolved.
+ *   - `record-id` / `package-blob` — we hold an identifier and mint the path
+ *     ourselves, so both eras are minted and tried in order (two candidates).
+ *
+ * Always non-empty; `[0]` is the canonical form.
+ */
+export function deriveCommitmentUrlCandidates(
+  input: string,
+  host: string = DEFAULT_HOST,
+): string[] {
   let u: URL;
   try {
     u = new URL(input);
@@ -280,14 +381,18 @@ export function deriveCommitmentUrl(input: string, host: string = DEFAULT_HOST):
   const hosted = classifyHostedUrl(u);
   switch (hosted.kind) {
     case 'commitment':
-      return withCanonicalOrigin(u);
-    case 'evidence-id':
-      return `${canonicalPublisherOrigin(u.origin)}/api/evidence/${hosted.id}/commitment`;
+      return [withCanonicalOrigin(u)];
+    case 'record-id':
+      // The id is taken verbatim from a URL pathname — already percent-encoded,
+      // so it is NOT re-encoded here (that would double-encode it).
+      return COMMITMENT_API_SEGMENTS.map(
+        (segment) => `${canonicalPublisherOrigin(u.origin)}/api/${segment}/${hosted.id}/commitment`,
+      );
     case 'package-blob':
-      return bareIdCommitmentUrl(hosted.hash, host);
+      return bareIdCommitmentUrlCandidates(hosted.hash, host);
     default:
       // Last resort: treat the URL itself as the commitment resource.
-      return withCanonicalOrigin(u);
+      return [withCanonicalOrigin(u)];
   }
 }
 
@@ -336,21 +441,49 @@ export function identifierResolutionKind(
 //   /verify/<host>/<id>   → resolve <id> against https://<host>
 //
 // `deriveShareTarget` mints these and `parseVerifyTarget` reads them back; the pair
-// is closed by `bareIdCommitmentUrl`, which both sides use to build the one URL an
-// identifier resolves to — and which `deriveCommitmentUrl` also routes package-blob
+// is closed by `commitmentUrlOn`, the one template both sides build the commitment
+// path from — and which `deriveCommitmentUrlCandidates` also routes package-blob
 // URLs through, so every origin-less input takes one path. The two-segment form is
 // what gives EVERY publisher the clean short link: it used to be earned only by a
 // commitment URL on the anchor origin, so a second publisher's result could only ever
 // be shared as an opaque `?url=<encoded>` blob.
+//
+// The round-trip survives the vocabulary settlement in BOTH directions. A commitment
+// URL that answered under EITHER era's segment collapses to the same short link
+// (`deriveShareTarget` recognizes both), and re-resolving that short link goes back
+// through the canonical-first candidate list — so a link shared today from a
+// prior-era publisher keeps working after that publisher cuts over, and vice versa.
+// The share link carries the IDENTIFIER, never the era.
 
-/** The commitment URL a bare identifier resolves to on `host` — the single place the
- *  `/api/evidence/<id>/commitment` shape is built, so a minted share link and the
- *  request it later re-issues cannot drift. `host` defaults to the anchor. The host
- *  is www-normalized (#50) before the URL is minted — a no-op for the anchor and the
+/** The single place the `/api/<segment>/<id>/commitment` shape is built, for BOTH
+ *  eras — so a minted share link and the request it later re-issues cannot drift,
+ *  and so widening the vocabulary could not fork the shape. The host is
+ *  www-normalized (#50) before the URL is minted — a no-op for the anchor and the
  *  roster's picker origins, which are canonical already; it matters for a host a
  *  link named. */
+function commitmentUrlOn(segment: string, id: string, host: string): string {
+  return `${canonicalPublisherOrigin(host)}/api/${segment}/${encodeURIComponent(id)}/commitment`;
+}
+
+/** The CANONICAL commitment URL a bare identifier resolves to on `host` — the
+ *  settlement-era `/api/records/<id>/commitment` form. `host` defaults to the
+ *  anchor. This is the form a share link round-trips through and the form the
+ *  UI displays; for the ordered list a fetch walks, see
+ *  {@link bareIdCommitmentUrlCandidates}. */
 export function bareIdCommitmentUrl(id: string, host: string = DEFAULT_HOST): string {
-  return `${canonicalPublisherOrigin(host)}/api/evidence/${encodeURIComponent(id)}/commitment`;
+  return commitmentUrlOn(CANONICAL_PATH_SEGMENT, id, host);
+}
+
+/** The commitment URLs a bare identifier resolves to on `host`, in RESOLUTION
+ *  ORDER: canonical first, prior-era second. Both are the same identifier on the
+ *  same host — only the path segment differs — so trying them in order costs one
+ *  extra request against a publisher that has not cut over yet, and costs nothing
+ *  against one that has. */
+export function bareIdCommitmentUrlCandidates(
+  id: string,
+  host: string = DEFAULT_HOST,
+): string[] {
+  return COMMITMENT_API_SEGMENTS.map((segment) => commitmentUrlOn(segment, id, host));
 }
 
 /** Hostname shape: dot-separated LDH labels (1–63 chars, no leading/trailing `-`),
@@ -440,11 +573,19 @@ export function parseVerifyTarget(segments: string[]): VerifyTarget | undefined 
  * reason changed.)
  *
  * - `null` when no commitment URL exists (inline / bundle — nothing hosted to link to).
- * - A canonical `^/api/evidence/<id>/commitment$` URL collapses to a clean short
- *   link, which round-trips through `parseVerifyTarget` + `bareIdCommitmentUrl` back
- *   to this exact URL: `/verify/<id>` on the anchor origin, `/verify/<host>/<id>`
- *   anywhere else. Both segments are `encodeURIComponent`'d; the id is decoded first
- *   so it survives the extra encode the rebuild applies.
+ * - A commitment-endpoint URL under EITHER era's segment
+ *   (`^/api/(?:records|evidence)/<id>/commitment$`) collapses to a clean short link:
+ *   `/verify/<id>` on the anchor origin, `/verify/<host>/<id>` anywhere else. Both
+ *   path segments are `encodeURIComponent`'d; the id is decoded first so it survives
+ *   the extra encode the rebuild applies.
+ *
+ *   The collapse is ERA-BLIND on purpose. A prior-era commitment URL is what a
+ *   not-yet-cut-over publisher answers with TODAY (see `resolveCommitment`), so
+ *   refusing to collapse it would deny every current publisher's result the clean
+ *   short link and hand the user an opaque `?url=` blob instead. What round-trips is
+ *   the IDENTIFIER: re-resolving the short link walks the canonical-first candidate
+ *   list afresh, which lands on whichever segment that publisher serves at that
+ *   moment — so a link minted before a publisher's cutover keeps working after it.
  * - Falls back to `/verify?url=<encoded>` — which re-resolves against the ORIGINAL
  *   origin via 'url' mode (`deriveCommitmentUrl` is idempotent for a
  *   `/commitment`-terminated URL) — for an unusual path, a decoded `/` in the id
@@ -465,7 +606,7 @@ export function deriveShareTarget(resolved: ResolvedInput): string | null {
     return null;
   }
 
-  const m = u.pathname.match(/^\/api\/evidence\/([^/]+)\/commitment$/);
+  const m = u.pathname.match(COMMITMENT_PATH_RE);
   if (m) {
     const id = decodeURIComponent(m[1]);
     if (!id.includes('/')) {
@@ -489,7 +630,34 @@ export interface ResolveOptions {
   host?: string;
 }
 
-/** Step 1 — resolve the commitment for hash / URL / bundle input. */
+/**
+ * Step 1 — resolve the commitment for hash / URL / bundle input.
+ *
+ * NEW-THEN-OLD RESOLUTION (spec Appendix J). For hosted input the candidate list
+ * is walked in order — canonical segment first, prior-era second — and the FIRST
+ * candidate that answers with a real commitment wins. A candidate that does not
+ * is not a user-facing failure; it is simply not that publisher's segment.
+ *
+ * "Does not answer" deliberately covers every way a candidate can fail to be a
+ * commitment, not just 404: an unreachable host, a non-JSON body, any non-2xx,
+ * and a 200 that parses but carries no `packageHash`. The last one matters more
+ * than it looks — `/api/records/…` is a plausible path for an unrelated
+ * records API on some publisher, and a JSON 200 from it must fall through to the
+ * prior-era segment rather than abort a verification that would have succeeded.
+ * The rule is the settlement's fourth normative dual-era rule: no migration step
+ * may create a state where something that resolved before stops resolving.
+ *
+ * When EVERY candidate fails, the LAST candidate's error surfaces. That is the
+ * prior-era one, which is the segment every publisher serves today — so the
+ * message a user sees for a genuinely bad identifier names a URL that really
+ * exists, and is byte-for-byte the message they saw before this change. The
+ * canonical-form 404 that precedes it is expected traffic during the migration
+ * and is never shown.
+ *
+ * The returned `url` is the one that ANSWERED, not the one first tried: it feeds
+ * `sources.commitment.url`, the independence disclosure, and `deriveShareTarget`,
+ * all of which must reflect the resolved fact rather than an attempt.
+ */
 export async function resolveCommitment(
   mode: InputMode,
   raw: string,
@@ -507,21 +675,38 @@ export async function resolveCommitment(
     const commitment = parsed as Commitment;
     if (!commitment || typeof commitment !== 'object' || !commitment.packageHash) {
       throw new VerifyFlowError(
-        'That JSON is not a commitment bundle (it has no `packageHash`). Paste a §9.2.1 commitment sidecar — for example, what a publisher’s `/api/evidence/<id>/commitment` endpoint returns.',
+        'That JSON is not a commitment bundle (it has no `packageHash`). Paste a §9.2.1 commitment sidecar — for example, what a publisher’s `/api/records/<id>/commitment` endpoint returns (the prior-era `/api/evidence/` path is still accepted).',
       );
     }
     return { commitment };
   }
   // `host` reaches BOTH branches: a bare identifier carries no origin, and a
   // package-blob URL's origin is storage rather than a publisher (see
-  // deriveCommitmentUrl), so each resolves against it.
+  // deriveCommitmentUrlCandidates), so each resolves against it.
   const host = opts.host ?? DEFAULT_HOST;
-  const url = mode === 'hash' ? bareIdCommitmentUrl(s, host) : deriveCommitmentUrl(s, host);
-  const commitment = (await getJson(url, signal)) as Commitment;
-  if (!commitment?.packageHash) {
-    throw new VerifyFlowError(`${shortUrl(url)} did not return a commitment (no \`packageHash\`).`);
+  const candidates =
+    mode === 'hash'
+      ? bareIdCommitmentUrlCandidates(s, host)
+      : deriveCommitmentUrlCandidates(s, host);
+
+  let lastError: unknown;
+  for (const url of candidates) {
+    try {
+      const commitment = (await getJson(url, signal)) as Commitment;
+      if (!commitment?.packageHash) {
+        throw new VerifyFlowError(
+          `${shortUrl(url)} did not return a commitment (no \`packageHash\`).`,
+        );
+      }
+      return { commitment, url };
+    } catch (err) {
+      // A caller-cancelled verification is not a failed candidate — trying the
+      // next one would issue a request the user already asked us to stop making.
+      if (signal?.aborted) throw err;
+      lastError = err;
+    }
   }
-  return { commitment, url };
+  throw lastError;
 }
 
 /** A resolution step, emitted as each piece is obtained (drives the live UI). */
@@ -675,7 +860,7 @@ export async function resolveInput(
  *  `opts.offline` (set for a fully self-contained bundle) makes verification
  *  OFFLINE-FIRST (#119 Q15): when the bundle carries the Rekor inclusion proof + entry
  *  body — which verify #8 cryptographically with no network — we drop `rekorEntryId` so
- *  `verifyEvidence` skips its redundant online hash-parity re-fetch (verify.ts:212).
+ *  `verifyRecord` skips its redundant online hash-parity re-fetch (verify.ts:212).
  *  The carried Merkle inclusion is strictly stronger than the online parity, and the
  *  `integratedTime` that fetch would yield isn't available offline anyway, so #5 bounds
  *  on the carried, verified RFC 3161 genTime instead. This is what makes a self-contained
@@ -730,7 +915,7 @@ export function runVerify(
   registry: TrustRegistry | undefined,
   lifecycleResolution?: LifecycleResolution,
 ): Promise<VerifyResult> {
-  return verifyEvidence(input, {
+  return verifyRecord(input, {
     registry,
     fetch: globalThis.fetch,
     ...(lifecycleResolution ? { lifecycleResolution } : {}),
@@ -834,7 +1019,7 @@ export function keyTrustStalenessNote(
 
 /** The earliest verified "signed before" time the #5 check is bounded by — the min
  *  of the Rekor integratedTime and a verified RFC 3161 genTime (#119 P2a). Mirrors
- *  the derivation inside verify-core's `verifyEvidence`, so a re-check reproduces
+ *  the derivation inside verify-core's `verifyRecord`, so a re-check reproduces
  *  the original #5 verdict exactly. Both are seconds since epoch. */
 function signedBeforeTimeOf(result: VerifyResult): number | undefined {
   let t = result.rekorIntegratedTime;
