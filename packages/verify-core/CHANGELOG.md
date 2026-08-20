@@ -6,7 +6,7 @@ references are to `npstorey/civic-ai-tools-website` (#119 is the offline-crypto
 hardening arc; #116 is the standalone-verifier arc this package was extracted
 in).
 
-## Unreleased
+## 0.9.0 — 2026-08-19
 
 Vocabulary settlement (spec v0.1.5 Appendix J; registry Q50/Q66, ADR-0025,
 anchored at `civic-ai-tools#160`). "Evidence" is retired from the artifact and
