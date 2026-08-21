@@ -160,7 +160,7 @@ test('buildPreview: an unavailable preview reports WHY (private vs. unfetchable)
 // The prescribed fix rested on a false premise: that a package blob's origin IS its
 // publisher's origin. It is not, wherever object storage is detached from the app —
 // Vercel Blob, S3, R2, GCS, and the reference publisher's own setup — where the blob
-// origin has no evidence API at all. Measured on the live deployment: the blob itself
+// origin has no commitment API at all. Measured on the live deployment: the blob itself
 // returns 200, `<blob-host>/api/evidence/<hash>/commitment` returns 404, and the
 // anchor's returns 200. So origin-preservation 404s for detached storage, while the
 // pre-P1 anchor-pinning 404s for a self-hosting publisher. NEITHER is right, because
@@ -198,10 +198,10 @@ test('deriveCommitmentUrl: package-blob resolution does not depend on roster mem
   );
 });
 
-test('deriveCommitmentUrl: DETACHED STORAGE — a blob host with no evidence API resolves to the anchor (B5)', () => {
+test('deriveCommitmentUrl: DETACHED STORAGE — a blob host with no commitment API resolves to the anchor (B5)', () => {
   // The case the original premise could not survive, and the reference publisher's
   // actual deployment shape: package bytes on third-party object storage whose origin
-  // serves no evidence API. Preserving that origin produced a guaranteed 404.
+  // serves no commitment API. Preserving that origin produced a guaranteed 404.
   const hash = 'c3'.repeat(32);
   for (const blobUrl of [
     `https://abcdef0123456789.public.blob.vercel-storage.com/evidence-packages/${hash}.json`,

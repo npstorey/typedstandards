@@ -1,6 +1,6 @@
 # Typed Standards
 
-The home of [Typed Standards][ts] — the standard for verifiable, signed evidence
+The home of [Typed Standards][ts] — the standard for verifiable, signed record
 packages, its reference verification core, and the typedstandards.org site.
 
 **Where the specification text lives:** the Typed Standards Specification is
