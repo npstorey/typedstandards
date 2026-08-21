@@ -71,6 +71,14 @@ a non-https origin, an explicit port, an identifier containing `/` — use
 `/verify?url=<encoded>`, which is also what the embeddable badge's `?url=`
 form produces.
 
+`/verify?hash=<id>&host=https://<host>` carries the same origin as an optional
+query hint, for the case a frozen `?hash=` link shape cannot be changed into a
+path. The hint is read with the same shape rules as the path segment — one
+implementation, so the two forms cannot drift — and a hint that does not parse
+is ignored, leaving the identifier on `bareIdentifierHost` exactly as a bare
+`?hash=` link does. The badge builder emits it when a publisher origin is
+given.
+
 Which inputs carry a publisher origin, and which do not:
 
 | input | resolved against |
@@ -79,6 +87,7 @@ Which inputs carry a publisher origin, and which do not:
 | a publisher's `…/evidence/<id>…` URL | that URL's origin — the origin serving the page is the publisher |
 | a **stored-package URL** (`…/<64-hex>.json`) | `bareIdentifierHost` — the origin is object storage, not a publisher, so the filename's package hash is treated as an origin-less identifier |
 | a bare hash or slug | `bareIdentifierHost` |
+| a bare hash or slug with `&host=https://<host>` | `https://<host>` — the optional origin hint, shape-validated like the path segment and ignored when it does not parse |
 
 The verifier states which host answered whenever the input had no origin of
 its own, and offers the roster to re-resolve it elsewhere in one click.

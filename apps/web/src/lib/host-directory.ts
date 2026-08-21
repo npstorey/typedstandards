@@ -298,6 +298,106 @@ export function canonicalPublisherOrigin(
   return u.origin;
 }
 
+// --- Publisher-origin shape: the grammar both /verify entry points share ---
+//
+// One implementation, two entry points. `/verify/<host>/<id>` reads a BARE host
+// segment; `/verify?hash=<id>&host=https://<host>` reads the same host with the
+// scheme written out (typedstandards#58). `parseHostHint` strips the scheme and
+// delegates the rest to `parseHostSegment`, so the userinfo / port / path
+// rejections and the #50 www-normalization are shared code and cannot drift.
+//
+// This lives in host-directory rather than in verify-flow for two reasons: it sits
+// beside `canonicalPublisherOrigin`, the normalization it applies, and it is
+// importable by the /badge page — which deliberately keeps the verification core
+// out of its bundle. verify-flow re-exports both functions, so the verifier's
+// public import surface is unchanged.
+
+/** Hostname shape: dot-separated LDH labels (1–63 chars, no leading/trailing `-`),
+ *  253 chars max. Rejects the shapes `new URL()` accepts but no publisher can have —
+ *  bare `.`/`..`, a leading-hyphen label, a trailing-dot FQDN, an IPv6 literal. */
+const HOSTNAME_RE = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)*$/i;
+
+/** Whether `hostname` — as `URL` reports it, already lower-cased — has the shape a
+ *  publisher host can have. The ONLY reader of {@link HOSTNAME_RE}, so the share-link
+ *  minter and the link parsers cannot disagree about what counts as a host. */
+export function isPublisherHostname(hostname: string): boolean {
+  return HOSTNAME_RE.test(hostname);
+}
+
+/**
+ * Canonical `https://<host>` origin for a `/verify/<host>/<id>` host segment, or
+ * `undefined` when the segment is not a well-formed host.
+ *
+ * SHAPE-VALIDATING, never roster GATING. Resolution and recognition are orthogonal
+ * dimensions (this module), and gating the LINK SHAPE on the directory would rebuild
+ * the very privilege that separation removes: an unlisted publisher would be back to
+ * the opaque `?url=` form. An unlisted host resolves normally here and the
+ * recognition banner does its job on the result. The shape is deliberately narrow
+ * — https, no port, no userinfo, no path/query/fragment — so the segment can carry
+ * an origin and nothing else; anything richer stays in the `?url=` form, which is
+ * where a full URL belongs.
+ *
+ * A well-formed host IS www-normalized (#50) — canonicalization, not gating: a
+ * `/verify/www.<host>/<id>` link resolves against (and the whole flow displays,
+ * shares, and fetches) the canonical origin, never riding the publisher's own
+ * domain redirect.
+ *
+ * `segment` is the DECODED value (Next.js decodes route params), so `%2F`-style
+ * smuggling has already collapsed into characters these checks see.
+ */
+export function parseHostSegment(segment: string): string | undefined {
+  if (!segment) return undefined;
+  let u: URL;
+  try {
+    u = new URL(`https://${segment}`);
+  } catch {
+    return undefined;
+  }
+  // `new URL` silently absorbs userinfo (`a@b.com` → host b.com), a port, and a
+  // path (`x/y` → host x), so each is rejected explicitly rather than trusted away.
+  if (u.username || u.password || u.port) return undefined;
+  if (u.pathname !== '/' || u.search || u.hash) return undefined;
+  if (!isPublisherHostname(u.hostname)) return undefined;
+  return canonicalPublisherOrigin(u.origin);
+}
+
+/**
+ * Read the OPTIONAL `host=` hint that may accompany `hash=` on `/verify`
+ * (typedstandards#58). Exactly ONE wire form is documented and accepted:
+ *
+ *     /verify?hash=<id>&host=https://<publisher-host>
+ *
+ * WHY THE SCHEME IS WRITTEN OUT. A query component is a place where a bare host and
+ * a mistyped value look alike, and requiring `https://` makes the parameter say what
+ * it is at a glance. It also keeps this form and the path form textually distinct,
+ * so neither can be pasted into the other by accident.
+ *
+ * WHY IT DELEGATES. Everything after `https://` goes to {@link parseHostSegment}
+ * unchanged — so the hint and the path segment share one set of rejections and one
+ * canonicalization (the #50 www-normalization), and there is no second copy of the
+ * hardening to drift. The scheme prefix itself is matched case-insensitively, since
+ * URI schemes are case-insensitive (RFC 3986 §3.1); the accepted form is otherwise
+ * exact.
+ *
+ * `undefined` for ANYTHING else: `http://`, another scheme, a bare host with no
+ * scheme, an explicit port, a path, userinfo, empty, malformed. `undefined` means
+ * "this link named no host", and the caller then falls back to the declared anchor
+ * — which is precisely what a `hash=`-only link does today. An unreadable hint
+ * therefore changes nothing, and no unvalidated string ever reaches resolution.
+ *
+ * TRUST CLASS. Same as `?url=` and `/verify/<host>/<id>`: the verifier already
+ * fetches from any host a link names, shape-validated and never roster-gated. This
+ * parameter adds no capability the two-segment path did not already have.
+ *
+ * `value` is the DECODED search-param value (Next.js decodes `searchParams`), so the
+ * percent-encoded spelling `https%3A%2F%2Fexample.org` — which a publisher's link
+ * emitter may well produce — arrives here already collapsed to these characters.
+ */
+export function parseHostHint(value: string): string | undefined {
+  const m = /^https:\/\/(.*)$/i.exec(value.trim());
+  return m ? parseHostSegment(m[1]) : undefined;
+}
+
 /**
  * Fetch the host directory from `url` (default: same-origin {@link
  * HOST_DIRECTORY_PATH}). Returns `'unavailable'` on any failure — a missing or

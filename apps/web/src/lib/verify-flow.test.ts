@@ -22,6 +22,7 @@ import {
   resolveCommitment,
   VerifyFlowError,
   identifierResolutionKind,
+  parseHostHint,
   parseHostSegment,
   parseVerifyTarget,
   DEFAULT_HOST,
@@ -548,6 +549,138 @@ test('parseHostSegment: rejects everything a host segment must not carry', () =>
   ]) {
     assert.equal(parseHostSegment(bad), undefined, `${JSON.stringify(bad)} must be rejected`);
   }
+});
+
+// --- The `host=` origin hint on /verify (typedstandards#58) ---------------
+//
+// `/verify?hash=<id>` is an ORIGIN-LESS deep-link: a bare identifier resolves against
+// the directory's declared anchor — right for the anchor's own readers, one picker
+// click away for everybody else. `host=` lets a link close that gap directly.
+//
+// ADDITIVE, and the first thing asserted below: a `hash=`-only link behaves exactly
+// as it does today. That matters because a second publisher has already frozen
+// `?hash=` links into published artifacts; nothing about their meaning moves.
+//
+// The hint is the SAME grammar as the `/verify/<host>/<id>` path segment, by
+// DELEGATION rather than by copy — parseHostHint strips the documented `https://` and
+// hands the rest to parseHostSegment. So these tests assert the delegation (same
+// origin, same #50 www-normalization, same rejections) instead of restating the
+// hardening, which is what keeps the two entry points from drifting apart.
+//
+// TRUST CLASS, for the record: unchanged. The verifier already fetches from any host
+// `?url=` or `/verify/<host>/<id>` names, shape-validated and never roster-gated.
+
+test('parseHostHint: the one documented form resolves to the canonical origin', () => {
+  assert.equal(
+    parseHostHint('https://data-concierge.dathere.com'),
+    'https://data-concierge.dathere.com',
+  );
+  // Shape, NOT roster membership — an unlisted publisher parses the same, exactly as
+  // the path segment does. That is the whole point: the publishers who need a hint
+  // are the ones not (yet) listed.
+  assert.equal(parseHostHint('https://example-publisher.test'), 'https://example-publisher.test');
+});
+
+test('parseHostHint: DELEGATES to parseHostSegment — one grammar, two entry points', () => {
+  for (const host of [
+    'data-concierge.dathere.com',
+    'example-publisher.test',
+    'www.example-publisher.test', // the #50 normalization arrives through the delegate
+    'EXAMPLE.com',
+  ]) {
+    assert.equal(
+      parseHostHint(`https://${host}`),
+      parseHostSegment(host),
+      `?host=https://${host} must agree with /verify/${host}/<id>`,
+    );
+  }
+});
+
+test('parseHostHint: a www hint resolves against the canonical origin (#50)', () => {
+  assert.equal(parseHostHint('https://www.example-publisher.test'), 'https://example-publisher.test');
+});
+
+test('parseHostHint: ignores everything that is not the documented form', () => {
+  for (const bad of [
+    '',
+    '   ',
+    'data-concierge.dathere.com', // a bare host — the path form's spelling, not this one
+    'http://data-concierge.dathere.com', // not https
+    'ftp://data-concierge.dathere.com', // another scheme
+    '//data-concierge.dathere.com', // scheme-relative
+    'https://', // scheme only
+    'https://a@evil.example', // userinfo
+    'https://publisher.test:8443', // explicit port
+    'https://publisher.test/some/path', // path
+    'https://publisher.test?x=1', // query
+    'https://publisher.test#x', // fragment
+    'https://-bad.example', // leading-hyphen label
+    'https://trailing-dot.example.', // empty final label
+    'https://[::1]', // IPv6 literal
+    'https://..',
+    'https://foo bar',
+    'https://https://publisher.test', // the scheme written twice
+    'javascript:alert(1)',
+  ]) {
+    assert.equal(parseHostHint(bad), undefined, `${JSON.stringify(bad)} must be ignored`);
+  }
+});
+
+test('parseHostHint: IGNORED means anchor, never a resolved unvalidated string', () => {
+  // The ignore path lands in exactly the state a bare `?hash=` link is in: no host
+  // named, so the page passes no initialHost and the flow uses DEFAULT_HOST. There is
+  // no branch in which an unparsed hint reaches a fetched URL.
+  const ignored = parseHostHint('http://attacker.example');
+  assert.equal(ignored, undefined);
+  assert.equal(
+    bareIdCommitmentUrl('some-slug', ignored ?? DEFAULT_HOST),
+    `${DEFAULT_HOST}/api/records/some-slug/commitment`,
+  );
+});
+
+test('parseHostHint: the percent-encoded spelling resolves identically', () => {
+  // Next.js decodes searchParams, so `host=https%3A%2F%2F…` — which a publisher's link
+  // emitter may well produce — arrives already decoded. Assert both spellings land on
+  // the same origin, through an actual query-string parse rather than by assumption.
+  const plain = 'https://data-concierge.dathere.com';
+  assert.equal(encodeURIComponent(plain), 'https%3A%2F%2Fdata-concierge.dathere.com');
+  const encodedParams = new URLSearchParams(`hash=some-slug&host=${encodeURIComponent(plain)}`);
+  const plainParams = new URLSearchParams(`hash=some-slug&host=${plain}`);
+  assert.equal(parseHostHint(encodedParams.get('host') ?? ''), plain);
+  assert.equal(parseHostHint(plainParams.get('host') ?? ''), plain);
+});
+
+test('host hint: a hinted link resolves ON the hint; a bare ?hash= link is UNCHANGED', () => {
+  const id = 'median-household-income-for-manhattan-255b8e';
+  const hinted = parseHostHint('https://data-concierge.dathere.com');
+  assert.deepEqual(bareIdCommitmentUrlCandidates(id, hinted ?? DEFAULT_HOST), [
+    `https://data-concierge.dathere.com/api/records/${id}/commitment`,
+    `https://data-concierge.dathere.com/api/evidence/${id}/commitment`,
+  ]);
+  // THE CONTROL CASE. No `host=` at all: the same candidates today's `?hash=` link
+  // produces, on the anchor, in the same order.
+  assert.deepEqual(bareIdCommitmentUrlCandidates(id, parseHostHint('') ?? DEFAULT_HOST), [
+    `${DEFAULT_HOST}/api/records/${id}/commitment`,
+    `${DEFAULT_HOST}/api/evidence/${id}/commitment`,
+  ]);
+});
+
+test('host hint: the disclosure line takes its LINK-NAMED branch, not the anchor branch', () => {
+  // Verifier.tsx's IdentifierResolutionNote branches on `host === DEFAULT_HOST`: the
+  // anchor branch reads "— the host the published directory names for identifiers
+  // with no origin of their own", the other "— the host this link named." No new
+  // prose was needed for `host=`; what this pins is the PREDICATE that selects the
+  // branch. This suite renders no React, so the rendered-markup measurement is in the
+  // phase report (server-rendered production build), not here.
+  const id = 'median-household-income-for-manhattan-255b8e';
+  const hinted = parseHostHint('https://data-concierge.dathere.com');
+  assert.equal(hinted, 'https://data-concierge.dathere.com');
+  assert.notEqual(hinted, DEFAULT_HOST, 'a hinted host selects the "this link named" branch');
+  // A bare `?hash=` names nothing, so the component falls back to the anchor branch.
+  assert.equal(parseHostHint('') ?? DEFAULT_HOST, DEFAULT_HOST);
+  // …and the note renders at all only for an origin-less input, which is what a
+  // hinted link carries.
+  assert.equal(identifierResolutionKind('hash', id), 'bare');
 });
 
 // --- www-normalization at the resolution entry points (#50) ----------------
