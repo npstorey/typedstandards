@@ -6,7 +6,7 @@ import { Verifier } from "@/components/Verifier";
 export const metadata: Metadata = {
   title: "Verify",
   description:
-    "Independently verify a Typed Standards evidence package — by hash, hosted URL, or uploaded bundle. The checks run in your browser.",
+    "Independently verify a Typed Standards record package — by hash, hosted URL, or uploaded bundle. The checks run in your browser.",
 };
 
 function first(v: string | string[] | undefined): string | undefined {
@@ -28,7 +28,7 @@ export default async function VerifyPage({
         Independent verifier
       </p>
       <h1 className="mt-4 font-display text-3xl font-semibold tracking-tight">
-        Verify an evidence package
+        Verify a record package
       </h1>
       <p className="mt-4 max-w-2xl leading-relaxed text-muted">
         Paste a package hash or slug, a hosted URL, or drop in a bundle. The
@@ -56,7 +56,7 @@ export default async function VerifyPage({
         transparency — not whether the content is correct.
       </p>
       <p className="mt-3 text-xs leading-relaxed text-muted">
-        Publishing evidence?{" "}
+        Publishing records?{" "}
         <Link href="/badge" className="underline decoration-dotted hover:text-accent">
           Embed a verify badge
         </Link>{" "}

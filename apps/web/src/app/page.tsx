@@ -7,14 +7,14 @@ export default function Home() {
       {/* Hero */}
       <section className="py-20 sm:py-28">
         <p className="font-mono text-xs uppercase tracking-[0.2em] text-muted">
-          Verifiable evidence
+          Verifiable records
         </p>
         <h1 className="mt-4 max-w-3xl font-display text-4xl font-semibold leading-tight tracking-tight sm:text-5xl">
-          A standard for signed evidence you can verify yourself.
+          A standard for signed records you can verify yourself.
         </h1>
         <p className="mt-6 max-w-2xl text-lg leading-relaxed text-muted">
           Typed Standards defines a format for publishing AI-generated answers
-          as evidence packages that carry their own cryptographic proof — a
+          as records — packages that carry their own cryptographic proof: a
           signature, a content hash, and a public trust registry. Anyone can
           check a package independently, without trusting the site that
           produced it.

@@ -31,7 +31,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   const on = parsed.host ? ` on ${hostLabel(parsed.host)}` : "";
   return {
     title: `Verify ${short}…`,
-    description: `Independent verification of evidence package ${short}…${on} — checks run in your browser.`,
+    description: `Independent verification of record package ${short}…${on} — checks run in your browser.`,
   };
 }
 

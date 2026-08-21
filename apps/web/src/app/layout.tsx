@@ -23,11 +23,11 @@ export const metadata: Metadata = {
     template: "%s · Typed Standards",
   },
   description:
-    "A standard for verifiable, signed evidence packages — and an independent verifier you can run yourself, in your own browser.",
+    "A standard for verifiable, signed record packages — and an independent verifier you can run yourself, in your own browser.",
   openGraph: {
     title: "Typed Standards",
     description:
-      "A standard for verifiable, signed evidence packages — and an independent verifier you can run yourself.",
+      "A standard for verifiable, signed record packages — and an independent verifier you can run yourself.",
     type: "website",
     url: "https://typedstandards.org",
   },
@@ -35,7 +35,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Typed Standards",
     description:
-      "A standard for verifiable, signed evidence packages — and an independent verifier you can run yourself.",
+      "A standard for verifiable, signed record packages — and an independent verifier you can run yourself.",
   },
 };
 
@@ -89,8 +89,8 @@ export default function RootLayout({
           <footer className="border-t border-border">
             <div className="mx-auto flex max-w-5xl flex-col items-center gap-2 px-6 py-8 text-center text-sm text-muted">
               <p>
-                Typed Standards — verifiable, signed evidence. Verification runs
-                in your browser; nothing is uploaded.
+                Typed Standards — signed records you can verify yourself. Verification
+                runs in your browser; nothing is uploaded.
               </p>
               <p className="text-xs">
                 By{" "}

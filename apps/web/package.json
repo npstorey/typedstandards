@@ -2,7 +2,7 @@
   "name": "@typedstandards/web",
   "version": "0.0.0",
   "private": true,
-  "description": "typedstandards.org — the Typed Standards site and the client-side evidence verifier.",
+  "description": "typedstandards.org — the Typed Standards site and the client-side record verifier.",
   "scripts": {
     "dev": "next dev",
     "prebuild": "npm run build --workspace @typedstandards/verify-core",

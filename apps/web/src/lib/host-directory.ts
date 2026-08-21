@@ -2,7 +2,7 @@
 // dimension for the typedstandards.org verifier (#116 WS3 Phase D, open-questions
 // Q47).
 //
-// Two orthogonal dimensions verify an evidence package:
+// Two orthogonal dimensions verify a record package:
 //
 //   1. CRYPTOGRAPHIC VALIDITY — universal. Anyone can mint a standard-conformant,
 //      validly-signed envelope and the §9.2 checks confirm the math. This is the
@@ -62,7 +62,7 @@ export interface HostDirectory {
   /** ISO date the roster was last edited (editorial provenance, not a proof). */
   updated: string;
   /**
-   * The origin a BARE IDENTIFIER (a package hash or an evidence slug, which carries
+   * The origin a BARE IDENTIFIER (a package hash or a record slug, which carries
    * no origin of its own) is resolved against — a DECLARED editorial choice by
    * whoever publishes this directory, not a property of any listed publisher.
    *
