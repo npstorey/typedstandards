@@ -102,3 +102,30 @@ test('buildEmbedMarkdown wraps the href in <> so a ) cannot truncate the link', 
   // the parenthesised path is preserved verbatim inside the destination
   assert.ok(md.includes('p(a)th'));
 });
+
+// --- 3. Vocabulary cutover pin (typedstandards#52, spec Appendix J) -------
+//
+// Pinned to the LITERAL settlement-era string, deliberately NOT to `BADGE_ALT`:
+// the constant-consistency checks above (`svg.includes(BADGE_ALT)`,
+// `html.includes(BADGE_ALT)`) would follow a revert of the constant silently.
+// This one fails instead. The asset path is pinned the same way — a cutover
+// changes the wording, never the `<img src>` that prior-era embeds resolve.
+
+const SETTLEMENT_ALT = 'Verify this record with Typed Standards';
+const FROZEN_ASSET_PATH = '/badge/typed-standards-verify.svg';
+
+test('badge emissions carry the settlement-era alt text and no prior-era wording (ts#52)', () => {
+  const emissions: Record<string, string> = {
+    'renderBadgeSvg(light)': renderBadgeSvg('light'),
+    'renderBadgeSvg(dark)': renderBadgeSvg('dark'),
+    buildEmbedHtml: buildEmbedHtml(CANONICAL_ORIGIN, 'some-slug', 'light'),
+    buildEmbedMarkdown: buildEmbedMarkdown(CANONICAL_ORIGIN, 'some-slug', 'dark'),
+  };
+  for (const [name, out] of Object.entries(emissions)) {
+    assert.ok(out.includes(SETTLEMENT_ALT), `${name} carries "${SETTLEMENT_ALT}"`);
+    assert.doesNotMatch(out, /this evidence/i, `${name} carries no prior-era wording`);
+  }
+  // The embed `<img src>` is unchanged by the cutover, so nothing stops resolving.
+  assert.ok(emissions.buildEmbedHtml.includes(`src="${CANONICAL_ORIGIN}${FROZEN_ASSET_PATH}"`));
+  assert.ok(emissions.buildEmbedMarkdown.includes(`](${CANONICAL_ORIGIN}${FROZEN_ASSET_PATH}?theme=dark)`));
+});

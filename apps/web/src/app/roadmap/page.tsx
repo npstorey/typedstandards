@@ -29,10 +29,10 @@ type Milestone = {
  */
 const MILESTONES: Milestone[] = [
   {
-    title: "Signed evidence packages",
+    title: "Signed record packages",
     state: "built",
     quarter: "2026 Q2",
-    body: "Analyses publish as content-addressable, cryptographically signed evidence packages — Ed25519 signatures over canonical JSON, RFC 3161 timestamps, and a public transparency-log entry for every publish.",
+    body: "Analyses publish as content-addressable, cryptographically signed record packages — Ed25519 signatures over canonical JSON, RFC 3161 timestamps, and a public transparency-log entry for every publish.",
   },
   {
     title: "Shared verification core",
@@ -50,7 +50,7 @@ const MILESTONES: Milestone[] = [
     title: "Domain-neutral standard",
     state: "built",
     quarter: "2026 Q2",
-    body: "The reusable core of the evidence system carries a neutral, cross-sector name: the Typed Standards specification, the shared verification core, and this site. Civic AI Tools is the civic reference implementation.",
+    body: "The reusable core of the system for publishing and verifying signed records carries a neutral, cross-sector name: the Typed Standards specification, the shared verification core, and this site. Civic AI Tools is the civic reference implementation.",
   },
   {
     title: "Public specification",
@@ -60,12 +60,12 @@ const MILESTONES: Milestone[] = [
   {
     title: "Lifecycle model and composite bundles",
     state: "designed",
-    body: "An event-history model for the evidence lifecycle, and composite bundles that carry a package and its attestations as one content-addressable artifact — so third-party verifiers need not call a host's separate APIs.",
+    body: "An event-history model for the record lifecycle, and composite bundles that carry a package and its attestations as one content-addressable artifact — so third-party verifiers need not call a host's separate APIs.",
   },
   {
-    title: "User-signed evidence and identity tiers",
+    title: "User-signed records and identity tiers",
     state: "upcoming",
-    body: "Moving from platform-signed to user-signed evidence with multi-signer attestations, and surfacing identity-strength tiers so readers can calibrate for themselves.",
+    body: "Moving from platform-signed to user-signed records with multi-signer attestations, and surfacing identity-strength tiers so readers can calibrate for themselves.",
   },
   {
     title: "Packages that travel",

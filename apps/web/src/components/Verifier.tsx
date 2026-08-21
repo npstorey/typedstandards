@@ -116,7 +116,7 @@ export function Verifier({
         offline: resolvedInput.fullyOffline,
       });
       // Independently resolve #10 from the carried signed attestation chain (#119 P3);
-      // undefined ⇒ verifyEvidence resolves lifecycle at STATE depth.
+      // undefined ⇒ verifyRecord resolves lifecycle at STATE depth.
       const lifecycleResolution = resolveCarriedLifecycle(resolvedInput.commitment);
       const result = await runVerify(vinput, resolvedInput.registry, lifecycleResolution);
       if (ac.signal.aborted) return;
@@ -235,7 +235,7 @@ export function Verifier({
           }}
           rows={raw.includes("\n") ? 6 : 1}
           spellCheck={false}
-          placeholder="Paste a 64-char package hash, an evidence slug, a hosted URL, or a bundle JSON…"
+          placeholder="Paste a 64-char package hash, a record slug, a hosted URL, or a bundle JSON…"
           className="mt-2 w-full resize-y rounded-md border border-border bg-white px-3 py-2 font-mono text-sm outline-none focus:border-accent"
         />
         <div className="mt-3 flex flex-wrap items-center justify-between gap-3">

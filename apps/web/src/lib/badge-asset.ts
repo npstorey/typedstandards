@@ -31,8 +31,18 @@ export const BADGE_HEIGHT = 30;
 export type BadgeTheme = 'light' | 'dark';
 
 /** Plain-language alt text for the embed `<img>` — describes the ACTION, not a
- *  verdict, consistent with the honesty constraint. */
-export const BADGE_ALT = 'Verify this evidence with Typed Standards';
+ *  verdict, consistent with the honesty constraint.
+ *
+ *  VOCABULARY CUTOVER (2026-08-21, typedstandards#52; spec Appendix J): the wording
+ *  moved from "this evidence" to "this record". Every NEW emission carries the new
+ *  text — the served SVG's `aria-label` + `<title>`, the copy-paste HTML and
+ *  Markdown embeds, and the /badge preview. Prior-era embeds keep working — src
+ *  unchanged: `BADGE_ASSET_PATH` is untouched, so an `<img>` pasted before the
+ *  cutover still resolves (and now shows the new SVG title); only the `alt` frozen
+ *  in that host page keeps the old wording, and shipped third-party embeds are not
+ *  chased. The literal is pinned in badge-asset.test.ts, independent of this
+ *  constant, so a revert here fails a test rather than passing silently. */
+export const BADGE_ALT = 'Verify this record with Typed Standards';
 
 /**
  * Render the badge as a self-contained SVG string (no external fonts/resources, so
@@ -76,7 +86,7 @@ export function classifyBadgeInput(raw: string): BadgeInputKind {
   if (!s) return 'empty';
   if (s.startsWith('{')) return 'bundle';
   if (/^https?:\/\//i.test(s)) return 'url';
-  return 'hash'; // 64-hex hash OR an evidence slug — both resolve by identifier
+  return 'hash'; // 64-hex hash OR a record slug — both resolve by identifier
 }
 
 /** Build the verifier deep-link for a package input. A hosted URL goes through

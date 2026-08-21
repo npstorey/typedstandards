@@ -160,21 +160,21 @@ const HASH_RE = /^[0-9a-f]{64}$/i;
 /**
  * Auto-detect the input kind. A 64-hex string is a package hash; an http(s) URL
  * is a hosted reference; a string starting with `{` is a pasted bundle/commitment
- * JSON; anything else is treated as an evidence slug (resolved like a hash).
+ * JSON; anything else is treated as a record slug (resolved like a hash).
  */
 export function detectInputMode(raw: string): InputMode {
   const s = raw.trim();
   if (!s) return 'hash';
   if (s.startsWith('{')) return 'bundle';
   if (/^https?:\/\//i.test(s)) return 'url';
-  return 'hash'; // 64-hex hash OR an evidence slug — both resolve by identifier
+  return 'hash'; // 64-hex hash OR a record slug — both resolve by identifier
 }
 
 /** A glanceable label for the detected mode. */
 export function describeMode(mode: InputMode, raw: string): string {
   if (mode === 'bundle') return 'Uploaded bundle';
   if (mode === 'url') return 'Hosted URL';
-  return HASH_RE.test(raw.trim()) ? 'Package hash' : 'Evidence slug';
+  return HASH_RE.test(raw.trim()) ? 'Package hash' : 'Record slug';
 }
 
 // --- Resolution -----------------------------------------------------------

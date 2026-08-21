@@ -5,7 +5,7 @@ import { BadgeBuilder } from "@/components/BadgeBuilder";
 export const metadata: Metadata = {
   title: "Embed a verify badge",
   description:
-    "Add a “Verify with Typed Standards” badge to your evidence pages. It deep-links readers to the independent verifier, where the checks run in their own browser.",
+    "Add a “Verify with Typed Standards” badge to your record pages. It deep-links readers to the independent verifier, where the checks run in their own browser.",
 };
 
 export default function BadgePage() {
@@ -15,10 +15,10 @@ export default function BadgePage() {
         Embeddable verify badge
       </p>
       <h1 className="mt-4 font-display text-3xl font-semibold tracking-tight">
-        Let readers verify your evidence — independently
+        Let readers verify your records — independently
       </h1>
       <p className="mt-4 max-w-2xl leading-relaxed text-muted">
-        Drop a badge on any page that publishes an evidence package. It deep-links to
+        Drop a badge on any page that publishes a record package. It deep-links to
         the{" "}
         <Link href="/verify" className="underline decoration-dotted hover:text-accent">
           independent verifier
