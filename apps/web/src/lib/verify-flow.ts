@@ -66,6 +66,8 @@ import {
   HOST_DIRECTORY_PATH,
   canonicalPublisherOrigin,
   fetchHostDirectory,
+  isPublisherHostname,
+  parseHostSegment,
   validateHostDirectory,
   type HostDirectory,
 } from './host-directory.ts';
@@ -76,6 +78,13 @@ import {
 // roster-driven "try another host" affordance from the same source of truth the
 // well-known route serves.
 export { resolveHostRecognition, HOST_DIRECTORY } from './host-directory.ts';
+// The publisher-origin grammar the two `/verify` entry points share. It is DEFINED
+// in host-directory — beside `canonicalPublisherOrigin`, the normalization it
+// applies, and out of reach of this module's verify-core imports so the /badge page
+// can validate an origin without pulling the verification core into its bundle
+// (typedstandards#58). Re-exported here because a caller reasoning about a `/verify`
+// link reads this module, and because every existing importer keeps its import path.
+export { parseHostSegment, parseHostHint } from './host-directory.ts';
 export type {
   HostDirectory,
   HostDirectoryEntry,
@@ -486,48 +495,6 @@ export function bareIdCommitmentUrlCandidates(
   return COMMITMENT_API_SEGMENTS.map((segment) => commitmentUrlOn(segment, id, host));
 }
 
-/** Hostname shape: dot-separated LDH labels (1–63 chars, no leading/trailing `-`),
- *  253 chars max. Rejects the shapes `new URL()` accepts but no publisher can have —
- *  bare `.`/`..`, a leading-hyphen label, a trailing-dot FQDN, an IPv6 literal. */
-const HOSTNAME_RE = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)*$/i;
-
-/**
- * Canonical `https://<host>` origin for a `/verify/<host>/<id>` host segment, or
- * `undefined` when the segment is not a well-formed host.
- *
- * SHAPE-VALIDATING, never roster GATING. Resolution and recognition are orthogonal
- * dimensions (host-directory.ts), and gating the LINK SHAPE on the directory would
- * rebuild the very privilege this removes: an unlisted publisher would be back to
- * the opaque `?url=` form. An unlisted host resolves normally here and the
- * recognition banner does its job on the result. The shape is deliberately narrow
- * — https, no port, no userinfo, no path/query/fragment — so the segment can carry
- * an origin and nothing else; anything richer stays in the `?url=` form, which is
- * where a full URL belongs.
- *
- * A well-formed host IS www-normalized (#50) — canonicalization, not gating: a
- * `/verify/www.<host>/<id>` link resolves against (and the whole flow displays,
- * shares, and fetches) the canonical origin, never riding the publisher's own
- * domain redirect.
- *
- * `segment` is the DECODED value (Next.js decodes route params), so `%2F`-style
- * smuggling has already collapsed into characters these checks see.
- */
-export function parseHostSegment(segment: string): string | undefined {
-  if (!segment) return undefined;
-  let u: URL;
-  try {
-    u = new URL(`https://${segment}`);
-  } catch {
-    return undefined;
-  }
-  // `new URL` silently absorbs userinfo (`a@b.com` → host b.com), a port, and a
-  // path (`x/y` → host x), so each is rejected explicitly rather than trusted away.
-  if (u.username || u.password || u.port) return undefined;
-  if (u.pathname !== '/' || u.search || u.hash) return undefined;
-  if (!HOSTNAME_RE.test(u.hostname)) return undefined;
-  return canonicalPublisherOrigin(u.origin);
-}
-
 /** What a `/verify/…` path resolves: an identifier, plus the origin to resolve it
  *  against when the link named one. `host` absent ⇒ the anchor (`DEFAULT_HOST`). */
 export interface VerifyTarget {
@@ -613,7 +580,7 @@ export function deriveShareTarget(resolved: ResolvedInput): string | null {
       if (u.origin === DEFAULT_HOST) return `/verify/${encodeURIComponent(id)}`;
       // Any other publisher gets the same clean link, with its origin carried in the
       // first segment. Roster membership is NOT consulted — see parseHostSegment.
-      if (u.protocol === 'https:' && !u.port && HOSTNAME_RE.test(u.hostname)) {
+      if (u.protocol === 'https:' && !u.port && isPublisherHostname(u.hostname)) {
         return `/verify/${encodeURIComponent(u.host)}/${encodeURIComponent(id)}`;
       }
     }

@@ -89,14 +89,41 @@ export function classifyBadgeInput(raw: string): BadgeInputKind {
   return 'hash'; // 64-hex hash OR a record slug — both resolve by identifier
 }
 
-/** Build the verifier deep-link for a package input. A hosted URL goes through
- *  `?url=` (host-independent — works for any publisher, resolved by the verifier's
- *  deriveCommitmentUrl); a bare hash/slug uses the `?hash=` shorthand (resolved
- *  against the default host). `origin` is `''` for a same-origin (relative) link. */
-export function buildVerifyHref(origin: string, input: string): string {
+/**
+ * Build the verifier deep-link for a package input. A hosted URL goes through
+ * `?url=` (host-independent — works for any publisher, resolved by the verifier's
+ * deriveCommitmentUrl); a bare hash/slug uses the `?hash=` shorthand. `origin` is
+ * `''` for a same-origin (relative) link.
+ *
+ * `hostHint` is the OPTIONAL publisher origin a bare hash/slug should resolve
+ * against (typedstandards#58), emitted as `&host=<origin>` and read back by
+ * `/verify` through `parseHostHint`. Omitted for a `?url=` input, which already
+ * carries an origin, and omitted for `bundle`/`empty`, which are not badgeable.
+ * Without it a bare identifier keeps today's behaviour exactly: it resolves against
+ * the directory's declared anchor.
+ *
+ * Two deliberate choices here, both load-bearing:
+ *
+ *  1. THE CALLER VALIDATES. `hostHint` must already be a canonical
+ *     `https://<host>` origin — what `parseHostHint` (host-directory) returns, or
+ *     `undefined`. This module is dependency-free on purpose (the SVG route handler
+ *     imports `renderBadgeSvg` from it, and /badge keeps the verification core out
+ *     of its bundle), so the shape grammar is NOT imported here and NOT restated
+ *     here. One implementation, in one place.
+ *  2. THE ORIGIN IS EMITTED UNENCODED. `:` and `/` are legal in a query component
+ *     (RFC 3986 §3.4: `query = *( pchar / "/" / "?" )`, and `pchar` admits `:`),
+ *     so `&host=https://example.org` is a well-formed URL and is the exact string a
+ *     publisher is handed — the same characters in the preview link, the "Links to"
+ *     line, and both snippets. The package input keeps its
+ *     `encodeURIComponent`: it is arbitrary user text, where the host hint is a
+ *     validated origin.
+ */
+export function buildVerifyHref(origin: string, input: string, hostHint?: string): string {
   const s = input.trim();
-  const param = classifyBadgeInput(s) === 'url' ? 'url' : 'hash';
-  return `${origin}/verify?${param}=${encodeURIComponent(s)}`;
+  const kind = classifyBadgeInput(s);
+  const param = kind === 'url' ? 'url' : 'hash';
+  const hint = kind === 'hash' && hostHint ? `&host=${hostHint}` : '';
+  return `${origin}/verify?${param}=${encodeURIComponent(s)}${hint}`;
 }
 
 /** Full badge asset URL for the given origin + theme. */
@@ -104,9 +131,22 @@ export function badgeAssetUrl(origin: string, theme: BadgeTheme = 'light'): stri
   return `${origin}${BADGE_ASSET_PATH}${theme === 'dark' ? '?theme=dark' : ''}`;
 }
 
-/** The copy-paste HTML embed: an `<a>` (deep-link) wrapping the badge `<img>`. */
-export function buildEmbedHtml(origin: string, input: string, theme: BadgeTheme = 'light'): string {
-  const href = buildVerifyHref(origin, input);
+/** The copy-paste HTML embed: an `<a>` (deep-link) wrapping the badge `<img>`.
+ *
+ *  A `&host=` hint puts a raw `&` in the `href` attribute. That is correct HTML: an
+ *  `&` is an AMBIGUOUS AMPERSAND (and so a parse error) only when alphanumerics
+ *  after it are terminated by `;`, and `&host=` is terminated by `=`, so every HTML5
+ *  tokenizer emits the character literally. Escaping it to `&amp;` would also work
+ *  in a browser, but would make the string a publisher copies out of this snippet
+ *  differ from the link shown everywhere else on the page — and a hand-copied
+ *  `&amp;` in a plain-text context is a broken link. One string, everywhere. */
+export function buildEmbedHtml(
+  origin: string,
+  input: string,
+  theme: BadgeTheme = 'light',
+  hostHint?: string,
+): string {
+  const href = buildVerifyHref(origin, input, hostHint);
   const src = badgeAssetUrl(origin, theme);
   return `<a href="${href}">
   <img src="${src}" alt="${BADGE_ALT}" width="${BADGE_WIDTH}" height="${BADGE_HEIGHT}" />
@@ -116,10 +156,16 @@ export function buildEmbedHtml(origin: string, input: string, theme: BadgeTheme 
 /** The copy-paste Markdown embed (linked image). The deep-link href is wrapped in
  *  angle brackets (`](<...>)`) — CommonMark's destination-in-`<>` form — so a `)`
  *  in the URL (rare, but legal in a hosted commitment URL) does not prematurely
- *  close the link. The href is already `encodeURIComponent`-encoded, so it contains
- *  no `<`/`>`/spaces that would break the angle-bracket form. */
-export function buildEmbedMarkdown(origin: string, input: string, theme: BadgeTheme = 'light'): string {
-  const href = buildVerifyHref(origin, input);
+ *  close the link. The package input is `encodeURIComponent`-encoded and an optional
+ *  `&host=` origin can only contain `https://` plus hostname characters, so the href
+ *  contains no `<`/`>`/spaces that would break the angle-bracket form. */
+export function buildEmbedMarkdown(
+  origin: string,
+  input: string,
+  theme: BadgeTheme = 'light',
+  hostHint?: string,
+): string {
+  const href = buildVerifyHref(origin, input, hostHint);
   const src = badgeAssetUrl(origin, theme);
   return `[![${BADGE_ALT}](${src})](<${href}>)`;
 }

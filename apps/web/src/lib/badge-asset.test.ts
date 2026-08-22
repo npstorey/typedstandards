@@ -24,6 +24,11 @@ import {
   buildEmbedMarkdown,
   renderBadgeSvg,
 } from './badge-asset.ts';
+// The verifier's own reader for the parameter this module emits. Importing it here
+// closes the loop in one place: emitter -> URL -> parser -> the same origin. (A test
+// file may cross this line; the /badge PAGE deliberately does not import the verify
+// flow, which is why parseHostHint lives in host-directory.)
+import { parseHostHint } from './host-directory.ts';
 
 // --- 1. Honesty constraint: CTA, never a verdict -------------------------
 
@@ -128,4 +133,91 @@ test('badge emissions carry the settlement-era alt text and no prior-era wording
   // The embed `<img src>` is unchanged by the cutover, so nothing stops resolving.
   assert.ok(emissions.buildEmbedHtml.includes(`src="${CANONICAL_ORIGIN}${FROZEN_ASSET_PATH}"`));
   assert.ok(emissions.buildEmbedMarkdown.includes(`](${CANONICAL_ORIGIN}${FROZEN_ASSET_PATH}?theme=dark)`));
+});
+
+// --- 4. The `&host=` publisher-origin hint (typedstandards#58) ------------
+//
+// A bare hash/slug badge link is ORIGIN-LESS, so it resolves against the declared
+// anchor — which is wrong-by-default for every publisher that is not the anchor, and
+// this builder mints that form for any bare input. The optional hint carries the
+// publisher's own origin instead.
+//
+// Three things are load-bearing and pinned here:
+//
+//   a. THE EXACT EMITTED STRING. It is handed to a publisher verbatim and pasted into
+//      their pages, so it is asserted as a literal, not as a shape.
+//   b. THE ROUND TRIP. What this module emits is what `parseHostHint` reads back.
+//   c. NO HINT MEANS NO CHANGE. Every emission without a hint is byte-identical to
+//      what shipped before, so no existing badge link moves.
+
+const HINT_ORIGIN = 'https://data-concierge.dathere.com';
+const HINT_SLUG = 'median-household-income-for-manhattan-255b8e';
+
+test('buildVerifyHref appends &host= UNENCODED for a hash/slug (ts#58)', () => {
+  // (a) the literal, character for character.
+  assert.equal(
+    buildVerifyHref(CANONICAL_ORIGIN, HINT_SLUG, HINT_ORIGIN),
+    'https://typedstandards.org/verify?hash=median-household-income-for-manhattan-255b8e' +
+      '&host=https://data-concierge.dathere.com',
+  );
+  // `:` and `/` are legal in a query component (RFC 3986 §3.4), so they stay literal —
+  // an encoded hint would still parse, but would not be the string in the record.
+  const relative = buildVerifyHref('', HINT_SLUG, HINT_ORIGIN);
+  assert.equal(relative.includes('%3A'), false);
+  assert.equal(relative.includes('%2F'), false);
+  assert.equal(relative, `/verify?hash=${HINT_SLUG}&host=${HINT_ORIGIN}`);
+});
+
+test('ROUND TRIP: the emitted &host= is exactly what /verify reads back (ts#58)', () => {
+  const url = new URL(buildVerifyHref(CANONICAL_ORIGIN, HINT_SLUG, HINT_ORIGIN));
+  assert.equal(url.searchParams.get('hash'), HINT_SLUG);
+  assert.equal(parseHostHint(url.searchParams.get('host') ?? ''), HINT_ORIGIN);
+});
+
+test('buildVerifyHref: without a hint every link is byte-identical to today (ts#58)', () => {
+  const unchanged = `${CANONICAL_ORIGIN}/verify?hash=${HINT_SLUG}`;
+  assert.equal(buildVerifyHref(CANONICAL_ORIGIN, HINT_SLUG), unchanged);
+  assert.equal(buildVerifyHref(CANONICAL_ORIGIN, HINT_SLUG, undefined), unchanged);
+  assert.equal(buildVerifyHref(CANONICAL_ORIGIN, HINT_SLUG, ''), unchanged);
+});
+
+test('buildVerifyHref: a ?url= input never carries a hint — it already has an origin', () => {
+  const href = buildVerifyHref(
+    CANONICAL_ORIGIN,
+    'https://data-concierge.dathere.com/api/records/x/commitment',
+    HINT_ORIGIN,
+  );
+  assert.ok(href.startsWith(`${CANONICAL_ORIGIN}/verify?url=`));
+  assert.equal(href.includes('&host='), false);
+});
+
+test('the hint reaches BOTH snippets in the same characters as the link (ts#58)', () => {
+  const href = buildVerifyHref(CANONICAL_ORIGIN, HINT_SLUG, HINT_ORIGIN);
+  const html = buildEmbedHtml(CANONICAL_ORIGIN, HINT_SLUG, 'light', HINT_ORIGIN);
+  const md = buildEmbedMarkdown(CANONICAL_ORIGIN, HINT_SLUG, 'light', HINT_ORIGIN);
+  assert.ok(html.includes(`<a href="${href}">`), 'the HTML embed carries the exact link');
+  assert.ok(md.includes(`](<${href}>)`), 'the Markdown embed carries the exact link');
+  // The raw `&` is deliberate. `&host=` is not an ambiguous ampersand (no `;`
+  // terminator), so it is correct HTML — and it keeps the string a publisher copies
+  // out of either snippet identical to the one the page shows them.
+  assert.ok(html.includes('&host=https://'));
+  assert.equal(html.includes('&amp;host='), false);
+  // The snippets without a hint stay exactly as they were.
+  assert.equal(
+    buildEmbedHtml(CANONICAL_ORIGIN, HINT_SLUG, 'light'),
+    buildEmbedHtml(CANONICAL_ORIGIN, HINT_SLUG, 'light', undefined),
+  );
+});
+
+test('the honesty constraint and the settlement wording survive the hint (ts#58)', () => {
+  // A new parameter must not become a way to smuggle a verdict onto a host's page.
+  for (const out of [
+    buildEmbedHtml(CANONICAL_ORIGIN, HINT_SLUG, 'light', HINT_ORIGIN),
+    buildEmbedMarkdown(CANONICAL_ORIGIN, HINT_SLUG, 'dark', HINT_ORIGIN),
+  ]) {
+    assert.ok(out.includes(SETTLEMENT_ALT), 'still the call-to-action alt text');
+    for (const sig of VERDICT_SIGNALS) {
+      assert.equal(sig.test(out), false, `no verdict signal (${sig})`);
+    }
+  }
 });
