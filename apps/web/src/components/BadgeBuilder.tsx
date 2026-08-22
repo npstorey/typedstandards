@@ -133,7 +133,7 @@ export function BadgeBuilder() {
               value={hostHint}
               onChange={(e) => setHostHint(e.target.value)}
               spellCheck={false}
-              placeholder="https://data-concierge.dathere.com"
+              placeholder="https://your-host.example"
               className="mt-2 w-full rounded-md border border-border bg-white px-3 py-2 font-mono text-sm outline-none focus:border-accent"
             />
             <p className="mt-2 text-xs leading-relaxed text-muted">
