@@ -9,6 +9,12 @@ This repo holds the [typedstandards.org](https://typedstandards.org) site (`apps
 3. Create a branch for your changes — all changes go through branches and PRs; no direct pushes to `main` (it auto-deploys to production)
 4. Open a pull request
 
+## If you use Claude Code
+
+Cloning this repo installs its checked-in Claude Code configuration: `.claude/settings.json` (a network allowlist and a sandbox block), plus the agent definitions in `.claude/agents/` and the path-scoped rules in `.claude/rules/`.
+
+Those files are ordinary JSON and Markdown — read them before you trust them, the same as any other code you clone. Personal overrides belong in `.claude/settings.local.json`, which is gitignored.
+
 ## Guidelines
 
 - Keep changes focused — one fix or feature per PR
