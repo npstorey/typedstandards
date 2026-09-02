@@ -248,6 +248,58 @@ test('queries: entries are rebuilt in envelope key order; extra caller keys are 
   );
 });
 
+test('queries: an entry with no failure keys keeps the exact bytes it has today', () => {
+  // The byte-identity guard for the failure keys: an entry that records no
+  // failure must serialize to the same bytes it does today, key for key. Both
+  // JSON.stringify and JCS omit an undefined-valued key, so an OPTIONAL key
+  // added to the re-emission list cannot move this line — and if one ever
+  // does, every published legacy-chain hash moves with it.
+  const { pkg } = buildEnvelope(baseInput());
+  assert.equal(
+    JSON.stringify(pkg.queries[0]),
+    '{"tool":"get_data","operationType":"query","arguments":{"type":"query",'
+      + '"portal":"data.example.gov","dataset_id":"abcd-1234","select":"count(*)"},'
+      + '"datasetId":"abcd-1234","portal":"data.example.gov","resultRows":1,'
+      + '"resultColumns":1}',
+  );
+});
+
+test('queries: a recorded tool-call failure reaches the envelope, after resultColumns', () => {
+  // A rejected call is a rejected call in the published package: the loop
+  // records `failed` / `failureKind` on the call it captured, and the envelope
+  // entry must carry them rather than drop them and leave a reader to infer a
+  // success. Casts run through `unknown` so the test compiles both before and
+  // after the two optional keys join `EnvelopeQuery`.
+  const failedCall = {
+    tool: 'get_data',
+    operationType: 'query',
+    arguments: {
+      type: 'query',
+      portal: 'data.example.gov',
+      dataset_id: 'abcd-1234',
+      select: 'count(*)',
+    },
+    failed: true,
+    failureKind: 'timeout',
+  } as unknown as EnvelopeQuery;
+  const { pkg } = buildEnvelope(baseInput({ queries: [failedCall] }));
+
+  const entry = pkg.queries[0] as unknown as Record<string, unknown>;
+  assert.equal(entry.failed, true, 'the envelope entry must carry the recorded failure');
+  assert.equal(entry.failureKind, 'timeout', 'the envelope entry must carry the failure kind');
+
+  // Key order: the two failure keys follow the last of the existing eight, so
+  // an entry that omits them is byte-unchanged. The undefined optionals
+  // (datasetId, portal, duration_ms, resultRows, resultColumns) drop out of
+  // serialization, leaving tool, operationType, arguments, failed, failureKind.
+  assert.equal(
+    JSON.stringify(pkg.queries[0]),
+    '{"tool":"get_data","operationType":"query","arguments":{"type":"query",'
+      + '"portal":"data.example.gov","dataset_id":"abcd-1234","select":"count(*)"},'
+      + '"failed":true,"failureKind":"timeout"}',
+  );
+});
+
 test('cost and skillMetadata are re-emitted in the envelope key order', () => {
   const { pkg } = buildEnvelope(
     baseInput({
