@@ -57,6 +57,16 @@ export interface EnvelopeQuery {
   duration_ms?: number;
   resultRows?: number;
   resultColumns?: number;
+  /** True when the producer recorded this call as rejected. Set at the site
+   *  where the rejection is known: a failed call is not distinguishable from a
+   *  successful zero-row one by `resultRows`, so a consumer cannot recover it
+   *  downstream. Absence means the call was not recorded as failed. */
+  failed?: boolean;
+  /** Producer-supplied short label for the rejection — the reference producer
+   *  emits one of `timeout`, `unavailable`, `not_configured`, `unknown`. The
+   *  core validates it exactly as much as it validates `operationType`: not at
+   *  all, and with no derivation table and no fallback. */
+  failureKind?: string;
 }
 
 /**
@@ -275,6 +285,8 @@ export function buildEnvelope(
     duration_ms: q.duration_ms,
     resultRows: q.resultRows,
     resultColumns: q.resultColumns,
+    failed: q.failed,
+    failureKind: q.failureKind,
   }));
 
   // v0.1 discriminator (spec §8.2): the presence of `type` signals a v0.1
