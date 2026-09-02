@@ -112,6 +112,9 @@ const { pkg, envelopeHash } = buildEnvelope({
   signingKeyId: kid,
   prompt: 'How many service requests were filed last year?',
   promptVisibility: 'full_text',
+  // A rejected call stays a rejected call: an entry MAY carry `failed: true`
+  // and a short `failureKind` label, and their absence means only that the
+  // call was not recorded as failed.
   queries: [
     {
       tool: 'get_data',
