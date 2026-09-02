@@ -3,6 +3,24 @@
 Factual record of what changed per published version. Check numbers (#1–#15)
 refer to the Typed Standards specification §9.2 verification sequence.
 
+## 0.4.0 — 2026-09-02
+
+A recorded tool-call failure reaches the envelope. **A minor bump** — two new optional interface
+members; nothing already published is affected and no envelope hash moves.
+
+- **`EnvelopeQuery` gains `failed?: boolean` and `failureKind?: string`**, emitted after
+  `resultColumns` in the envelope's fixed key order. A producer that records a rejected tool call
+  can now state it inside the signed package: a failed call is not distinguishable from a
+  successful zero-row one by `resultRows`, so a consumer that reads only the package had no way to
+  recover it. `failureKind` is a producer-supplied short label — the reference producer emits
+  `timeout`, `unavailable`, `not_configured`, `unknown` — and the core validates it no more than it
+  validates `operationType`: no vocabulary, no derivation table, no fallback.
+- **Byte-identical for every entry that omits them.** Both `JSON.stringify` and JCS omit an
+  undefined-valued key, so an entry recording no failure serializes to the bytes it did before and
+  every already-published envelope hash is unchanged. All eight byte-golden envelope fixtures pass
+  unmodified. Unknown caller keys are still dropped by the literal re-emission.
+- No change to hashing, canonicalization, signing, attestation, or the external-proof codecs.
+
 ## 0.3.0 — 2026-08-19
 
 Vocabulary settlement (spec v0.1.5 Appendix J; registry Q50/Q66, ADR-0025,
