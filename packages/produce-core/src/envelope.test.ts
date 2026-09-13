@@ -381,3 +381,7 @@ test('unsigned tier: the result is a complete package + hash with no signature a
   assert.ok(!serialized.includes('"sealed"'));
   assert.equal(result.envelopeHash.length, 64);
 });
+
+// THROWAWAY (Wave N11 P-T1 red): a type error no gate sees at base.
+const N11_PT1_DELIBERATE_TYPE_ERROR: number = "not a number";
+void N11_PT1_DELIBERATE_TYPE_ERROR;

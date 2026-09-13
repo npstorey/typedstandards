@@ -29,3 +29,6 @@ export * from './asn1.ts';
 export * from './x509.ts';
 export * from './rfc3161.ts';
 export * from './verify.ts';
+
+// THROWAWAY (Wave N11 P-T1 red): an environment read in shipped verify-core source.
+export const N11_PT1_PURITY_PROBE: string | undefined = process.env.N11_PT1_PURITY_PROBE;

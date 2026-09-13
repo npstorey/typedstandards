@@ -447,3 +447,7 @@ test('verifyEvidence: a verified RFC 3161 genTime bounds the deprecated-key (#5)
   });
   assert.equal(signedAfterDeprecation.keyTrust?.status, 'deprecated_invalid');
 });
+
+// THROWAWAY (Wave N11 P-T1 red): a type error no gate sees at base.
+const N11_PT1_DELIBERATE_TYPE_ERROR: number = "not a number";
+void N11_PT1_DELIBERATE_TYPE_ERROR;
