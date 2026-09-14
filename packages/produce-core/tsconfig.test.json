@@ -1,0 +1,23 @@
+{
+  // Type-check config for this core's TEST files (typedstandards#68).
+  //
+  // Why a second config rather than dropping the exclude from tsconfig.json:
+  // tsconfig.json is the BUILD config. It emits `dist/` (`rootDir: src`,
+  // `declaration: true`), and `files: ["dist", ...]` is what npm publishes, so
+  // folding the test files into it would ship every test file and its `.d.ts`.
+  // This config emits nothing and carries the test files instead.
+  //
+  // `npm run typecheck` runs both configs, so a type error in a test file fails
+  // CI's typecheck step. Before this config existed, the build config excluded
+  // `src/**/*.test.ts`, no other config included them, and a type error in a
+  // test file passed every CI step.
+  //
+  // scripts/type-check-universe.test.mjs derives the test files from disk and
+  // the configs from the `typecheck` script, and fails if either drifts.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["dist", "node_modules"]
+}

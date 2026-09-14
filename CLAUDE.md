@@ -16,7 +16,10 @@ consumers resolve verify-core's **built dist**, not its source, so it builds fir
 - `npm run build:verify-core` — `tsc -p tsconfig.json`; silent on success.
 - `npm run build` — all workspaces; the web build ends with its `Route (app)` table.
 - `npm test` — all workspaces; `# pass` 97 produce-core / 64 verify-core / 116 web, `# fail 0`.
-- `npm run typecheck` — all workspaces; `tsc --noEmit`, silent on success.
+- `npm run typecheck` — all workspaces; silent on success. Each core runs its build
+  config (`--noEmit`) and then `tsconfig.test.json`, which carries the test files.
+- `node --test scripts/type-check-universe.test.mjs` — `# fail 0`; needs the build
+  above (its pack check reads each published `dist/`).
 - `npm run lint --workspace @typedstandards/produce-core` — the purity config. There
   is **no root `npm run lint`**.
 - `node --test scripts/check-dependency-budget.test.mjs` — `# pass 8`, `# fail 0`.
