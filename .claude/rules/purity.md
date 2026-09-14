@@ -25,10 +25,13 @@ network-touching helpers do not call `fetch` themselves either: they take an inj
 Three checks, and they are not redundant: each covers something another does not.
 
 - **Typecheck** (`npm run typecheck`, both cores). Each build config sets
-  `"types": []`, so shipped source cannot resolve Node's type definitions: a
+  `"types": []`, so shipped source resolves no Node type definitions: a
   `process` or `Buffer` read is `TS2591`, and an import of a Node built-in is
-  `TS2307`, anywhere under `src/`. `scripts/type-check-universe.test.mjs` fails if a
-  build config loads `@types/node` again or stops reddening on those three probes.
+  `TS2307`, anywhere under `src/`, unless a shipped file carries
+  `/// <reference types="node" />`, which loads them and lets all three type-check.
+  `scripts/type-check-universe.test.mjs` fails if a build program loads
+  `@types/node`, by config or by that reference, or if a config stops reddening on
+  those three probes.
 - **Lint** (`npm run lint --workspace @typedstandards/produce-core`, produce-core
   only). `packages/produce-core/eslint.config.mjs`: `no-restricted-imports` and
   `no-restricted-globals` (`process`, `Buffer`), at edit and lint time.
