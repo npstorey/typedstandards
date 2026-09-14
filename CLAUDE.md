@@ -29,8 +29,9 @@ consumers resolve verify-core's **built dist**, not its source, so it builds fir
 
 Both cores stay browser-safe and I/O-free in shipped `src/`; test files are exempt.
 Enumerated rules and enforcement: [`.claude/rules/purity.md`](.claude/rules/purity.md).
-Don't weaken any of it — and a diff touching produce-core's ESLint config must say so.
-<!-- that config is half the enforcement (browser-safety.test.ts is the other half), so a quiet edit there retires the rule it enforces -->
+Don't weaken any of it — and a diff touching produce-core's ESLint config, or a core
+build config's `types`, must say so.
+<!-- each is one of the three checks (typecheck, lint, browser-safety.test.ts), so a quiet edit there retires the rule it enforces -->
 
 ## Secret hygiene
 

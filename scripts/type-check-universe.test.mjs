@@ -1,6 +1,8 @@
 // Guard: every test file in every workspace is type-checked by a config its
 // `typecheck` script runs, and no config that emits contains a test file
-// (typedstandards#68). Run: node --test scripts/type-check-universe.test.mjs
+// (typedstandards#68); and a published workspace's build configs resolve no
+// Node type definitions, so the typecheck enforces the purity rule (second
+// section below). Run: node --test scripts/type-check-universe.test.mjs
 // (after `npm run build`: the pack check needs each published `dist/`).
 //
 // WHAT WAS MEASURED. At 1d24991 both cores' build configs excluded
@@ -220,4 +222,96 @@ test("#68: CI's typecheck step runs every workspace's typecheck script", () => {
   const runs = [...ci.matchAll(/^\s*(?:-\s+)?run:\s*(.+?)\s*$/gm)].map((m) => m[1]);
   assert.ok(runs.length > 0, 'read no run step from ci.yml: the instrument saw nothing');
   assert.ok(runs.includes('npm run typecheck'), `ci.yml runs no \`npm run typecheck\` step; its steps: ${runs.join(' | ')}`);
+});
+
+// ---------------------------------------------------------------------------
+// Purity: shipped source of a published workspace cannot reach Node's types
+//
+// WHAT WAS MEASURED. At 1d24991 no build config set `types`, so TypeScript
+// loaded every hoisted `node_modules/@types/*`, including `@types/node` (63
+// files in each core's build program). `process` and `Buffer` therefore
+// type-checked in shipped source. verify-core has no lint, and its
+// browser-safety.test.ts checks imports and Buffer usage but not `process`: a
+// `process.env` read appended to verify-core/src/index.ts passed every CI step.
+//
+// Universe: every emitting config of every non-private (published) workspace.
+
+function emittingConfigsOfPublished() {
+  const out = [];
+  for (const dir of workspaceDirs().filter((d) => manifestOf(d).private !== true)) {
+    for (const config of candidateConfigsOf(dir)) {
+      const parsedConfig = parseConfig(dir, config);
+      if (!parsedConfig.parsed.options.noEmit) out.push({ dir, config, ...parsedConfig });
+    }
+  }
+  assert.ok(out.length > 0, 'derived no emitting config of a published workspace: these assertions would be vacuous');
+  return out;
+}
+
+/** Diagnostics for one in-memory source file compiled under a config's options. */
+function diagnoseVirtual(ts, parsed, fileName, text) {
+  const host = ts.createCompilerHost(parsed.options);
+  const { getSourceFile, fileExists, readFile } = host;
+  const isProbe = (f) => resolve(f) === fileName;
+  host.getSourceFile = (f, language, ...rest) =>
+    isProbe(f) ? ts.createSourceFile(f, text, language, true) : getSourceFile.call(host, f, language, ...rest);
+  host.fileExists = (f) => isProbe(f) || fileExists.call(host, f);
+  host.readFile = (f) => (isProbe(f) ? text : readFile.call(host, f));
+  const program = ts.createProgram({ rootNames: [fileName], options: parsed.options, host });
+  return ts.getPreEmitDiagnostics(program).map((d) => ({
+    code: d.code,
+    line: d.file && d.start !== undefined ? d.file.getLineAndCharacterOfPosition(d.start).line + 1 : 0,
+    file: d.file ? resolve(d.file.fileName) : '',
+    text: ts.flattenDiagnosticMessageText(d.messageText, ' '),
+  }));
+}
+
+test('purity: every config a published workspace builds with is also run by its typecheck script', () => {
+  for (const dir of workspaceDirs().filter((d) => manifestOf(d).private !== true)) {
+    const { build, typecheck } = manifestOf(dir).scripts ?? {};
+    const built = tscConfigsOf(build, dir);
+    assert.ok(built.length > 0, `${rel(dir)} is published and its build script runs no tsc: "${build ?? ''}"`);
+    const checked = new Set(tscConfigsOf(typecheck, dir));
+    assert.deepEqual(built.filter((c) => !checked.has(c)).map(rel), [], `${rel(dir)}: built but not type-checked`);
+  }
+});
+
+test('purity: no emitting config of a published workspace resolves Node type definitions', () => {
+  for (const { dir, config, ts, parsed } of emittingConfigsOfPublished()) {
+    assert.ok(parsed.fileNames.length > 0, `${rel(config)} compiles no file`);
+    const program = ts.createProgram({ rootNames: parsed.fileNames, options: parsed.options });
+    const nodeTypes = program
+      .getSourceFiles()
+      .map((sf) => resolve(sf.fileName))
+      .filter((f) => f.includes(`${join('node_modules', '@types', 'node')}/`));
+    assert.deepEqual(
+      nodeTypes.map((f) => relative(dir, f)).slice(0, 3),
+      [],
+      `${rel(config)} loads ${nodeTypes.length} @types/node files, so \`process\` and \`Buffer\` type-check in shipped source`,
+    );
+  }
+});
+
+test('purity: a `process` read, a `Buffer` use, or a Node built-in import in shipped source is a type error', () => {
+  for (const { config, ts, parsed } of emittingConfigsOfPublished()) {
+    const srcDir = parsed.options.rootDir ?? dirname(config);
+
+    // Control: browser-safe code under the same options produces no diagnostic,
+    // so a red below is the probe's content and not a broken instrument.
+    const control = diagnoseVirtual(ts, parsed, join(srcDir, '__purity-control__.ts'),
+      "export const ok = new TextEncoder().encode(atob('cHJvYmU='));\n");
+    assert.deepEqual(control, [], `${rel(config)}: the control probe does not type-check cleanly`);
+
+    const probe = join(srcDir, '__purity-probe__.ts');
+    const diagnostics = diagnoseVirtual(ts, parsed, probe, [
+      'export const env = process.env.PURITY_PROBE;',
+      "export const bytes = Buffer.from('probe');",
+      "export { readFileSync } from 'node:fs';",
+      '',
+    ].join('\n'));
+    const onLine = (n) => diagnostics.filter((d) => d.file === probe && d.line === n);
+    assert.ok(onLine(1).some((d) => /'process'/.test(d.text)), `${rel(config)}: a \`process\` read type-checks: ${JSON.stringify(diagnostics)}`);
+    assert.ok(onLine(2).some((d) => /'Buffer'/.test(d.text)), `${rel(config)}: a \`Buffer\` use type-checks: ${JSON.stringify(diagnostics)}`);
+    assert.ok(onLine(3).some((d) => /'node:fs'/.test(d.text)), `${rel(config)}: a node:fs import type-checks: ${JSON.stringify(diagnostics)}`);
+  }
 });

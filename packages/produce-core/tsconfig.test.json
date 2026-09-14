@@ -16,7 +16,13 @@
   // the configs from the `typecheck` script, and fails if either drifts.
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "noEmit": true
+    "noEmit": true,
+    // Test files are Node programs (node:test, node:fs, node:crypto). The build
+    // config sets `"types": []` so shipped source cannot reach a Node global;
+    // this opts the tests back in. Shipped source is in this program too, so it
+    // is the build config, which the typecheck script also runs, that holds
+    // shipped source to the purity rule.
+    "types": ["node"]
   },
   "include": ["src/**/*.ts"],
   "exclude": ["dist", "node_modules"]
