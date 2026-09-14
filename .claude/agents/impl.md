@@ -35,10 +35,13 @@ Phase report (your final message, mirrored into the PR body) — the evidence pr
 in CLAUDE.md, concretely:
 
 - branch + diff stat, with an explicit blast-zone statement;
-- full output of every check CI gates on, pasted rather than summarized, in this
-  order: `npm run build:verify-core`, `npm run build`, `npm test`,
-  `npm run typecheck`, `npm run lint --workspace @typedstandards/produce-core`,
-  `node --test scripts/check-dependency-budget.test.mjs`, `npm run check:budgets`.
+- full output of every check CI gates on, pasted rather than summarized, in the
+  order ci.yml runs them: `npm run build:verify-core`, `npm run build`,
+  `npm run test`, `npm run typecheck`,
+  `node --test scripts/type-check-universe.test.mjs`,
+  `npm run lint --workspace @typedstandards/produce-core`,
+  `node --test scripts/check-dependency-budget.test.mjs`, `npm run check:budgets`,
+  `node --test scripts/claude-md-gate-list.test.mjs`.
   Run `npm ci` at the repo root first: a stale `node_modules`, or a verify-core dist
   built from older source, produces failures that look like code defects;
 - fixture provenance — which source test or capture each fixture derives from, with
