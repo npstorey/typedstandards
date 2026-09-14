@@ -672,9 +672,11 @@ export const CAPTURE_METHOD_VOCAB_SIGNALS: Record<
 // Not a verify-library status: `metadata.extensions["org.civicaitools.notebook"]
 // .provenance` distinguishes a notebook executed in a signed sandbox from a
 // skeleton that reproduces the steps without running them (per open-questions
-// Q31). Both readings are honest and calm — neither is a failure. `'executed'`
-// is the only value emitted today; `'skeleton'` is reserved (no code path writes
-// it yet). Canonical list kept here because the value is a notebook-author
+// Q31). Both readings are honest and calm — neither is a failure. Both values
+// are written by the reference producer: its executed pipeline stamps
+// `'executed'`, and its skeleton notebook generator has stamped `'skeleton'`
+// since civic-ai-tools-website#401. This site reads the value and writes
+// neither. Canonical list kept here because the value is a notebook-author
 // concept, not a verify.ts type.
 export const NOTEBOOK_PROVENANCE_VALUES = ['executed', 'skeleton'] as const;
 export type NotebookProvenance = (typeof NOTEBOOK_PROVENANCE_VALUES)[number];
@@ -686,9 +688,14 @@ export const NOTEBOOK_PROVENANCE_SIGNALS: Record<NotebookProvenance, TrustSignal
     detail:
       'The notebook was run end-to-end in a signed sandbox; its outputs are the executed results.',
   },
+  // The label is in the reader's words, not the code path's (ruling D7 = B,
+  // civic-ai-tools-website#434). "Skeleton" names the generator that writes the
+  // notebook without running it, which a reader has no reason to know. The
+  // VALUE `skeleton` is what a package carries and is unchanged; the label
+  // reaches no signed byte. `notebook-provenance-copy.test.ts` pins the words.
   skeleton: {
     tier: 'normal',
-    label: 'Skeleton notebook (not executed)',
+    label: 'Analysis notebook (not executed)',
     detail:
       'The notebook reproduces the steps but was not executed; its outputs were not regenerated.',
   },
