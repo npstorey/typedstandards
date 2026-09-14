@@ -74,3 +74,8 @@ jobs:
 
       - name: Dependency-budget check
         run: npm run check:budgets
+
+      # CLAUDE.md's gate list pins no count and names exactly these run steps,
+      # in this order. A step added here without its bullet there fails it.
+      - name: CLAUDE.md gate-list guard
+        run: node --test scripts/claude-md-gate-list.test.mjs

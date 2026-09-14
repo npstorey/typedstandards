@@ -12,18 +12,25 @@ it first: `eval "$(fnm env)" && fnm use 22`, or your equivalent.
 
 The CI gates below, in the order `.github/workflows/ci.yml` runs them. Workspace
 consumers resolve verify-core's **built dist**, not its source, so it builds first.
+No cell pins a pass total, which rises with every test added: `# fail 0` is the gate.
+`scripts/claude-md-gate-list.test.mjs` fails on a pinned count, and on a list that
+differs from ci.yml's steps in either direction or in order.
 
+- `npm ci --ignore-scripts` — installs every workspace; the ci.yml header says why
+  `--ignore-scripts` is defense-in-depth only.
 - `npm run build:verify-core` — `tsc -p tsconfig.json`; silent on success.
 - `npm run build` — all workspaces; the web build ends with its `Route (app)` table.
-- `npm test` — all workspaces; `# pass` 97 produce-core / 64 verify-core / 116 web, `# fail 0`.
+- `npm run test` — all workspaces; `# fail 0` for each.
 - `npm run typecheck` — all workspaces; silent on success. Each core runs its build
   config (`--noEmit`) and then `tsconfig.test.json`, which carries the test files.
 - `node --test scripts/type-check-universe.test.mjs` — `# fail 0`; needs the build
   above (its pack check reads each published `dist/`).
 - `npm run lint --workspace @typedstandards/produce-core` — the purity config. There
   is **no root `npm run lint`**.
-- `node --test scripts/check-dependency-budget.test.mjs` — `# pass 8`, `# fail 0`.
-- `npm run check:budgets` — two `OK` lines, then `Dependency-budget check passed.`
+- `node --test scripts/check-dependency-budget.test.mjs` — `# fail 0`.
+- `npm run check:budgets` — an `OK` line per budgeted package, then
+  `Dependency-budget check passed.`
+- `node --test scripts/claude-md-gate-list.test.mjs` — `# fail 0`.
 
 ## Purity discipline
 
