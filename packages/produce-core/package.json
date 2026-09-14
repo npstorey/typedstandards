@@ -26,7 +26,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "clean": "rm -rf dist tsconfig.tsbuildinfo",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
     "lint": "eslint .",
     "test": "node --test --experimental-strip-types \"src/**/*.test.ts\"",
     "prepublishOnly": "npm run clean && npm run build"
@@ -36,6 +36,7 @@
     "@typedstandards/verify-core": "^0.9.0"
   },
   "devDependencies": {
+    "@types/node": "^20",
     "@typescript-eslint/parser": "^8",
     "eslint": "^9",
     "typescript": "^5.9.3"

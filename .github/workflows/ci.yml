@@ -60,6 +60,12 @@ jobs:
       - name: Typecheck (all workspaces)
         run: npm run typecheck
 
+      # Every test file is type-checked by a non-emitting config its workspace's
+      # typecheck script runs, and no emitting config carries one (#68). After
+      # the build: its pack check reads each published dist/.
+      - name: Type-check universe guard
+        run: node --test scripts/type-check-universe.test.mjs
+
       - name: Lint (produce-core purity config)
         run: npm run lint --workspace @typedstandards/produce-core
 
@@ -68,3 +74,8 @@ jobs:
 
       - name: Dependency-budget check
         run: npm run check:budgets
+
+      # CLAUDE.md's gate list pins no count and names exactly these run steps,
+      # in this order. A step added here without its bullet there fails it.
+      - name: CLAUDE.md gate-list guard
+        run: node --test scripts/claude-md-gate-list.test.mjs

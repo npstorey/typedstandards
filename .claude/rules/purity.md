@@ -22,18 +22,39 @@ network-touching helpers do not call `fetch` themselves either: they take an inj
 
 ## What enforces it
 
-Two independent checks, and they are not redundant:
+Three checks, and they are not redundant: each covers something another does not.
 
-- `packages/produce-core/eslint.config.mjs` — `no-restricted-imports` /
-  `no-restricted-globals`, at edit and lint time
-  (`npm run lint --workspace @typedstandards/produce-core`);
-- each core's dependency-free `src/browser-safety.test.ts`, mechanically, under
-  `node --test` in CI.
+- **Typecheck** (`npm run typecheck`, both cores). Each build config sets
+  `"types": []`, so shipped source cannot resolve Node's type definitions: a
+  `process` or `Buffer` read is `TS2591`, and an import of a Node built-in is
+  `TS2307`, anywhere under `src/`. `scripts/type-check-universe.test.mjs` fails if a
+  build config loads `@types/node` again or stops reddening on those three probes.
+- **Lint** (`npm run lint --workspace @typedstandards/produce-core`, produce-core
+  only). `packages/produce-core/eslint.config.mjs`: `no-restricted-imports` and
+  `no-restricted-globals` (`process`, `Buffer`), at edit and lint time.
+  verify-core has no lint.
+- **`src/browser-safety.test.ts`** (each core, under `node --test`). Import
+  specifiers and `Buffer` usage, by regex; produce-core's copy also bars
+  `Date.now`, `new Date(`, `Math.random`, `randomUUID` and `getRandomValues`. It
+  reads the top level of `src/` only, not subdirectories.
 
-Don't weaken either. A diff that touches the lint config must say so explicitly in
-its PR body — that config is half the enforcement, so a quiet edit there retires the
-rule it enforces while the test still looks green.
-<!-- the standing CLAUDE.md rule since the config was written; it is the only reason a purity regression cannot land as a silent config relaxation -->
+Per rule, per core:
+
+| Rule | produce-core | verify-core |
+|---|---|---|
+| no Node built-in import | typecheck, lint, browser-safety test | typecheck, browser-safety test |
+| no `process` read | typecheck, lint | typecheck |
+| no `Buffer` | typecheck, lint, browser-safety test | typecheck, browser-safety test |
+| no clock, no RNG | browser-safety test | not a verify-core rule |
+| no direct network call | nothing mechanical | nothing mechanical |
+
+Both build configs keep the DOM lib, so the typecheck does not see `fetch`,
+`crypto.getRandomValues` or `Date`.
+
+Don't weaken any of it. A diff that touches the lint config, or a build config's
+`types`, must say so explicitly in its PR body: each is part of the enforcement, so a
+quiet edit there retires the rule it enforces while the other checks still look green.
+<!-- the standing CLAUDE.md rule since the lint config was written. The typecheck leg was added with typedstandards#68: before it, verify-core's "two independent checks" were one for imports and Buffer and none for `process`, and a `process.env` read in verify-core/src/index.ts passed every CI step -->
 
 ## Build order
 

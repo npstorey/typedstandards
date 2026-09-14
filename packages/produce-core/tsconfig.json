@@ -24,7 +24,15 @@
     "allowImportingTsExtensions": true,
     "rewriteRelativeImportExtensions": true,
     "forceConsistentCasingInFileNames": true,
-    "noUncheckedIndexedAccess": false
+    "noUncheckedIndexedAccess": false,
+
+    // No ambient type packages. Without this, TypeScript loads every
+    // `node_modules/@types/*` it can find, and the hoisted `@types/node` makes
+    // `process` and `Buffer` resolve in shipped source. With it, a `process`
+    // or `Buffer` read in `src/` fails `npm run typecheck` (TS2591), which is
+    // the purity rule in .claude/rules/purity.md. tsconfig.test.json opts the
+    // test files back into Node's types.
+    "types": []
   },
   "include": ["src/**/*.ts"],
   "exclude": ["src/**/*.test.ts", "dist", "node_modules"]
