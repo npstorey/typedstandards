@@ -25,6 +25,7 @@ import {
   base64ToBytes,
   children,
   content,
+  deriveKeyDerivedIdentifier,
   expectTag,
   oidToString,
   readNode,
@@ -136,6 +137,37 @@ export function derivePublicKeySpki(key: Ed25519KeyInput): string {
   der.set(ED25519_SPKI_PREFIX, 0);
   der.set(publicKey, ED25519_SPKI_PREFIX.length);
   return bytesToBase64(der);
+}
+
+/**
+ * Derive the key-derived signer identifier — `did:key` in its base58btc
+ * (`z`) form for an Ed25519 key (hub ADR-0030 §2, §6) — from the CALLER'S
+ * Ed25519 key input (any form `derivePublicKeySpki` accepts).
+ *
+ * One implementation on both sides: the SPKI comes from `derivePublicKeySpki`
+ * (the same value `signEnvelopeHash` puts in the envelope's `publicKey`), and
+ * the identifier from verify-core's `deriveKeyDerivedIdentifier`, the function
+ * a verifier runs against that `publicKey` for check #14. A producer that
+ * uses this value as `signer.identifier` therefore emits exactly the string
+ * the verifier recomputes.
+ *
+ * A self-certified package (`signer.bindingTier: "pseudonymous"` with this
+ * identifier) names its key the same way everywhere: pass the identifier as
+ * the `kid` to `signEnvelopeHash` AND as the envelope's
+ * `metadata.signingKeyId`, so the envelope's `kid` equals
+ * `metadata.signingKeyId` (spec §8.1.2; ADR-0030 §5 recommends the identifier
+ * string as the `kid`).
+ *
+ *   const id = deriveKeyDerivedIdentifierFromKey(seed);
+ *   const { pkg, envelopeHash } = buildEnvelope({ ...fields, signingKeyId: id,
+ *     signer: { bindingTier: 'pseudonymous', identifier: id, displayName } });
+ *   const signed = signEnvelopeHash(envelopeHash, seed, id);
+ *
+ * The identifier proves that one key signed everything under it — not who
+ * holds the key. It has no rotation and no revocation (ADR-0030 §7).
+ */
+export function deriveKeyDerivedIdentifierFromKey(key: Ed25519KeyInput): string {
+  return deriveKeyDerivedIdentifier(derivePublicKeySpki(key));
 }
 
 /**

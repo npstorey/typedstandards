@@ -48,6 +48,8 @@ test('index exports the produce-core API surface', async () => {
     'signEnvelopeHash',
     'derivePublicKeySpki',
     'derPublicKeyToPemBase64',
+    // the key-derived signer identifier (hub ADR-0030 §6, Wave N14 P5)
+    'deriveKeyDerivedIdentifierFromKey',
     // pure external-proof codecs
     'buildTimestampRequest',
     'buildRekorProposal',

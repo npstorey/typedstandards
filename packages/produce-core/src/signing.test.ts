@@ -7,10 +7,15 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
-import { verifySignature } from '@typedstandards/verify-core';
+import {
+  deriveKeyDerivedIdentifier,
+  isKeyDerivedIdentifier,
+  verifySignature,
+} from '@typedstandards/verify-core';
 import {
   SIGNING_ALGORITHM,
   derPublicKeyToPemBase64,
+  deriveKeyDerivedIdentifierFromKey,
   derivePublicKeySpki,
   signEnvelopeHash,
 } from './signing.ts';
@@ -114,6 +119,47 @@ test('derivePublicKeySpki matches node:crypto SPKI export (interop bar)', () => 
   assert.equal(derivePublicKeySpki(key.seed), key.spkiB64);
   assert.equal(derivePublicKeySpki(key.pkcs8Der), key.spkiB64);
   assert.equal(derivePublicKeySpki(key.pkcs8B64), key.spkiB64);
+});
+
+// --- The key-derived identifier helper (hub ADR-0030 §2, §6) ---
+
+/** did:key for RFC 8032 §7.1 TEST 1's published public key
+ *  (d75a9801…f707511a) — FIXED_SEED's public key. The same string verify-core's
+ *  P4 tests assert (`did-key.test.ts`, re-derived there from the ADR's study). */
+const DID_RFC8032_T1 = 'did:key:z6MktwupdmLXVVqTzCw4i46r4uGyosGXRnR3XjN4Zq7oMMsw';
+
+test('deriveKeyDerivedIdentifierFromKey: RFC 8032 §7.1 test 1 seed → its published did:key', () => {
+  const id = deriveKeyDerivedIdentifierFromKey(FIXED_SEED);
+  assert.equal(id, DID_RFC8032_T1);
+  assert.equal(isKeyDerivedIdentifier(id), true);
+  assert.equal(id.length, 'did:key:z'.length + 47, 'Ed25519 z form: 47 base-58 characters');
+  assert.ok(id.startsWith('did:key:z6Mk'), 'an Ed25519 did:key begins z6Mk');
+});
+
+test('deriveKeyDerivedIdentifierFromKey: one implementation — equals verify-core over the envelope publicKey', () => {
+  const key = generateTestKey();
+  const id = deriveKeyDerivedIdentifierFromKey(key.seed);
+  // The verifier's view: derive from the publicKey signEnvelopeHash emits.
+  const signed = signEnvelopeHash(SAMPLE_HASH, key.seed, id);
+  assert.equal(deriveKeyDerivedIdentifier(signed.publicKey), id);
+  // ...and from node:crypto's own SPKI export (the interop bar).
+  assert.equal(deriveKeyDerivedIdentifier(key.spkiB64), id);
+  // Every accepted key input form yields the same identifier.
+  assert.equal(deriveKeyDerivedIdentifierFromKey(key.pkcs8Der), id);
+  assert.equal(deriveKeyDerivedIdentifierFromKey(key.pkcs8B64), id);
+  assert.equal(
+    deriveKeyDerivedIdentifierFromKey(Buffer.from(key.seed).toString('base64')),
+    id,
+  );
+  // The documented convention: kid = the identifier.
+  assert.equal(signed.kid, id);
+});
+
+test('deriveKeyDerivedIdentifierFromKey: distinct keys, distinct identifiers; invalid keys throw', () => {
+  const a = deriveKeyDerivedIdentifierFromKey(generateTestKey().seed);
+  const b = deriveKeyDerivedIdentifierFromKey(generateTestKey().seed);
+  assert.notEqual(a, b);
+  assert.throws(() => deriveKeyDerivedIdentifierFromKey(new Uint8Array(31)));
 });
 
 // --- Caller-supplied configuration: no env probe, no defaults ---
