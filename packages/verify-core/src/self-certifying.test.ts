@@ -403,10 +403,64 @@ test('rules 2-3 as a table over every registry-path verdict', () => {
     assert.equal(applySelfCertifiedKeyTrust(b, 'pseudonymous', undefined).status, want.bundle, status);
     assert.equal(applySelfCertifiedKeyTrust(b, 'pseudonymous', 'bundle').status, want.bundle, status);
     assert.equal(applySelfCertifiedKeyTrust(b, 'pseudonymous', 'declared-url').status, want.declared, status);
-    // Any other tier: the registry path stands.
-    assert.equal(applySelfCertifiedKeyTrust(b, 'oauth', 'bundle'), b, status);
+    // Any other tier (G2-B at any tier): a declared-URL registry decides; a
+    // bundle-carried or provenance-less one may only lower, and a raising
+    // verdict from it reads as the envelope alone (`registry_unavailable`).
+    const otherTier = { ...want, bundle: want.bundle === 'self_certified' ? status : want.bundle };
+    if (status === 'active' || status === 'deprecated_valid') otherTier.bundle = 'registry_unavailable';
+    for (const provenance of [undefined, 'bundle'] as const) {
+      const o = applySelfCertifiedKeyTrust(b, 'oauth', provenance);
+      assert.equal(o.status, otherTier.bundle, `oauth/${provenance}/${status}`);
+      if (o.status !== status) assert.deepEqual(o, { status: 'registry_unavailable', verified: false, kid: 'k' });
+      else assert.equal(o, b);
+    }
+    assert.equal(applySelfCertifiedKeyTrust(b, 'oauth', 'declared-url'), b, status);
     const out = applySelfCertifiedKeyTrust(b, 'pseudonymous', 'bundle');
     if (out.status === 'self_certified') assert.equal(out.verified, false);
+  }
+  // A raising verdict with no kid (not reachable from verifyRecord, which only
+  // consults a registry with a kid) reads as legacy_embedded.
+  assert.deepEqual(
+    applySelfCertifiedKeyTrust({ status: 'active', verified: true }, 'oauth', 'bundle'),
+    { status: 'legacy_embedded', verified: false },
+  );
+});
+
+const OTHER_TIERS = ['oauth', 'orcid', 'did-web', 'notarized', 'platform', 'organization'];
+
+test('G2-B at any tier: a bundle-carried or provenance-less registry listing the key active is ignored (not active, verified: false)', async () => {
+  for (const bindingTier of OTHER_TIERS) {
+    const c = buildCanary({ identifierKey: KEY_A, signingKey: KEY_A, bindingTier });
+    for (const provenance of [undefined, 'bundle'] as const) {
+      const r = await verifyCanary(c, registryFor(c, 'active'), provenance);
+      assert.deepEqual(
+        r.keyTrust,
+        { status: 'registry_unavailable', verified: false, kid: c.kid },
+        `${bindingTier}/${provenance}`,
+      );
+      assert.equal(r.signerIdentity?.status, 'key_derived_match');
+    }
+  }
+});
+
+test('G2-B at any tier: a bundle-carried or provenance-less registry listing the key revoked yields revoked', async () => {
+  for (const bindingTier of OTHER_TIERS) {
+    const c = buildCanary({ identifierKey: KEY_A, signingKey: KEY_A, bindingTier });
+    for (const provenance of [undefined, 'bundle'] as const) {
+      const r = await verifyCanary(c, registryFor(c, 'revoked'), provenance);
+      assert.equal(r.keyTrust?.status, 'revoked', `${bindingTier}/${provenance}`);
+      assert.equal(r.keyTrust?.verified, false);
+    }
+  }
+});
+
+test('G2-B at any tier: a registry fetched from the declared URL listing the key active yields active', async () => {
+  for (const bindingTier of OTHER_TIERS) {
+    const c = buildCanary({ identifierKey: KEY_A, signingKey: KEY_A, bindingTier });
+    const r = await verifyCanary(c, registryFor(c, 'active'), 'declared-url');
+    assert.equal(r.keyTrust?.status, 'active', bindingTier);
+    assert.equal(r.keyTrust?.verified, true);
+    assert.equal(r.signerIdentity?.status, 'key_derived_match');
   }
 });
 

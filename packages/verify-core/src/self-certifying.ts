@@ -52,32 +52,47 @@ export function compareKeyDerivedIdentifier(
 }
 
 /**
- * Apply ADR-0030 §4 rules 2-3 to the registry-path verdict `base`, for a
- * package whose key-derived identifier MATCHED its envelope key (rule 1 —
- * a mismatch — leaves `base` unchanged, and the caller does not call this).
+ * Apply ADR-0030 §4 rules 2-3, as amended at gate G2, to the registry-path
+ * verdict `base`, for a package whose key-derived identifier MATCHED its
+ * envelope key (rule 1 — a mismatch — leaves `base` unchanged, and the caller
+ * does not call this).
  *
- *   - Under any `bindingTier` other than `pseudonymous`, `base` stands: the
- *     status `self_certified` is reserved for that rung (§3).
- *   - No registry lists the envelope's `(kid, publicKey)` → `self_certified`.
- *   - A registry from the declared `trustRegistryUrl` lists it → its verdict
- *     stands.
- *   - Any other registry (bundle-carried, or no stated provenance) lists it →
- *     a lowering verdict (`revoked`, `deprecated_invalid`) stands; a raising
- *     one (`active`, `deprecated_valid`) leaves `self_certified`.
+ * For a key-derived identifier, at any `bindingTier`:
+ *   - A registry from the declared `trustRegistryUrl` that lists the
+ *     envelope's `(kid, publicKey)` decides: its verdict stands.
+ *   - Any other registry (bundle-carried, or no stated provenance)
+ *     contributes only a lowering verdict (`revoked`, `deprecated_invalid`).
+ *     A raising one (`active`, `deprecated_valid`) is ignored.
+ *   - With no registry listing the key, or a raising verdict ignored, the
+ *     status is `self_certified` at `pseudonymous`; at any other tier it is
+ *     what the envelope alone yields with no registry supplied
+ *     (`registry_unavailable` with a `kid`, `legacy_embedded` without) — never
+ *     `active`, never `verified: true`. `self_certified` is reserved for the
+ *     `pseudonymous` rung (§3).
  */
 export function applySelfCertifiedKeyTrust(
   base: KeyTrustResult,
   bindingTier: unknown,
   provenance: TrustRegistryProvenance | undefined,
 ): KeyTrustResult {
-  if (bindingTier !== SELF_CERTIFYING_TIER) return base;
-  const selfCertified: KeyTrustResult = {
+  const pseudonymous = bindingTier === SELF_CERTIFYING_TIER;
+  const listed = !UNLISTED_STATUSES.has(base.status);
+  if (listed && (provenance === 'declared-url' || LOWERING_STATUSES.has(base.status))) {
+    return base;
+  }
+  if (!pseudonymous) {
+    // Unlisted: the registry path's own verdict (`unknown_key`,
+    // `registry_unavailable`, `legacy_embedded`) is unchanged. Listed with a
+    // raising verdict from a registry that may not raise: the envelope-alone
+    // verdict, as if no registry had been supplied.
+    if (!listed) return base;
+    return base.kid !== undefined
+      ? { status: 'registry_unavailable', verified: false, kid: base.kid }
+      : { status: 'legacy_embedded', verified: false };
+  }
+  return {
     status: 'self_certified',
     verified: false,
     ...(base.kid !== undefined ? { kid: base.kid } : {}),
   };
-  if (UNLISTED_STATUSES.has(base.status)) return selfCertified;
-  if (provenance === 'declared-url') return base;
-  if (LOWERING_STATUSES.has(base.status)) return base;
-  return selfCertified;
 }
