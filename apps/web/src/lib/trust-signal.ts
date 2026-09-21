@@ -570,6 +570,8 @@ export const CAPTURE_METHOD_LABELS: Record<CaptureMethod, string> = {
   'claude-code-jsonl-readback': 'Reconstructed from the Claude Code session transcript.',
   'claude-code-self-report':
     'Summarized by the AI from its own session memory (deprecated capture method).',
+  'script-run': 'Read into the package by a packaging program from files that already existed on disk.',
+  'tool-emitted': 'Written into the package by the program that computed the content.',
 };
 
 /**

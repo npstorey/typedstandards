@@ -1,0 +1,170 @@
+{
+  "metadata": {
+    "schemaVersion": "0.1.0",
+    "packageId": "ab822abb-9c0f-485a-8012-008b51261f65",
+    "createdAt": "2026-09-13T22:07:05.697Z",
+    "signingKeyId": "eval-run-example:ed25519-2026-09",
+    "captureMethod": "script-run"
+  },
+  "producerProfile": "scripted-recomputation/eval-run",
+  "type": "content/analysis/v1",
+  "signer": {
+    "bindingTier": "pseudonymous",
+    "identifier": "https://github.com/npstorey",
+    "displayName": "Nathan Storey"
+  },
+  "contentCanonicalization": "https://typedstandards.org/canonicalization/legacy-json/v1",
+  "prompt": {
+    "hash": "726717c0bdcac3baa4743105b30766de38e92fb39c4b75c45afbc53928763ef3",
+    "visibility": "full_text",
+    "text": "Recompute accuracy for GPQA Diamond run S5QYXSvQBRSbUbXSnAGbMm from the per-sample scores in the pinned log, with the formula frozen in docs/p2-preregistration.md."
+  },
+  "queries": [
+    {
+      "tool": "python3",
+      "operationType": "script-run",
+      "arguments": {
+        "script": "analysis/recompute.py",
+        "scriptSha256": "bcc5ffaec70174aa8beef04c0430ac469570a8fffc33e295322311fd57a4d61c",
+        "input": "data/S5QYXSvQBRSbUbXSnAGbMm.eval",
+        "inputSha256": "93a9f3ca91499c42c533a882a04292efedf6218d74749bc0fa28350cfff1270d",
+        "preregistration": "docs/p2-preregistration.md",
+        "freezeCommit": "959b2bb2621a643df45d5385a8ea6338ea9da9d3"
+      }
+    }
+  ],
+  "dataSources": [
+    {
+      "sourceId": "retrieval-record",
+      "catalogType": "record-package",
+      "portalUrl": "https://github.com/npstorey/typedstandards-eval-run-example",
+      "datasetId": "3637b5952f6a44e050fa0ac84d2ab58454ab7d29507dbbaf09147da7f8b37d48",
+      "accessTimestamp": "2026-09-13T21:58:40Z"
+    }
+  ],
+  "cost": {
+    "model": "none"
+  },
+  "skillMetadata": {},
+  "output": "{\n  \"script\": \"analysis/recompute.py\",\n  \"script_sha256\": \"bcc5ffaec70174aa8beef04c0430ac469570a8fffc33e295322311fd57a4d61c\",\n  \"input\": {\n    \"file\": \"data/S5QYXSvQBRSbUbXSnAGbMm.eval\",\n    \"sha256\": \"93a9f3ca91499c42c533a882a04292efedf6218d74749bc0fa28350cfff1270d\",\n    \"bytes\": 15487293\n  },\n  \"scorer\": \"choice\",\n  \"scorers_present_other_than_choice\": {},\n  \"value_mapping\": {\n    \"C\": 1,\n    \"I\": 0,\n    \"P\": 0.5,\n    \"N\": 0,\n    \"numbers and booleans\": \"cast to float\"\n  },\n  \"formula\": \"mean over every (sample, epoch) record of the mapped `choice` value\",\n  \"n_samples\": 198,\n  \"n_epochs\": 16,\n  \"epochs\": [\n    1,\n    16\n  ],\n  \"n_records\": 3168,\n  \"missing_sample_epoch_pairs\": [],\n  \"duplicate_sample_epoch_pairs\": [],\n  \"value_counts\": {\n    \"C\": 1613,\n    \"I\": 1555\n  },\n  \"recomputed_score_as_ratio\": \"1613 / 3168\",\n  \"recomputed_score_fraction\": \"1613/3168\",\n  \"recomputed_score\": 0.5091540404040404,\n  \"mean_of_sample_means\": 0.5091540404040404,\n  \"published_score\": {\n    \"value\": \"0.5091540404040404\",\n    \"source\": \"gpqa_diamond.csv lines 440-442 inside benchmark_data.zip (sha256 e5120e5eba7e7761c989557f3ad1e7ec400cbf98deb642704a111fb79facc6fb)\",\n    \"url\": \"https://epoch.ai/data/benchmark_data.zip\"\n  },\n  \"difference_recomputed_minus_published\": 0.0,\n  \"log_header_metric\": {\n    \"source\": \"header.json results.scores[name=choice].metrics\",\n    \"accuracy\": 0.5091540404040404,\n    \"stderr\": 0.025861992702770648,\n    \"results_total_samples\": 3168,\n    \"results_completed_samples\": 3168\n  },\n  \"difference_recomputed_minus_log_header_accuracy\": 0.0,\n  \"claim\": \"none about whether either score is correct\"\n}\n",
+  "trace": {
+    "resourceSpans": []
+  },
+  "summary": "Recomputation for run S5QYXSvQBRSbUbXSnAGbMm: 1613 / 3168 = 0.5091540404040404 from the pinned log; the hub's published mean_score is 0.5091540404040404; difference 0. No claim is made about whether either score is correct.",
+  "provenance": {
+    "@context": {
+      "prov": "http://www.w3.org/ns/prov#",
+      "xsd": "http://www.w3.org/2001/XMLSchema#",
+      "dcterms": "http://purl.org/dc/terms/",
+      "ex": "https://github.com/npstorey/typedstandards-eval-run-example#"
+    },
+    "@graph": [
+      {
+        "@id": "urn:eval-run-example:node:3637b5952f6a44e050fa0ac84d2ab58454ab7d29507dbbaf09147da7f8b37d48",
+        "@type": "prov:Entity",
+        "dcterms:description": "Retrieval record node, identified by its envelope hash",
+        "ex:envelopeHash": "3637b5952f6a44e050fa0ac84d2ab58454ab7d29507dbbaf09147da7f8b37d48"
+      },
+      {
+        "@id": "urn:eval-run-example:file:sha256:bcc5ffaec70174aa8beef04c0430ac469570a8fffc33e295322311fd57a4d61c",
+        "@type": [
+          "prov:Entity",
+          "prov:Plan"
+        ],
+        "dcterms:title": "analysis/recompute.py",
+        "dcterms:description": "Recomputation script, committed unrun in 959b2bb2621a643df45d5385a8ea6338ea9da9d3",
+        "ex:sha256": "bcc5ffaec70174aa8beef04c0430ac469570a8fffc33e295322311fd57a4d61c"
+      },
+      {
+        "@id": "urn:eval-run-example:activity:recompute:54ab7c6f1817f395d1685c920336e59927cfc1c5a559fd3f883f62a1a3313126",
+        "@type": "prov:Activity",
+        "dcterms:description": "python3 analysis/recompute.py",
+        "prov:startedAtTime": {
+          "@value": "2026-09-13T21:58:40Z",
+          "@type": "xsd:dateTime"
+        },
+        "prov:endedAtTime": {
+          "@value": "2026-09-13T21:58:41Z",
+          "@type": "xsd:dateTime"
+        },
+        "prov:used": [
+          {
+            "@id": "urn:eval-run-example:node:3637b5952f6a44e050fa0ac84d2ab58454ab7d29507dbbaf09147da7f8b37d48"
+          },
+          {
+            "@id": "urn:eval-run-example:file:sha256:bcc5ffaec70174aa8beef04c0430ac469570a8fffc33e295322311fd57a4d61c"
+          }
+        ]
+      },
+      {
+        "@id": "urn:eval-run-example:file:sha256:54ab7c6f1817f395d1685c920336e59927cfc1c5a559fd3f883f62a1a3313126",
+        "@type": "prov:Entity",
+        "dcterms:title": "analysis/out/recomputation.json",
+        "ex:sha256": "54ab7c6f1817f395d1685c920336e59927cfc1c5a559fd3f883f62a1a3313126",
+        "prov:wasGeneratedBy": {
+          "@id": "urn:eval-run-example:activity:recompute:54ab7c6f1817f395d1685c920336e59927cfc1c5a559fd3f883f62a1a3313126"
+        },
+        "prov:wasDerivedFrom": [
+          {
+            "@id": "urn:eval-run-example:node:3637b5952f6a44e050fa0ac84d2ab58454ab7d29507dbbaf09147da7f8b37d48"
+          }
+        ]
+      }
+    ]
+  },
+  "extensions": {
+    "io.github.npstorey.eval-run-example": {
+      "role": "recomputation",
+      "repository": "https://github.com/npstorey/typedstandards-eval-run-example",
+      "run": {
+        "hub": "Epoch AI Benchmarking Hub",
+        "benchmark": "GPQA Diamond",
+        "runId": "S5QYXSvQBRSbUbXSnAGbMm"
+      },
+      "script": {
+        "path": "analysis/recompute.py",
+        "sha256": "bcc5ffaec70174aa8beef04c0430ac469570a8fffc33e295322311fd57a4d61c",
+        "freezeCommit": "959b2bb2621a643df45d5385a8ea6338ea9da9d3"
+      },
+      "preregistration": {
+        "path": "docs/p2-preregistration.md",
+        "sha256": "18cbf2e63f98dffd8007e55f5372566f7ffbc2d02fd7931f5ccbb23c0224a2e1"
+      },
+      "input": {
+        "path": "data/S5QYXSvQBRSbUbXSnAGbMm.eval",
+        "sha256": "93a9f3ca91499c42c533a882a04292efedf6218d74749bc0fa28350cfff1270d",
+        "bytes": 15487293
+      },
+      "output": {
+        "path": "analysis/out/recomputation.json",
+        "sha256": "54ab7c6f1817f395d1685c920336e59927cfc1c5a559fd3f883f62a1a3313126"
+      },
+      "scores": {
+        "recomputed": 0.5091540404040404,
+        "recomputedFraction": "1613/3168",
+        "published": {
+          "value": "0.5091540404040404",
+          "source": "gpqa_diamond.csv lines 440-442 inside benchmark_data.zip (sha256 e5120e5eba7e7761c989557f3ad1e7ec400cbf98deb642704a111fb79facc6fb)",
+          "url": "https://epoch.ai/data/benchmark_data.zip"
+        },
+        "differenceRecomputedMinusPublished": 0,
+        "logHeaderAccuracy": 0.5091540404040404,
+        "differenceRecomputedMinusLogHeader": 0
+      },
+      "derivedFrom": {
+        "role": "retrieval-record",
+        "envelopeHash": "3637b5952f6a44e050fa0ac84d2ab58454ab7d29507dbbaf09147da7f8b37d48",
+        "packageId": "74a11e1f-c17e-469c-a78e-8f4a1f76773d"
+      },
+      "runTime": {
+        "startedAt": "2026-09-13T21:58:40Z",
+        "endedAt": "2026-09-13T21:58:41Z",
+        "basis": "date -u before and after the run, docs/p2-record.md section 1"
+      },
+      "claim": "none about whether either score is correct"
+    }
+  },
+  "contentHash": {
+    "sha256": "8ee1929871984a5d9a10d210e9311ba9da8fcd39f27c90abc78e976c89fe5427"
+  }
+}
