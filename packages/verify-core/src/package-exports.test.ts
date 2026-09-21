@@ -70,11 +70,16 @@ test('ADR-0029 exports resolve from the entry point', async () => {
 });
 
 // Hub ADR-0030 (Wave N14 P4): the key-derived identifier's derivation and
-// predicate are public runtime exports; the base-58 encoder stays internal.
+// predicate, and the registry-provenance values, are public runtime exports.
+// The base-58 encoder and the key-trust rule stay internal.
 test('ADR-0030 exports resolve from the entry point', async () => {
   const api = (await import('./index.ts')) as Record<string, unknown>;
   assert.equal(typeof api['deriveKeyDerivedIdentifier'], 'function');
   assert.equal(typeof api['isKeyDerivedIdentifier'], 'function');
   assert.equal(api['KEY_DERIVED_IDENTIFIER_PREFIX'], 'did:key:');
+  assert.deepEqual(api['TRUST_REGISTRY_PROVENANCES'], ['declared-url', 'bundle']);
+  assert.equal((api['KEY_TRUST_STATUSES'] as readonly string[]).at(-1), 'self_certified');
   assert.equal(api['base58btcEncode'], undefined);
+  assert.equal(api['applySelfCertifiedKeyTrust'], undefined);
+  assert.equal(api['compareKeyDerivedIdentifier'], undefined);
 });

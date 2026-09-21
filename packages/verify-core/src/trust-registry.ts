@@ -45,15 +45,33 @@ export const KEY_TRUST_STATUSES = [
   'unknown_key',           // (kid, publicKey) pair not found in registry
   'registry_unavailable',  // registry could not be loaded
   'legacy_embedded',       // signed with an embedded key, no registry kid stored
+  'self_certified',        // key-derived identifier matches the key; no registry vouches (hub ADR-0030 §3)
 ] as const;
 export type KeyTrustStatus = (typeof KEY_TRUST_STATUSES)[number];
+
+/**
+ * Where a supplied registry came from (hub ADR-0030 §4 rule 3). This module
+ * still has no opinion on HOW a registry is obtained; the caller states it,
+ * because for a signer with a key-derived identifier the answer decides what
+ * the registry may do:
+ *   - `declared-url` — fetched from the view's declared `trustRegistryUrl` (or
+ *     `trustRegistryUrlLegacy`). Its verdict about the key stands.
+ *   - `bundle` — carried in the bundle (the `?inline=1` form's
+ *     `trustRegistry`), or obtained any other way. It may lower a
+ *     self-certified signer's status (`revoked`, `deprecated_invalid`) and
+ *     never raise it.
+ * A registry supplied with no stated provenance is treated as `bundle`.
+ * Signers whose identifier is not key-derived are unaffected by provenance.
+ */
+export const TRUST_REGISTRY_PROVENANCES = ['declared-url', 'bundle'] as const;
+export type TrustRegistryProvenance = (typeof TRUST_REGISTRY_PROVENANCES)[number];
 
 export interface KeyTrustResult {
   status: KeyTrustStatus;
   /** `true` iff the status is `active` or `deprecated_valid`. Legacy-embedded
-   *  signatures are intentionally surfaced as `verified: false` because the
-   *  trust registry cannot vouch for them — the UI renders them as neutral
-   *  rather than failed. */
+   *  and self-certified signatures are intentionally surfaced as
+   *  `verified: false` because no trust registry vouches for them — the UI
+   *  renders them as neutral rather than failed. */
   verified: boolean;
   /** The registry `kid` when available. Omitted for `legacy_embedded` /
    *  pre-registry packages because the signature has no kid to report. */
