@@ -36,6 +36,13 @@ export function PagePreview({ preview }: { preview: PreviewData }) {
         {preview.captureMethod && <Chip label="captureMethod" value={preview.captureMethod} />}
       </div>
 
+      {preview.signerSelfDescribedName && (
+        <p className="mt-2 text-xs text-muted">
+          The signer calls itself “{preview.signerSelfDescribedName}”. That is the
+          signer’s own description; no check established it.
+        </p>
+      )}
+
       {preview.summary && (
         <div className="mt-4">
           <p className="text-xs text-muted">Summary</p>
