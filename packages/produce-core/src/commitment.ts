@@ -17,6 +17,14 @@
 // which the spec makes required and gives no default, and which defaulted
 // would state a disclosure claim nobody made.
 //
+// `trustRegistryUrl` has one conditional case (hub ADR-0030 §6): a
+// self-certifying signer — a key-derived `signer.identifier` (`did:key:`) at
+// `bindingTier: "pseudonymous"` — has no domain and so no registry. Its view
+// omits the key. The builder then checks the claim it is asked to serve: it
+// derives the identifier from `signature.publicKey` and throws when that is
+// not `signer.identifier`, since such a view fails check #14 on every
+// verifier. Every other case keeps the ADR-0024 throw.
+//
 // The signature envelope is carried verbatim (including `algorithm` and
 // `kid`): `algorithm` is load-bearing for the verifier's Ed25519/Ed25519ph
 // dispatch, and `kid` is the trust-registry lookup handle; both may be absent
@@ -26,9 +34,11 @@
 // adapter work; the core defines the shape and the conditional-emission rules
 // (absent proofs are omitted, never emitted as null).
 
-import type {
-  CarriedLifecycleNode,
-  SignerIdentity,
+import {
+  deriveKeyDerivedIdentifier,
+  isKeyDerivedIdentifier,
+  type CarriedLifecycleNode,
+  type SignerIdentity,
 } from '@typedstandards/verify-core';
 
 // The schema version this view is published against, emitted as §8.8.1's
@@ -39,6 +49,10 @@ import type {
 // verifier MUST accept both keys. New emissions mint the new key only; this
 // constant carries the value, unchanged, under either.
 const PROTOCOL_VERSION = '0.1.0';
+
+// The one `bindingTier` at which a key-derived signer may omit
+// `trustRegistryUrl` (hub ADR-0030 §3, §6).
+const SELF_CERTIFYING_TIER = 'pseudonymous';
 
 /**
  * Current lifecycle state of the content node, surfaced alongside the proofs
@@ -112,8 +126,14 @@ export interface CommitmentViewInput {
    *  `verifyLifecycleChain`. Omitted when empty. */
   lifecycleAttestations?: readonly CarriedLifecycleNode[];
   /** REQUIRED per-publisher configuration (spec §8.3.3): where the
-   *  publisher's public keys resolve. Never a constant in the core. */
-  trustRegistryUrl: string;
+   *  publisher's public keys resolve. Never a constant in the core.
+   *
+   *  Optional in the TYPE for one case only (hub ADR-0030 §6): a
+   *  self-certifying signer — `signer.identifier` key-derived (`did:key:`) and
+   *  `signer.bindingTier` `pseudonymous` — whose identifier equals the one
+   *  derived from `signature.publicKey`. The view then omits the key (never
+   *  `null`). Absent in any other case is a runtime error. */
+  trustRegistryUrl?: string;
   /** Optional secondary registry path served byte-identical to the canonical
    *  one, for clients that only know an older path. */
   trustRegistryUrlLegacy?: string;
@@ -130,6 +150,38 @@ export interface CommitmentViewInput {
 }
 
 /**
+ * A self-certifying view with no `trustRegistryUrl` must carry the key its
+ * signer's identifier names: derive the identifier from the verbatim
+ * `signature.publicKey` (verify-core's derivation, the one check #14 runs)
+ * and throw unless it equals `signer.identifier`. No key material is needed:
+ * the public key is already in the view.
+ */
+function assertKeyDerivedIdentifierMatches(
+  claimed: string,
+  signature: Record<string, unknown> | null | undefined,
+): void {
+  const publicKey = signature?.['publicKey'];
+  if (typeof publicKey !== 'string' || publicKey === '') {
+    throw new Error(
+      'buildCommitmentView: a self-certifying signer with no trustRegistryUrl requires signature.publicKey — the key-derived identifier is checked against the key the view carries',
+    );
+  }
+  let derived: string;
+  try {
+    derived = deriveKeyDerivedIdentifier(publicKey);
+  } catch (err) {
+    throw new Error(
+      `buildCommitmentView: signature.publicKey is not an Ed25519 SPKI key, so the key-derived signer identifier cannot be checked (${(err as Error).message})`,
+    );
+  }
+  if (derived !== claimed) {
+    throw new Error(
+      `buildCommitmentView: signer.identifier ${claimed} is not the identifier derived from signature.publicKey (${derived}) — the view would fail check #14 on every verifier`,
+    );
+  }
+}
+
+/**
  * Build the spec §8.8.1 / §9.2.1 commitment view from caller-supplied proof
  * fields. Optional fields are conditionally spread so absent values don't
  * appear as `null` in the serialized output; emission order matches the
@@ -141,9 +193,20 @@ export function buildCommitmentView(
   // One rule, two fields: nothing this view asserts to a verifier may be
   // supplied by the core on the caller's behalf (civic-ai-tools ADR-0024).
   if (!input.trustRegistryUrl) {
-    throw new Error(
-      'buildCommitmentView requires trustRegistryUrl — per-publisher configuration is caller-supplied, never a core constant',
-    );
+    // The one exception (hub ADR-0030 §6): a self-certifying signer. Keyed on
+    // the identifier AND the tier: no signer, an identifier that is not
+    // key-derived, or any other tier keeps the ADR-0024 throw.
+    const signer = input.signer;
+    if (
+      !signer ||
+      !isKeyDerivedIdentifier(signer.identifier) ||
+      signer.bindingTier !== SELF_CERTIFYING_TIER
+    ) {
+      throw new Error(
+        'buildCommitmentView requires trustRegistryUrl — per-publisher configuration is caller-supplied, never a core constant',
+      );
+    }
+    assertKeyDerivedIdentifierMatches(signer.identifier, input.signature);
   }
   if (!input.visibility) {
     throw new Error(
@@ -187,7 +250,8 @@ export function buildCommitmentView(
     ...(input.lifecycleAttestations?.length
       ? { lifecycleAttestations: input.lifecycleAttestations }
       : {}),
-    trustRegistryUrl: input.trustRegistryUrl,
+    // Omitted (never null) only for a self-certifying signer — checked above.
+    ...(input.trustRegistryUrl ? { trustRegistryUrl: input.trustRegistryUrl } : {}),
     ...(input.trustRegistryUrlLegacy
       ? { trustRegistryUrlLegacy: input.trustRegistryUrlLegacy }
       : {}),

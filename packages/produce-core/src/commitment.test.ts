@@ -250,3 +250,181 @@ test('subject strings: explicit nulls serialize as JSON null (record has none)',
   assert.equal(parsed.subjectTitle, null);
   assert.equal(parsed.subjectSummary, null);
 });
+
+// --- The self-certifying signer: the one case with no trustRegistryUrl ---
+// (hub ADR-0030 §6). Absent `trustRegistryUrl` is accepted ONLY when
+// `signer.identifier` is key-derived (`did:key:`) AND `bindingTier` is
+// `pseudonymous`, and the identifier derived from `signature.publicKey`
+// equals it. Every other case keeps the ADR-0024 throw, message unchanged.
+
+/** The ADR-0024 message, verbatim — the other cases must still see exactly it. */
+const ADR_0024_MESSAGE =
+  'buildCommitmentView requires trustRegistryUrl — per-publisher configuration is caller-supplied, never a core constant';
+
+/** RFC 8032 §7.1 TEST 1's published public key, as the envelope's base64 SPKI
+ *  (the 12-byte Ed25519 SPKI prefix + the 32 raw bytes). */
+const RFC8032_T1_SPKI = Buffer.concat([
+  Buffer.from('302a300506032b6570032100', 'hex'),
+  Buffer.from('d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a', 'hex'),
+]).toString('base64');
+/** Its did:key (the value verify-core's P4 tests assert). */
+const DID_RFC8032_T1 = 'did:key:z6MktwupdmLXVVqTzCw4i46r4uGyosGXRnR3XjN4Zq7oMMsw';
+
+/** A second, unrelated Ed25519 public key (base64 SPKI). */
+function otherSpki(): string {
+  const { publicKey } = crypto.generateKeyPairSync('ed25519');
+  return publicKey.export({ format: 'der', type: 'spki' }).toString('base64');
+}
+
+function selfCertifiedInput(
+  overrides: Partial<CommitmentViewInput> = {},
+): CommitmentViewInput {
+  const input = fullInput({
+    signer: {
+      bindingTier: 'pseudonymous',
+      identifier: DID_RFC8032_T1,
+      displayName: 'Example Self-Certifying Signer',
+    },
+    signature: {
+      signature: 'c2ln',
+      publicKey: RFC8032_T1_SPKI,
+      algorithm: 'Ed25519ph',
+      kid: DID_RFC8032_T1,
+    },
+    signerIdentity: undefined,
+    trustRegistryUrl: undefined,
+    trustRegistryUrlLegacy: undefined,
+    ...overrides,
+  });
+  return input;
+}
+
+test('self-certifying signer: no trustRegistryUrl → the view OMITS the key (not null)', () => {
+  const view = buildCommitmentView(selfCertifiedInput());
+  assert.ok(!('trustRegistryUrl' in view), 'trustRegistryUrl must be omitted, not emitted');
+  assert.ok(!JSON.stringify(view).includes('trustRegistryUrl'), 'no trustRegistryUrl key on the wire');
+  assert.deepEqual(view.signer, selfCertifiedInput().signer, 'the signer claim is carried verbatim');
+  assert.deepEqual(view.signature, selfCertifiedInput().signature, 'the signature envelope is carried verbatim');
+  // Emission order is otherwise unchanged: the key's slot is simply absent.
+  assert.deepEqual(Object.keys(view), [
+    'protocolVersion',
+    'packageHash',
+    'packageUrl',
+    'visibility',
+    'captureMethod',
+    'contentProfile',
+    'producerProfile',
+    'type',
+    'signer',
+    'contentHash',
+    'contentCanonicalization',
+    'signature',
+    'rfc3161Timestamp',
+    'rekorEntryId',
+    'rekorInclusionProof',
+    'rekorEntryBody',
+    'lifecycle',
+    'lifecycleAttestations',
+    'subjectTitle',
+    'subjectSummary',
+  ]);
+});
+
+test('self-certifying signer: a supplied trustRegistryUrl is still emitted as given', () => {
+  const view = buildCommitmentView(selfCertifiedInput({ trustRegistryUrl: TRUST_REGISTRY_URL }));
+  assert.equal(view.trustRegistryUrl, TRUST_REGISTRY_URL);
+});
+
+test('ADR-0024 throw, unchanged: no signer and no trustRegistryUrl', () => {
+  assert.throws(
+    () => buildCommitmentView(selfCertifiedInput({ signer: undefined })),
+    { message: ADR_0024_MESSAGE },
+  );
+});
+
+test('ADR-0024 throw, unchanged: a non-key-derived identifier at pseudonymous (the ADR-0028 shape)', () => {
+  assert.throws(
+    () =>
+      buildCommitmentView(
+        selfCertifiedInput({
+          signer: {
+            bindingTier: 'pseudonymous',
+            identifier: 'https://github.com/example-signer',
+            displayName: 'Example Signer',
+          },
+        }),
+      ),
+    { message: ADR_0024_MESSAGE },
+  );
+});
+
+for (const tier of ['oauth', 'orcid', 'did-web', 'notarized', 'platform', 'organization']) {
+  test(`ADR-0024 throw, unchanged: a key-derived identifier at bindingTier "${tier}"`, () => {
+    assert.throws(
+      () =>
+        buildCommitmentView(
+          selfCertifiedInput({
+            signer: {
+              bindingTier: tier,
+              identifier: DID_RFC8032_T1,
+              displayName: 'Example Self-Certifying Signer',
+            },
+          }),
+        ),
+      { message: ADR_0024_MESSAGE },
+    );
+  });
+}
+
+test('self-certifying signer: an identifier the envelope key does not derive throws, with its own message', () => {
+  // The identifier names RFC 8032 test 1's key; the envelope carries another.
+  const swappedKey = selfCertifiedInput({
+    signature: { signature: 'c2ln', publicKey: otherSpki(), algorithm: 'Ed25519ph', kid: DID_RFC8032_T1 },
+  });
+  assert.throws(
+    () => buildCommitmentView(swappedKey),
+    (err: Error) =>
+      err.message !== ADR_0024_MESSAGE &&
+      /is not the identifier derived from signature\.publicKey/.test(err.message) &&
+      /check #14/.test(err.message),
+  );
+  // The did:key `u` (base64url) spelling is key-derived by prefix and never
+  // equals the `z` derivation (ADR-0030 §3): also a mismatch.
+  assert.throws(
+    () =>
+      buildCommitmentView(
+        selfCertifiedInput({
+          signer: {
+            bindingTier: 'pseudonymous',
+            // Built at run time: multibase `u` over `ed 01` + the same raw key.
+            identifier: `did:key:u${Buffer.concat([
+              Buffer.from([0xed, 0x01]),
+              Buffer.from(RFC8032_T1_SPKI, 'base64').subarray(12),
+            ]).toString('base64url')}`,
+            displayName: 'Example Self-Certifying Signer',
+          },
+        }),
+      ),
+    /is not the identifier derived from signature\.publicKey/,
+  );
+});
+
+test('self-certifying signer: no signature.publicKey, or a malformed one, throws with its own message', () => {
+  for (const signature of [undefined, null, { signature: 'c2ln', algorithm: 'Ed25519ph' }]) {
+    assert.throws(
+      () => buildCommitmentView(selfCertifiedInput({ signature })),
+      (err: Error) =>
+        err.message !== ADR_0024_MESSAGE && /requires signature\.publicKey/.test(err.message),
+    );
+  }
+  assert.throws(
+    () =>
+      buildCommitmentView(
+        selfCertifiedInput({
+          signature: { signature: 'c2ln', publicKey: 'cHVi', algorithm: 'Ed25519ph' },
+        }),
+      ),
+    (err: Error) =>
+      err.message !== ADR_0024_MESSAGE && /not an Ed25519 SPKI key/.test(err.message),
+  );
+});
