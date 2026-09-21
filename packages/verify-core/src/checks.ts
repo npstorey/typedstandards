@@ -14,16 +14,19 @@ import {
   KNOWN_CANONICALIZATION_RULES,
   LEGACY_JSON_CANONICALIZATION,
   DATHERE_AG_JUPYTER_CANONICALIZATION,
+  RAW_BYTES_CANONICALIZATION,
 } from './canonicalization.ts';
+import { sha256Hex } from './primitives.ts';
 import { captureVocabForProfile, resolveProfileType } from './profiles.ts';
 import {
   isBlobRef,
+  parseBlobRef,
   verifyBlobRef,
   type BlobRef,
   type BlobRefVerifyReason,
   type BlobFetchOptions,
 } from './blob-ref.ts';
-import type { CaptureMethod, SignerIdentity } from './types.ts';
+import type { CaptureMethod, FetchLike, SignerIdentity } from './types.ts';
 import type { TrustRegistry } from './trust-registry.ts';
 
 /**
@@ -100,6 +103,7 @@ export const CONTENT_HASH_STATUSES = [
   'contentHash_no_supported_algorithm',
   'unresolved_rule',
   'legacy_relabeled',
+  'content_bytes_unavailable',
 ] as const;
 export type ContentHashStatus = (typeof CONTENT_HASH_STATUSES)[number];
 
@@ -136,11 +140,24 @@ const SUPPORTED_CONTENT_HASH_ALGORITHMS: readonly string[] = ['sha256'];
  * single-SHA-256 is RELABELED as `{ sha256: <hex> }` per §8.2 rather than
  * recomputed; its integrity is established by check #1, so check #4 reports
  * `legacy_relabeled`.
+ *
+ * raw-bytes/v1 with a BlobRef `output` (hub ADR-0029 §4): the fingerprinted
+ * bytes live outside the package. `outputBytes` are those bytes when the caller
+ * holds them.
+ *   - `contentHash.sha256` differs from the hex of `output.ref` →
+ *     `content_hash_mismatch`, decided from the package alone.
+ *   - no `outputBytes` → `content_bytes_unavailable`: the bytes were not
+ *     checked. Never `ok` without hashing.
+ *   - otherwise the SHA-256 of `outputBytes` is compared with
+ *     `contentHash.sha256` → `ok` / `content_hash_mismatch`.
+ * This function does no I/O; `verifyContentHashWithFetch` obtains the bytes
+ * through the injected fetcher and passes them here.
  */
 export function verifyContentHash(
   pkg: Record<string, unknown>,
   resolution: ContentCanonicalizationResolution,
   legacyExternalHash?: string,
+  outputBytes?: Uint8Array,
 ): ContentHashCheck {
   const contentHash = pkg['contentHash'];
   if (!isMultihashContentHash(contentHash)) {
@@ -166,6 +183,22 @@ export function verifyContentHash(
     };
   }
 
+  const output = pkg['output'];
+  if (resolution.rule === RAW_BYTES_CANONICALIZATION && isBlobRef(output)) {
+    // sha256 is the only supported algorithm, so `checkable` is ['sha256'] here.
+    const signed = contentHash['sha256'];
+    if (signed !== parseBlobRef(output.ref).hash) {
+      // No file can hash to two different signed digests.
+      return { status: 'content_hash_mismatch', algorithms, contentHash };
+    }
+    if (outputBytes === undefined) {
+      return { status: 'content_bytes_unavailable', algorithms, contentHash };
+    }
+    return sha256Hex(outputBytes) === signed
+      ? { status: 'ok', algorithms, matched: 'sha256', contentHash }
+      : { status: 'content_hash_mismatch', algorithms, contentHash };
+  }
+
   for (const algo of checkable) {
     let recomputed: string | undefined;
     try {
@@ -187,6 +220,49 @@ export function verifyContentHash(
     }
   }
   return { status: 'content_hash_mismatch', algorithms, contentHash };
+}
+
+/** Fetch a BlobRef's bytes through the injected fetcher (defaulting to
+ *  `globalThis.fetch`, the same default check #9 uses). `undefined` on any
+ *  failure. */
+async function fetchBlobRefBytes(
+  ref: BlobRef,
+  options: BlobFetchOptions,
+): Promise<Uint8Array | undefined> {
+  try {
+    const fetcher = options.fetch ?? (globalThis.fetch as unknown as FetchLike);
+    const response = await fetcher(ref.url, {
+      signal: options.signal ?? AbortSignal.timeout(15_000),
+    });
+    if (!response.ok) return undefined;
+    return new Uint8Array(await response.arrayBuffer());
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Check #4 with the raw-bytes/v1 BlobRef path wired to the injected fetcher
+ * (hub ADR-0029 §4). Identical to `verifyContentHash` for every other rule and
+ * shape. For a raw-bytes/v1 package whose `output` is a BlobRef, it obtains the
+ * file's bytes through `options.fetch` (an offline verifier supplies a local
+ * copy through that fetcher) and hashes them; bytes it cannot obtain leave the
+ * status at `content_bytes_unavailable`.
+ */
+export async function verifyContentHashWithFetch(
+  pkg: Record<string, unknown>,
+  resolution: ContentCanonicalizationResolution,
+  legacyExternalHash?: string,
+  options: BlobFetchOptions = {},
+): Promise<ContentHashCheck> {
+  const first = verifyContentHash(pkg, resolution, legacyExternalHash);
+  const output = pkg['output'];
+  if (first.status !== 'content_bytes_unavailable' || !isBlobRef(output)) {
+    return first;
+  }
+  const bytes = await fetchBlobRefBytes(output, options);
+  if (bytes === undefined) return first;
+  return verifyContentHash(pkg, resolution, legacyExternalHash, bytes);
 }
 
 // --- Content-profile check (spec §9.2 check #16; hub ADR-0029 §5) ---

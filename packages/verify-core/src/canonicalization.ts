@@ -21,12 +21,17 @@ export const LEGACY_JSON_CANONICALIZATION =
   'https://typedstandards.org/canonicalization/legacy-json/v1';
 export const DATHERE_AG_JUPYTER_CANONICALIZATION =
   'https://typedstandards.org/canonicalization/dathere-ag-jupyter/v1';
+/** hub ADR-0029 §4: the SHA-256 of the bytes of the package's `output`, with no
+ *  normalization — the digest `sha256sum` prints for the file. */
+export const RAW_BYTES_CANONICALIZATION =
+  'https://typedstandards.org/canonicalization/raw-bytes/v1';
 
 /** Canonicalization-rule URIs this implementation knows how to apply. An
  *  unknown URI fails verify check #3 (`unknown_canonicalization_rule`). */
 export const KNOWN_CANONICALIZATION_RULES: readonly string[] = [
   LEGACY_JSON_CANONICALIZATION,
   DATHERE_AG_JUPYTER_CANONICALIZATION,
+  RAW_BYTES_CANONICALIZATION,
 ];
 
 /** Notebook extension whose object the dathere-ag-jupyter/v1 rule fingerprints
@@ -95,11 +100,24 @@ export function computeEnvelopeHash(pkg: Record<string, unknown>): string {
  *     (and the sig envelope, which lives off-package here) omitted.
  *   - dathere-ag-jupyter/v1 → the executed notebook object
  *     (`extensions["org.civicaitools.notebook"]` and its rendered outputs).
+ *   - raw-bytes/v1          → the UTF-8 bytes of an inline string `output`.
+ *     An `output` that is not a string (a BlobRef, whose bytes live outside the
+ *     package) throws here: those bytes have to be obtained first, which is what
+ *     check #4's fetching path (`verifyContentHashWithFetch`) does.
  */
 export function computeContentHashSha256(
   pkg: Record<string, unknown>,
   rule: string,
 ): string {
+  if (rule === RAW_BYTES_CANONICALIZATION) {
+    const output = pkg['output'];
+    if (typeof output !== 'string') {
+      throw new Error(
+        'raw-bytes/v1 content hash over a package alone requires an inline string output',
+      );
+    }
+    return sha256Hex(output);
+  }
   if (rule === DATHERE_AG_JUPYTER_CANONICALIZATION) {
     const extensions = pkg['extensions'] as Record<string, unknown> | undefined;
     const notebook = extensions?.[NOTEBOOK_EXTENSION_KEY];

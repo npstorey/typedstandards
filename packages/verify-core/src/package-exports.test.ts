@@ -49,3 +49,22 @@ test('entry point: verifyRecord is exported and verifyEvidence still resolves to
     'verifyEvidence must BE verifyRecord (one function object), not a second implementation',
   );
 });
+
+// Hub ADR-0029 (Wave N14 P3): the raw-bytes/v1 rule, check #4's fetching path,
+// and the content-profile check (#16) are public runtime exports.
+test('ADR-0029 exports resolve from the entry point', async () => {
+  const api = (await import('./index.ts')) as Record<string, unknown>;
+  assert.equal(
+    api['RAW_BYTES_CANONICALIZATION'],
+    'https://typedstandards.org/canonicalization/raw-bytes/v1',
+  );
+  assert.equal(typeof api['verifyContentHashWithFetch'], 'function');
+  assert.equal(typeof api['checkContentProfile'], 'function');
+  assert.deepEqual(api['CONTENT_PROFILE_STATUSES'], [
+    'ok',
+    'contentProfile_absent',
+    'contentProfile_unknown',
+    'contentProfile_inconsistent',
+  ]);
+  assert.deepEqual(api['KNOWN_CONTENT_PROFILES'], ['default', 'datHere']);
+});
