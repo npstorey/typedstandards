@@ -1,6 +1,6 @@
 // Content-canonicalization, content-hash, and typed-standards envelope checks
-// (spec §9.2 checks #3, #4, #12, #13, #14, #15) + the package-level blob-ref
-// walker (#9) — browser-safe.
+// (spec §9.2 checks #3, #4, #12, #13, #14, #15, #16) + the package-level
+// blob-ref walker (#9) — browser-safe.
 //
 // Factored verbatim from the server `verify.ts` (WS2); these functions were
 // already pure JS over the package object. The only environmental change is the
@@ -187,6 +187,68 @@ export function verifyContentHash(
     }
   }
   return { status: 'content_hash_mismatch', algorithms, contentHash };
+}
+
+// --- Content-profile check (spec §9.2 check #16; hub ADR-0029 §5) ---
+
+/** The known `metadata.contentProfile` values (spec §8.1.2). */
+export const KNOWN_CONTENT_PROFILES: readonly string[] = ['default', 'datHere'];
+
+export const CONTENT_PROFILE_STATUSES = [
+  'ok',
+  'contentProfile_absent',
+  'contentProfile_unknown',
+  'contentProfile_inconsistent',
+] as const;
+export type ContentProfileStatus = (typeof CONTENT_PROFILE_STATUSES)[number];
+
+export interface ContentProfileCheck {
+  status: ContentProfileStatus;
+  /** `metadata.contentProfile` as carried, when it is a string. */
+  contentProfile?: string;
+  /** `producerProfile` as carried, when present. */
+  producerProfile?: string;
+}
+
+/**
+ * Check #16 — `metadata.contentProfile` (hub ADR-0029 §5).
+ *   - key absent → `contentProfile_absent` (read as `"default"`, spec §8.1.2).
+ *   - present and neither `"default"` nor `"datHere"` → `contentProfile_unknown`
+ *     (reported, not passed; consistency is not judged).
+ *   - present, known, `producerProfile` present, and the ADR-0006 §2 invariant
+ *     fails (`contentProfile === "datHere"` iff `producerProfile` starts with
+ *     `ai-assisted-analysis/datHere`) → `contentProfile_inconsistent`.
+ *   - otherwise → `ok`.
+ * The invariant is compared only when both fields are present. No status is an
+ * integrity failure: both labels are signature-covered.
+ */
+export function checkContentProfile(pkg: Record<string, unknown>): ContentProfileCheck {
+  const metadata = pkg['metadata'];
+  const raw =
+    typeof metadata === 'object' && metadata !== null && !Array.isArray(metadata)
+      ? (metadata as Record<string, unknown>)['contentProfile']
+      : undefined;
+  const producerProfile =
+    typeof pkg['producerProfile'] === 'string' ? (pkg['producerProfile'] as string) : undefined;
+  const base = {
+    ...(typeof raw === 'string' ? { contentProfile: raw } : {}),
+    ...(producerProfile !== undefined ? { producerProfile } : {}),
+  };
+
+  if (raw === undefined) {
+    return { status: 'contentProfile_absent', ...base };
+  }
+  if (typeof raw !== 'string' || !KNOWN_CONTENT_PROFILES.includes(raw)) {
+    return { status: 'contentProfile_unknown', ...base };
+  }
+  if (producerProfile !== undefined) {
+    const isDatHere = raw === 'datHere';
+    const profileIsDatHere = producerProfile.startsWith('ai-assisted-analysis/datHere');
+    if (isDatHere !== profileIsDatHere) {
+      return { status: 'contentProfile_inconsistent', ...base };
+    }
+  }
+  return { status: 'ok', ...base };
 }
 
 // --- Typed-standards envelope checks (spec §9.2 checks #12, #14, #15) ---

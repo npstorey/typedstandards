@@ -19,7 +19,7 @@
 // name is still exported, still the same function object, and still works;
 // see the deprecated alias at the bottom of this file.
 //
-// Check depth: fully client-side for #1/#2/#3/#4/#5/#6/#9/#12/#13/#14/#15; #7 (RFC
+// Check depth: fully client-side for #1/#2/#3/#4/#5/#6/#9/#12/#13/#14/#15/#16; #7 (RFC
 // 3161) is PRESENCE (`hasTimestamp`) AND, when a token is present, cryptographic TSA
 // verification against the pinned FreeTSA anchor (civic-ai-tools-website#119 P2a —
 // ECDSA-P384 over the signed TSTInfo, message-imprint match, genTime-in-validity);
@@ -50,12 +50,14 @@ import {
   resolvePackageType,
   checkSignerIdentity,
   checkCaptureMethodVocab,
+  checkContentProfile,
   verifyPackageBlobRefs,
   type ContentCanonicalizationResolution,
   type ContentHashCheck,
   type TypeResolution,
   type SignerIdentityCheck,
   type CaptureMethodVocabCheck,
+  type ContentProfileCheck,
   type BlobRefVerification,
 } from './checks.ts';
 import {
@@ -207,6 +209,8 @@ export interface VerifyResult {
   typeResolution: TypeResolution | null;
   signerIdentity: SignerIdentityCheck | null;
   captureMethodVocab: CaptureMethodVocabCheck | null;
+  /** Check #16 — `metadata.contentProfile` (hub ADR-0029 §5). */
+  contentProfile: ContentProfileCheck | null;
   lifecycle: LifecycleResolution;
 }
 
@@ -328,12 +332,14 @@ export async function verifyRecord(
     keyTrust = legacyEmbeddedKeyTrust();
   }
 
-  // Step 5 — canonicalization, content-hash, and envelope checks (#3/#4/#12/#14/#15).
+  // Step 5 — canonicalization, content-hash, and envelope checks
+  // (#3/#4/#12/#14/#15/#16).
   let contentCanonicalization: ContentCanonicalizationResolution | null = null;
   let contentHashCheck: ContentHashCheck | null = null;
   let typeResolution: TypeResolution | null = null;
   let signerIdentity: SignerIdentityCheck | null = null;
   let captureMethodVocab: CaptureMethodVocabCheck | null = null;
+  let contentProfile: ContentProfileCheck | null = null;
   if (pkg) {
     contentCanonicalization = resolveContentCanonicalization(pkg);
     contentHashCheck = verifyContentHash(
@@ -344,6 +350,7 @@ export async function verifyRecord(
     typeResolution = resolvePackageType(pkg);
     signerIdentity = checkSignerIdentity(pkg, sigKid, deps.registry);
     captureMethodVocab = checkCaptureMethodVocab(pkg);
+    contentProfile = checkContentProfile(pkg);
   }
 
   // Step 6 — lifecycle (check #10). Server-deeper resolution wins when supplied;
@@ -380,6 +387,7 @@ export async function verifyRecord(
     typeResolution,
     signerIdentity,
     captureMethodVocab,
+    contentProfile,
     lifecycle,
   };
 }
