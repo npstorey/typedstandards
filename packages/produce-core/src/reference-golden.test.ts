@@ -23,6 +23,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
+import { deriveKeyDerivedIdentifier, isKeyDerivedIdentifier } from '@typedstandards/verify-core';
 import {
   buildEnvelope,
   buildAttestationNode,
@@ -40,6 +41,10 @@ interface GoldenExpected {
 interface GoldenCase {
   name: string;
   sourceTests: string[];
+  /** How the case was captured, where it differs from `_meta`'s description. */
+  capture?: string;
+  /** For a key-derived signer: where its key comes from. */
+  signerKeySource?: string;
   input: Record<string, unknown>;
   expected: GoldenExpected;
 }
@@ -111,3 +116,49 @@ for (const c of fixture.attestationCases) {
     assert.equal(nodeId, c.expected.nodeId, `${c.name}: nodeId diverged`);
   });
 }
+
+// --- The self-certifying signer case (hub ADR-0030; Wave N14 P5) ---
+//
+// Byte identity is asserted by the envelope loop above, like every other case.
+// This test pins what makes the case the self-certifying one, and that it
+// names its source and its key's source.
+
+/** RFC 8032 §7.1 TEST 1's published public key, as a base64 Ed25519 SPKI. */
+const RFC8032_T1_SPKI = Buffer.concat([
+  Buffer.from('302a300506032b6570032100', 'hex'),
+  Buffer.from('d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a', 'hex'),
+]).toString('base64');
+
+test('golden envelope [v01-self-certified-signer]: a pseudonymous did:key signer, captured from the reference, naming its key', () => {
+  const c = fixture.envelopeCases.find((x) => x.name === 'v01-self-certified-signer');
+  assert.ok(c, 'the self-certified-signer case is in the fixture');
+
+  // Its source and its key's source are named in the case itself.
+  assert.match(c.capture ?? '', /reference implementation/);
+  assert.match(c.capture ?? '', new RegExp(fixture._meta.referenceCommit));
+  assert.match(c.signerKeySource ?? '', /RFC 8032 §7\.1 TEST 1/);
+
+  // The signer is the self-certifying shape, and its identifier is the one
+  // derived from RFC 8032 test 1's public key.
+  const signer = c.input.signer as { bindingTier: string; identifier: string; displayName: string };
+  assert.equal(signer.bindingTier, 'pseudonymous');
+  assert.equal(isKeyDerivedIdentifier(signer.identifier), true);
+  assert.equal(signer.identifier, deriveKeyDerivedIdentifier(RFC8032_T1_SPKI));
+  // kid = metadata.signingKeyId = the identifier (ADR-0030 §5), so check #6
+  // holds for a package signed with kid = the identifier.
+  assert.equal(c.input.signingKeyId, signer.identifier);
+
+  // The captured bytes carry that signer and key id verbatim.
+  const captured = JSON.parse(c.expected.serializedJson) as {
+    signer: unknown;
+    metadata: { signingKeyId: string };
+  };
+  assert.deepEqual(captured.signer, signer);
+  assert.equal(captured.metadata.signingKeyId, signer.identifier);
+
+  // And produce-core emits exactly those bytes.
+  const { pkg, envelopeHash } = buildEnvelope(c.input as unknown as EnvelopeInput);
+  assert.equal(JSON.stringify(pkg), c.expected.serializedJson);
+  assert.equal(pkg.contentHash?.sha256, c.expected.contentHashSha256);
+  assert.equal(envelopeHash, c.expected.envelopeHash);
+});
