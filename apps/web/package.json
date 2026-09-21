@@ -5,7 +5,7 @@
   "description": "typedstandards.org — the Typed Standards site and the client-side record verifier.",
   "scripts": {
     "dev": "next dev",
-    "prebuild": "npm run build --workspace @typedstandards/verify-core",
+    "prebuild": "npm run build --workspace @typedstandards/verify-core && npm run build --workspace @typedstandards/produce-core",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -20,6 +20,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@typedstandards/produce-core": "^0.4.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

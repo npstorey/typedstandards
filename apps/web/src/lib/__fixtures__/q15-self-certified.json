@@ -1,0 +1,71 @@
+{
+  "protocolVersion": "0.1.0",
+  "packageHash": "9a53cd8ee701f2361cdcf353604bbcde43679f9a55c7cd3759db64d2b7e31dde",
+  "visibility": "public",
+  "captureMethod": "script-run",
+  "contentProfile": "default",
+  "producerProfile": "scripted-recomputation/interop-fixture",
+  "type": "content/analysis/v1",
+  "signer": {
+    "bindingTier": "pseudonymous",
+    "identifier": "did:key:z6MksiBL19kSyhZxxQV7UHt1jjX32MVscWX2NeXGshacCjHz",
+    "displayName": "Typed Standards interop fixture (public test key)"
+  },
+  "contentHash": {
+    "sha256": "f189b442e23fbdb0b3f0d1b065a2afb59172f0d6b4a1e7bb661b0b940cc59928"
+  },
+  "contentCanonicalization": "https://typedstandards.org/canonicalization/raw-bytes/v1",
+  "signature": {
+    "signature": "d2R+o5PRHxGjacIe/2oVmwqLEk+tGM1nyk5QsPacAVK2Z78ldQmnZZmhaxlOjWZMPp1Lyfmzwgeb1h/6Oba/AA==",
+    "publicKey": "MCowBQYDK2VwAyEAxPpPAVID5mU2RUmDy+akbI7HMOl7xaV7zzSR+4hlDEk=",
+    "algorithm": "Ed25519ph",
+    "kid": "did:key:z6MksiBL19kSyhZxxQV7UHt1jjX32MVscWX2NeXGshacCjHz"
+  },
+  "subjectTitle": "Interop fixture: self-certified raw-bytes record",
+  "subjectSummary": "A four-row CSV packaged under raw-bytes/v1 and signed by a self-certifying key generated for this fixture. The key is public, so the signature proves nothing about anyone.",
+  "package": {
+    "metadata": {
+      "schemaVersion": "0.1.0",
+      "packageId": "abcdefab-cdef-4abc-8def-abcdefabcdef",
+      "createdAt": "2026-09-21T00:00:00.000Z",
+      "signingKeyId": "did:key:z6MksiBL19kSyhZxxQV7UHt1jjX32MVscWX2NeXGshacCjHz",
+      "captureMethod": "script-run"
+    },
+    "producerProfile": "scripted-recomputation/interop-fixture",
+    "type": "content/analysis/v1",
+    "signer": {
+      "bindingTier": "pseudonymous",
+      "identifier": "did:key:z6MksiBL19kSyhZxxQV7UHt1jjX32MVscWX2NeXGshacCjHz",
+      "displayName": "Typed Standards interop fixture (public test key)"
+    },
+    "contentCanonicalization": "https://typedstandards.org/canonicalization/raw-bytes/v1",
+    "prompt": {
+      "hash": "d0dd86e2e39d357c0fdc16a64d4cf6b8d1eed9287ef53af55646cfce4d1fe4d2",
+      "visibility": "full_text",
+      "text": "Package the committed file q15-self-certified.output.csv as the output of a scripted-recomputation record under raw-bytes/v1, signed by a self-certifying fixture key."
+    },
+    "queries": [
+      {
+        "tool": "q15-self-certified.mint.ts",
+        "operationType": "package-file",
+        "arguments": {
+          "inputFile": "q15-self-certified.output.csv",
+          "inputSha256": "f189b442e23fbdb0b3f0d1b065a2afb59172f0d6b4a1e7bb661b0b940cc59928"
+        }
+      }
+    ],
+    "dataSources": [],
+    "cost": {
+      "model": "none"
+    },
+    "skillMetadata": {},
+    "output": "category,records,share\nalpha,12,0.40\nbravo,9,0.30\ncharlie,9,0.30\n",
+    "trace": {
+      "resourceSpans": []
+    },
+    "summary": "A four-row CSV packaged under raw-bytes/v1 and signed by a self-certifying key generated for this fixture. The key is public, so the signature proves nothing about anyone.",
+    "contentHash": {
+      "sha256": "f189b442e23fbdb0b3f0d1b065a2afb59172f0d6b4a1e7bb661b0b940cc59928"
+    }
+  }
+}

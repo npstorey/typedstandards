@@ -824,8 +824,17 @@ export async function resolveInput(
     });
   }
 
+  // A self-certified signer needs no registry (hub ADR-0030 §6): a bundle whose inline
+  // package names a key-derived signer and that declares no registry URL has read
+  // everything it verifies against from the bundle. Every other case is unchanged.
+  const selfCertifiedNoRegistry =
+    isKeyDerivedIdentifier(signerIdentifierOf(pkg)) &&
+    commitment.trustRegistryUrl === undefined &&
+    commitment.trustRegistryUrlLegacy === undefined;
   const fullyOffline =
-    mode === 'bundle' && pkgSource.kind === 'inline' && registrySource.kind === 'inline';
+    mode === 'bundle' &&
+    pkgSource.kind === 'inline' &&
+    (registrySource.kind === 'inline' || selfCertifiedNoRegistry);
 
   return {
     commitment,
