@@ -38,7 +38,7 @@ import {
   type TrustRegistryProvenance,
   type VerifyResult,
 } from './index.ts';
-import { applySelfCertifiedKeyTrust } from './self-certifying.ts';
+import { applyKeyDerivedRegistryRule, applySelfCertifiedKeyTrust } from './self-certifying.ts';
 
 const hexToBytes = (hex: string) =>
   Uint8Array.from(hex.match(/../g)!.map((h) => parseInt(h, 16)));
@@ -462,6 +462,32 @@ test('G2-B at any tier: a registry fetched from the declared URL listing the key
     assert.equal(r.keyTrust?.verified, true);
     assert.equal(r.signerIdentity?.status, 'key_derived_match');
   }
+});
+
+test('G2-B under a mismatch: a bundle-carried or provenance-less registry only lowers; the declared-URL registry decides', async () => {
+  for (const bindingTier of ['pseudonymous', ...OTHER_TIERS]) {
+    // Identifier from key A, envelope key B; the registries list key B.
+    const c = buildCanary({ identifierKey: KEY_A, signingKey: KEY_B, bindingTier });
+    for (const provenance of [undefined, 'bundle'] as const) {
+      const tag = `${bindingTier}/${provenance}`;
+      const active = await verifyCanary(c, registryFor(c, 'active'), provenance);
+      assert.deepEqual(active.keyTrust, { status: 'registry_unavailable', verified: false, kid: c.kid }, tag);
+      assert.equal(active.signerIdentity?.status, 'key_derived_mismatch', tag);
+      const revoked = await verifyCanary(c, registryFor(c, 'revoked'), provenance);
+      assert.equal(revoked.keyTrust?.status, 'revoked', tag);
+      assert.equal(revoked.keyTrust?.verified, false, tag);
+      assert.equal(revoked.signerIdentity?.status, 'key_derived_mismatch', tag);
+    }
+    const declared = await verifyCanary(c, registryFor(c, 'active'), 'declared-url');
+    assert.equal(declared.keyTrust?.status, 'active', bindingTier);
+    assert.equal(declared.keyTrust?.verified, true, bindingTier);
+    assert.equal(declared.signerIdentity?.status, 'key_derived_mismatch', bindingTier);
+  }
+  // With no kid, an ignored raising verdict reads as the envelope alone.
+  assert.deepEqual(applyKeyDerivedRegistryRule({ status: 'active', verified: true }, 'bundle'), {
+    status: 'legacy_embedded',
+    verified: false,
+  });
 });
 
 // --- 4. The ADR-0028 package is unaffected ---------------------------------

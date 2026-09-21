@@ -46,6 +46,7 @@ import {
   type TrustRegistryProvenance,
 } from './trust-registry.ts';
 import {
+  applyKeyDerivedRegistryRule,
   applySelfCertifiedKeyTrust,
   compareKeyDerivedIdentifier,
 } from './self-certifying.ts';
@@ -343,20 +344,26 @@ export async function verifyRecord(
     keyTrust = legacyEmbeddedKeyTrust();
   }
 
-  // Step 4b — the self-certifying signer (hub ADR-0030 §3-§4). Runs only when
-  // the package is present, its `signer.identifier` is key-derived, and the
-  // envelope carries a `publicKey`. On a match, rules 2-3 decide the status
-  // from the registry verdict above and the registry's stated provenance; a
-  // mismatch (fatal at check #14) leaves the registry-path verdict unchanged.
-  // A signer whose identifier is not key-derived is untouched.
+  // Step 4b — the self-certifying signer (hub ADR-0030 §3-§4, rule 3 as
+  // amended at G2; spec v0.1.9 §9.4). Runs only when the package is present,
+  // its `signer.identifier` is key-derived, and the envelope carries a
+  // `publicKey`. For a key-derived identifier, match or mismatch, only a
+  // registry fetched from the declared URL can raise the status; a
+  // bundle-carried or provenance-less one contributes only lowering verdicts.
+  // On a match, rules 2-3 then decide the status (`self_certified` at
+  // `pseudonymous`); on a mismatch (fatal at check #14) the lowering-only rule
+  // applies to the registry-path verdict. A signer whose identifier is not
+  // key-derived is untouched.
   const pkgSigner = pkg ? pkg['signer'] : undefined;
   const keyDerived = compareKeyDerivedIdentifier(pkgSigner, sigPublicKey);
-  if (keyTrust && keyDerived?.match) {
-    keyTrust = applySelfCertifiedKeyTrust(
-      keyTrust,
-      (pkgSigner as { bindingTier?: unknown }).bindingTier,
-      deps.registryProvenance,
-    );
+  if (keyTrust && keyDerived) {
+    keyTrust = keyDerived.match
+      ? applySelfCertifiedKeyTrust(
+          keyTrust,
+          (pkgSigner as { bindingTier?: unknown }).bindingTier,
+          deps.registryProvenance,
+        )
+      : applyKeyDerivedRegistryRule(keyTrust, deps.registryProvenance);
   }
 
   // Step 5 — canonicalization, content-hash, and envelope checks

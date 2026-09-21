@@ -52,10 +52,30 @@ export function compareKeyDerivedIdentifier(
 }
 
 /**
+ * G2-B for a key-derived identifier, whether or not it matched its envelope
+ * key (ADR-0030 §4 rule 3 as amended; spec v0.1.9 §9.4): only a registry
+ * fetched from the declared `trustRegistryUrl` can raise the status. Returns
+ * `base` unless it is a raising verdict (`active`, `deprecated_valid`) from a
+ * bundle-carried or provenance-less registry; that verdict is ignored and the
+ * status is what the envelope alone yields with no registry supplied
+ * (`registry_unavailable` with a `kid`, `legacy_embedded` without),
+ * `verified: false`. Lowering and unlisted verdicts pass through.
+ */
+export function applyKeyDerivedRegistryRule(
+  base: KeyTrustResult,
+  provenance: TrustRegistryProvenance | undefined,
+): KeyTrustResult {
+  if (provenance === 'declared-url') return base;
+  if (UNLISTED_STATUSES.has(base.status) || LOWERING_STATUSES.has(base.status)) return base;
+  return base.kid !== undefined
+    ? { status: 'registry_unavailable', verified: false, kid: base.kid }
+    : { status: 'legacy_embedded', verified: false };
+}
+
+/**
  * Apply ADR-0030 §4 rules 2-3, as amended at gate G2, to the registry-path
  * verdict `base`, for a package whose key-derived identifier MATCHED its
- * envelope key (rule 1 — a mismatch — leaves `base` unchanged, and the caller
- * does not call this).
+ * envelope key. (A mismatch takes `applyKeyDerivedRegistryRule` alone.)
  *
  * For a key-derived identifier, at any `bindingTier`:
  *   - A registry from the declared `trustRegistryUrl` that lists the
@@ -75,20 +95,14 @@ export function applySelfCertifiedKeyTrust(
   bindingTier: unknown,
   provenance: TrustRegistryProvenance | undefined,
 ): KeyTrustResult {
-  const pseudonymous = bindingTier === SELF_CERTIFYING_TIER;
   const listed = !UNLISTED_STATUSES.has(base.status);
   if (listed && (provenance === 'declared-url' || LOWERING_STATUSES.has(base.status))) {
     return base;
   }
-  if (!pseudonymous) {
-    // Unlisted: the registry path's own verdict (`unknown_key`,
-    // `registry_unavailable`, `legacy_embedded`) is unchanged. Listed with a
-    // raising verdict from a registry that may not raise: the envelope-alone
-    // verdict, as if no registry had been supplied.
-    if (!listed) return base;
-    return base.kid !== undefined
-      ? { status: 'registry_unavailable', verified: false, kid: base.kid }
-      : { status: 'legacy_embedded', verified: false };
+  if (bindingTier !== SELF_CERTIFYING_TIER) {
+    // Unlisted: the registry path's own verdict is unchanged. Listed with a
+    // raising verdict from a registry that may not raise: the envelope alone.
+    return applyKeyDerivedRegistryRule(base, provenance);
   }
   return {
     status: 'self_certified',
