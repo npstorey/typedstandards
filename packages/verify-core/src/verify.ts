@@ -19,7 +19,7 @@
 // name is still exported, still the same function object, and still works;
 // see the deprecated alias at the bottom of this file.
 //
-// Check depth: fully client-side for #1/#2/#3/#4/#5/#6/#9/#12/#13/#14/#15; #7 (RFC
+// Check depth: fully client-side for #1/#2/#3/#4/#5/#6/#9/#12/#13/#14/#15/#16; #7 (RFC
 // 3161) is PRESENCE (`hasTimestamp`) AND, when a token is present, cryptographic TSA
 // verification against the pinned FreeTSA anchor (civic-ai-tools-website#119 P2a —
 // ECDSA-P384 over the signed TSTInfo, message-imprint match, genTime-in-validity);
@@ -46,16 +46,18 @@ import {
 } from './trust-registry.ts';
 import {
   resolveContentCanonicalization,
-  verifyContentHash,
+  verifyContentHashWithFetch,
   resolvePackageType,
   checkSignerIdentity,
   checkCaptureMethodVocab,
+  checkContentProfile,
   verifyPackageBlobRefs,
   type ContentCanonicalizationResolution,
   type ContentHashCheck,
   type TypeResolution,
   type SignerIdentityCheck,
   type CaptureMethodVocabCheck,
+  type ContentProfileCheck,
   type BlobRefVerification,
 } from './checks.ts';
 import {
@@ -162,7 +164,8 @@ export interface VerifyDeps {
   /** Parsed trust registry (server: loaded; browser: fetched from the sidecar's
    *  `trustRegistryUrl`). */
   registry: TrustRegistry | undefined;
-  /** Injected fetcher for #8 / #9. Defaults to `globalThis.fetch`. */
+  /** Injected fetcher for #8 / #9, and for #4 under raw-bytes/v1 when `output`
+   *  is a BlobRef. Defaults to `globalThis.fetch`. */
   fetch?: FetchLike;
   /** Optional server-deeper lifecycle resolution (the signed attestation chain).
    *  When provided it is surfaced verbatim, preserving the server route's current
@@ -207,6 +210,8 @@ export interface VerifyResult {
   typeResolution: TypeResolution | null;
   signerIdentity: SignerIdentityCheck | null;
   captureMethodVocab: CaptureMethodVocabCheck | null;
+  /** Check #16 — `metadata.contentProfile` (hub ADR-0029 §5). */
+  contentProfile: ContentProfileCheck | null;
   lifecycle: LifecycleResolution;
 }
 
@@ -328,22 +333,26 @@ export async function verifyRecord(
     keyTrust = legacyEmbeddedKeyTrust();
   }
 
-  // Step 5 — canonicalization, content-hash, and envelope checks (#3/#4/#12/#14/#15).
+  // Step 5 — canonicalization, content-hash, and envelope checks
+  // (#3/#4/#12/#14/#15/#16). #4 fetches only for a raw-bytes/v1 BlobRef output.
   let contentCanonicalization: ContentCanonicalizationResolution | null = null;
   let contentHashCheck: ContentHashCheck | null = null;
   let typeResolution: TypeResolution | null = null;
   let signerIdentity: SignerIdentityCheck | null = null;
   let captureMethodVocab: CaptureMethodVocabCheck | null = null;
+  let contentProfile: ContentProfileCheck | null = null;
   if (pkg) {
     contentCanonicalization = resolveContentCanonicalization(pkg);
-    contentHashCheck = verifyContentHash(
+    contentHashCheck = await verifyContentHashWithFetch(
       pkg,
       contentCanonicalization,
       input.legacyExternalHash ?? packageHash,
+      { fetch: deps.fetch },
     );
     typeResolution = resolvePackageType(pkg);
     signerIdentity = checkSignerIdentity(pkg, sigKid, deps.registry);
     captureMethodVocab = checkCaptureMethodVocab(pkg);
+    contentProfile = checkContentProfile(pkg);
   }
 
   // Step 6 — lifecycle (check #10). Server-deeper resolution wins when supplied;
@@ -380,6 +389,7 @@ export async function verifyRecord(
     typeResolution,
     signerIdentity,
     captureMethodVocab,
+    contentProfile,
     lifecycle,
   };
 }

@@ -255,6 +255,15 @@ export const CONTENT_HASH_SIGNALS: Record<ContentHashStatus, TrustSignalDescript
     detail:
       'The content fingerprint lists only hash algorithms this verifier cannot compute, so it could not be confirmed.',
   },
+  // raw-bytes/v1 with a BlobRef output: the file could not be obtained, so its
+  // bytes were not hashed. Unconfirmed, not altered — the tier the envelope check
+  // gives an unfetchable content location.
+  content_bytes_unavailable: {
+    tier: 'attention',
+    label: 'Content file not checked',
+    detail:
+      'The file this package fingerprints could not be obtained, so its bytes were not hashed and the content fingerprint was not checked.',
+  },
 };
 
 // --- #5 Trust-registry verdict (keyTrust) --------------------------------
@@ -570,6 +579,8 @@ export const CAPTURE_METHOD_LABELS: Record<CaptureMethod, string> = {
   'claude-code-jsonl-readback': 'Reconstructed from the Claude Code session transcript.',
   'claude-code-self-report':
     'Summarized by the AI from its own session memory (deprecated capture method).',
+  'script-run': 'Read into the package by a packaging program from files that already existed on disk.',
+  'tool-emitted': 'Written into the package by the program that computed the content.',
 };
 
 /**

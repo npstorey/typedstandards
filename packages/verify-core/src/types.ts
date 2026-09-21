@@ -24,9 +24,13 @@ export interface SignerIdentity {
  * enumerates these.
  */
 export type CaptureMethod =
+  // ai-assisted-analysis (spec §8.6)
   | 'chat-flow-stream'
   | 'claude-code-jsonl-readback'
-  | 'claude-code-self-report';
+  | 'claude-code-self-report'
+  // scripted-recomputation (hub ADR-0029 §2)
+  | 'script-run'
+  | 'tool-emitted';
 
 /**
  * The subset of the WHATWG `fetch` signature verify-core depends on. Network

@@ -13,6 +13,12 @@ export const PROFILE_CAPTURE_VOCAB: Record<string, readonly CaptureMethod[]> = {
     'claude-code-jsonl-readback',
     'claude-code-self-report',
   ],
+  // Status note, 2026-09-21 (hub ADR-0029 §2, Q32 still open): a second
+  // stand-in entry. A program computed the content from inputs pinned by hash;
+  // `script-run` = a packaging program read files already on disk, `tool-emitted`
+  // = the computing program wrote the package itself. The guidance-bundle routing
+  // convention that replaces this table is not settled by this entry.
+  'scripted-recomputation': ['script-run', 'tool-emitted'],
 };
 
 /**
