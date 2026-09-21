@@ -29,6 +29,15 @@
 //      settlement-era coverage at all: the captured fixtures cannot be re-minted, so
 //      the synthetic bundle is the only leg that can carry the new wire key and URN
 //      scheme and still be self-consistent under its own signatures.
+//   3. A MINTED, COMMITTED self-certified fixture (Wave N14 P7) — `q15-self-certified.json`,
+//      the fixture an independent implementation can test against: a package under hub
+//      ADR-0029's `scripted-recomputation` profile, canonicalized under `raw-bytes/v1` with
+//      an inline `output` (the committed `q15-self-certified.output.csv`), signed by a
+//      self-certifying signer under ADR-0030 (`did:key` identifier, no trust registry and
+//      no `trustRegistryUrl`). It is minted by `__fixtures__/q15-self-certified.mint.ts`
+//      with the shipped cores from a seed the fixtures README documents, and the test
+//      below re-mints it and asserts the committed bytes equal the result. No TSA token /
+//      Rekor proof ⇒ #7/#8 calm-absent. See `__fixtures__/README.md`.
 //
 // Every fixture runs through the FULL verify-flow in bundle mode with a `fetch` stub
 // that THROWS on any call: we assert zero fetch, `fullyOffline`, and the verdict.
@@ -44,7 +53,21 @@ import {
   runVerify,
   rollupVerdict,
 } from './verify-flow.ts';
-import { recomputePackageHash, type VerifyResult } from '@typedstandards/verify-core';
+import {
+  recomputePackageHash,
+  computeEnvelopeHash,
+  deriveKeyDerivedIdentifier,
+  sha256Hex,
+  RAW_BYTES_CANONICALIZATION,
+  type VerifyResult,
+} from '@typedstandards/verify-core';
+import { createHash } from 'node:crypto';
+import {
+  mintSelfCertifiedBundle,
+  readContentFile,
+  BUNDLE_FILE,
+  CONTENT_FILE,
+} from './__fixtures__/q15-self-certified.mint.ts';
 
 const fixture = (short: string): string =>
   readFileSync(new URL(`./__fixtures__/q15-${short}.json`, import.meta.url), 'utf8');
@@ -299,4 +322,118 @@ test('Q15 dual-era: the two eras differ ONLY in the renamed surface, and verify 
     pr.result.nodeId,
     'sanity: the two eras really are different signed bytes, not the same bundle twice',
   );
+});
+
+// --- The committed self-certified fixture (Wave N14 P7) --------------------
+//
+// `q15-self-certified.json`: a `scripted-recomputation/interop-fixture` package whose
+// content is the committed CSV beside it, fingerprinted under raw-bytes/v1 as its
+// exact bytes and carried inline as `output`; signed by a self-certifying signer
+// (hub ADR-0030: `bindingTier: "pseudonymous"`, a `did:key` identifier that is also
+// the `kid` and `metadata.signingKeyId`); no trust registry and no registry URL.
+// What each check reports on it is listed in `__fixtures__/README.md`.
+
+const selfCertifiedRaw = (): string =>
+  readFileSync(new URL(`./__fixtures__/${BUNDLE_FILE}`, import.meta.url), 'utf8');
+
+test('Q15 self-certified: a raw-bytes/v1 scripted-recomputation bundle with no registry verifies fully offline', async () => {
+  const raw = selfCertifiedRaw();
+  const { result: r, fetches, fullyOffline } = await runOffline(raw);
+  assert.equal(fetches, 0, 'zero network calls');
+  assert.equal(fullyOffline, true, 'no registry is needed, so every input came from the bundle');
+
+  // #1 envelope integrity and #13 node id.
+  assert.equal(r.hashMatch, true, '#1 hashMatch');
+  assert.deepEqual(r.envelopeIntegrity, { status: 'verified' }, '#1 envelope integrity');
+  const bundle = JSON.parse(raw) as { packageHash: string };
+  assert.equal(r.recomputedHash, bundle.packageHash, '#1 recomputed hash');
+  assert.equal(r.nodeId, bundle.packageHash, '#13 node id');
+  // #2 signature.
+  assert.equal(r.hasSigning, true, '#2 hasSigning');
+  assert.equal(r.signatureValid, true, '#2 signature valid');
+  // #3 the rule resolves; #4 the inline output's bytes hash to contentHash.sha256.
+  assert.deepEqual(r.contentCanonicalization, { status: 'ok', rule: RAW_BYTES_CANONICALIZATION }, '#3');
+  assert.equal(r.contentHash?.status, 'ok', '#4 content hash');
+  assert.equal(r.contentHash?.matched, 'sha256', '#4 matched algorithm');
+  // #5 key trust: self-certified, never verified.
+  assert.equal(r.keyTrust?.status, 'self_certified', '#5 key trust');
+  assert.equal(r.keyTrust?.verified, false, '#5 not verified: no registry vouches for the key');
+  // #7 / #8 calm-absent: no RFC 3161 token, no Rekor entry.
+  assert.equal(r.rfc3161, null, '#7 calm-absent');
+  assert.equal(r.hasTimestamp, false);
+  assert.equal(r.rekorInclusion, null, '#8 calm-absent');
+  assert.equal(r.hasRekor, false);
+  // #12 type.
+  assert.deepEqual(r.typeResolution, { status: 'ok', type: 'content/analysis/v1' }, '#12 type');
+  // #14 the identifier is the one derived from the signing key.
+  assert.equal(r.signerIdentity?.status, 'key_derived_match', '#14');
+  // #15 script-run is in the scripted-recomputation vocabulary.
+  assert.equal(r.captureMethodVocab?.status, 'ok', '#15');
+  assert.equal(r.captureMethodVocab?.profileType, 'scripted-recomputation', '#15 profile type');
+  assert.equal(r.captureMethodVocab?.captureMethod, 'script-run', '#15 capture method');
+  // #16 no metadata.contentProfile key.
+  assert.equal(r.contentProfile?.status, 'contentProfile_absent', '#16');
+
+  // The site's verdict: normal, never verified.
+  const verdict = rollupVerdict(r);
+  assert.equal(verdict.tier, 'normal');
+  assert.notEqual(verdict.tier, 'verified');
+  assert.equal(verdict.headline, 'Signature valid — self-certified signer');
+});
+
+test('Q15 self-certified: re-minting from the documented seed and inputs with the shipped cores is byte-identical to the committed bundle', () => {
+  const committed = selfCertifiedRaw();
+  const reminted = mintSelfCertifiedBundle(readContentFile());
+  // The load-bearing provenance check: string equality over the whole file.
+  assert.equal(reminted, committed, `${BUNDLE_FILE} is byte-identical to a fresh mint`);
+  assert.equal(
+    Buffer.from(reminted, 'utf8').equals(readFileSync(new URL(`./__fixtures__/${BUNDLE_FILE}`, import.meta.url))),
+    true,
+    'byte-equal at the byte level too',
+  );
+});
+
+test('Q15 self-certified: the committed content file, the hashes and the identifier agree with each other', () => {
+  const bundle = JSON.parse(selfCertifiedRaw()) as Record<string, unknown> & {
+    packageHash: string;
+    signer: { bindingTier: string; identifier: string };
+    signature: { publicKey: string; kid: string; algorithm: string };
+    contentHash: { sha256: string };
+    package: Record<string, unknown> & {
+      metadata: Record<string, unknown>;
+      output: string;
+      contentHash: { sha256: string };
+      signer: { bindingTier: string; identifier: string };
+    };
+  };
+  const pkg = bundle.package;
+  const fileBytes = readFileSync(new URL(`./__fixtures__/${CONTENT_FILE}`, import.meta.url));
+
+  // raw-bytes/v1: the file's ordinary SHA-256 is the signed content hash, and the
+  // inline output is exactly the file's bytes.
+  const fileSha256 = createHash('sha256').update(fileBytes).digest('hex');
+  assert.equal(pkg.contentHash.sha256, fileSha256, 'contentHash.sha256 is the file digest');
+  assert.equal(bundle.contentHash.sha256, fileSha256, 'the view carries the same digest');
+  assert.equal(sha256Hex(pkg.output), fileSha256, 'output hashes to the same digest');
+  assert.equal(Buffer.from(pkg.output, 'utf8').equals(fileBytes), true, 'output is the file, byte for byte');
+
+  // The envelope hash is SHA-256 over the JCS of the package (the unsigned envelope).
+  assert.equal(computeEnvelopeHash(pkg), bundle.packageHash);
+  assert.equal(recomputePackageHash(pkg), bundle.packageHash);
+
+  // ADR-0030 §2 and §5: the identifier derives from the envelope's publicKey, and it
+  // names the key in all three places.
+  const derived = deriveKeyDerivedIdentifier(bundle.signature.publicKey);
+  assert.equal(pkg.signer.identifier, derived);
+  assert.equal(bundle.signer.identifier, derived);
+  assert.equal(bundle.signature.kid, derived);
+  assert.equal(pkg.metadata['signingKeyId'], derived);
+  assert.equal(pkg.signer.bindingTier, 'pseudonymous');
+  assert.equal(bundle.signature.algorithm, 'Ed25519ph');
+
+  // What the fixture must NOT carry.
+  for (const absent of ['trustRegistryUrl', 'trustRegistryUrlLegacy', 'trustRegistry', 'signerIdentity', 'rfc3161Timestamp', 'rekorEntryId', 'rekorInclusionProof', 'rekorEntryBody', 'hostDirectory', 'packageUrl']) {
+    assert.equal(absent in bundle, false, `no ${absent}`);
+  }
+  assert.equal('contentProfile' in pkg.metadata, false, 'no metadata.contentProfile');
 });
