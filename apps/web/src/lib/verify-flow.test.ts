@@ -1265,6 +1265,97 @@ test('self_certified with no registry: no provenance claimed, the registry step 
   assert.equal(run.verdict.tier, 'normal');
 });
 
+// --- fullyOffline for a self-certified bundle (Wave N14 P7) ----------------
+//
+// `fullyOffline` is true for exactly one new case: bundle mode, the package inline, a
+// key-derived `signer.identifier`, and neither `trustRegistryUrl` nor
+// `trustRegistryUrlLegacy` declared. Every other case keeps today's rule (an inline
+// package AND an inline registry, in bundle mode).
+
+/** Resolve a commitment and report `fullyOffline` plus the fetches attempted. The
+ *  stub serves the registry at its declared URL so a declared URL resolves. */
+async function resolveOfflineFlag(
+  commitment: Record<string, unknown>,
+  registry: Record<string, unknown>,
+  mode: 'bundle' | 'url' = 'bundle',
+): Promise<{ fullyOffline: boolean; fetches: number }> {
+  const real = globalThis.fetch;
+  let fetches = 0;
+  globalThis.fetch = ((input: unknown) => {
+    fetches += 1;
+    const url = String(input);
+    const json = (body: unknown) =>
+      Promise.resolve(
+        new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } }),
+      );
+    if (url === SC_COMMITMENT_URL) return json(commitment);
+    if (url === SC_REGISTRY_URL) return json(registry);
+    return Promise.resolve(new Response('not found', { status: 404, headers: { 'content-type': 'text/plain' } }));
+  }) as typeof globalThis.fetch;
+  try {
+    const resolved =
+      mode === 'bundle'
+        ? await resolveInput('bundle', JSON.stringify(commitment))
+        : await resolveInput('url', SC_COMMITMENT_URL);
+    return { fullyOffline: resolved.fullyOffline, fetches };
+  } finally {
+    globalThis.fetch = real;
+  }
+}
+
+test('fullyOffline: a self-certified bundle (inline package, key-derived signer, no registry URL) is fully offline', async () => {
+  const m = mintSigned({ identifier: 'key-derived', bindingTier: 'pseudonymous', inlineRegistry: false, declareUrl: false });
+  const r = await resolveOfflineFlag(m.commitment, m.registry);
+  assert.equal(r.fetches, 0);
+  assert.equal(r.fullyOffline, true);
+});
+
+test('fullyOffline: the other side of the line — each departure from the self-certified case stays not fully offline', async () => {
+  const keyDerived = mintSigned({ identifier: 'key-derived', bindingTier: 'pseudonymous', inlineRegistry: false, declareUrl: false });
+
+  // A declared trustRegistryUrl: the registry is fetched, so not offline.
+  const withUrl = await resolveOfflineFlag({ ...keyDerived.commitment, trustRegistryUrl: SC_REGISTRY_URL }, keyDerived.registry);
+  assert.equal(withUrl.fetches, 1, 'the declared registry is fetched');
+  assert.equal(withUrl.fullyOffline, false, 'trustRegistryUrl declared');
+
+  // A declared trustRegistryUrlLegacy alone: fetched too.
+  const withLegacy = await resolveOfflineFlag(
+    { ...keyDerived.commitment, trustRegistryUrlLegacy: SC_REGISTRY_URL },
+    keyDerived.registry,
+  );
+  assert.equal(withLegacy.fetches, 1);
+  assert.equal(withLegacy.fullyOffline, false, 'trustRegistryUrlLegacy declared');
+
+  // A signer whose identifier is not key-derived, with no registry and no URL:
+  // unchanged, not fully offline.
+  const urn = mintSigned({ identifier: 'urn', bindingTier: 'platform', inlineRegistry: false, declareUrl: false });
+  const urnRun = await resolveOfflineFlag(urn.commitment, urn.registry);
+  assert.equal(urnRun.fetches, 0);
+  assert.equal(urnRun.fullyOffline, false, 'not key-derived');
+
+  // The package not inline (a location to fetch instead): not offline.
+  const noInlinePkg: Record<string, unknown> = { ...keyDerived.commitment };
+  delete noInlinePkg['package'];
+  const pkgFetched = await resolveOfflineFlag(
+    { ...noInlinePkg, packageUrl: 'https://registry-host.test/pkg.json' },
+    keyDerived.registry,
+  );
+  assert.equal(pkgFetched.fullyOffline, false, 'package not inline');
+
+  // Not bundle mode (a hosted URL), even with the package inline: not offline.
+  const hosted = await resolveOfflineFlag(keyDerived.commitment, keyDerived.registry, 'url');
+  assert.equal(hosted.fullyOffline, false, 'hosted mode');
+});
+
+test('fullyOffline: the existing rule is unchanged — an inline registry with an inline package is fully offline for any signer', async () => {
+  for (const identifier of ['key-derived', 'urn'] as const) {
+    const m = mintSigned({ identifier, bindingTier: 'pseudonymous', inlineRegistry: true, declareUrl: true });
+    const r = await resolveOfflineFlag(m.commitment, m.registry);
+    assert.equal(r.fetches, 0, identifier);
+    assert.equal(r.fullyOffline, true, identifier);
+  }
+});
+
 test('registry_unavailable under a SET-ASIDE bundle registry: the #5 detail says the bundle registry was not used', async () => {
   // A key-derived identifier at a tier other than pseudonymous: verify-core sets
   // the bundle registry's `active` aside and returns registry_unavailable.
