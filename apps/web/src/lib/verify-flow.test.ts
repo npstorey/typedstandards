@@ -9,9 +9,31 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import type { VerifyResult, EnvelopeIntegrityResult } from '@typedstandards/verify-core';
+import { generateKeyPairSync, sign as nodeSign } from 'node:crypto';
+import {
+  recomputePackageHash,
+  deriveKeyDerivedIdentifier,
+  KEY_DERIVED_IDENTIFIER_PREFIX,
+  type VerifyResult,
+  type EnvelopeIntegrityResult,
+} from '@typedstandards/verify-core';
+import {
+  KEY_TRUST_SIGNALS,
+  KEY_TRUST_BUNDLE_REGISTRY_NOT_USED,
+  SIGNER_IDENTITY_SIGNALS,
+  CONTENT_HASH_SIGNALS,
+  CONTENT_PROFILE_SIGNALS,
+  CAPTURE_METHOD_LABELS,
+} from './trust-signal.ts';
 import {
   rollupVerdict,
+  resolveInput,
+  runVerify,
+  buildCheckRows,
+  registryMetaOf,
+  registryProvenanceOf,
+  type CheckRow,
+  type ResolveStep,
   buildVerifyInput,
   buildPreview,
   deriveShareTarget,
@@ -965,5 +987,444 @@ test('resolution: a cancelled verification does not issue the fallback request',
     assert.equal(requested.length, 1, 'no fallback request after cancellation');
   } finally {
     globalThis.fetch = real;
+  }
+});
+
+// --- Self-certifying signers on the site (hub ADR-0030 §4 rule 3, §10) -----
+//
+// Wave N14 P6. The question every test below answers: does any path show a
+// self-certified signer as more than a check established?
+//
+// The packages are minted in process (Ed25519 via node:crypto, signed over the
+// package-hash string exactly as q15-offline-bundle.test.ts's synthetic bundle
+// is). The key-derived identifier is computed at run time by verify-core's own
+// `deriveKeyDerivedIdentifier`, so no identifier or key is committed here. Each
+// package runs through the real flow: resolveInput → buildVerifyInput →
+// runVerify (verify-core's verifyRecord) → buildCheckRows / rollupVerdict /
+// buildPreview.
+
+const SC_REGISTRY_URL = 'https://registry-host.test/trust-registry.json';
+const SC_COMMITMENT_URL = 'https://registry-host.test/api/records/sc-fixture/commitment';
+const PROVIDER_NAME = 'Provider Display Name';
+const SELF_NAME = 'Self Described Name';
+
+interface MintOptions {
+  /** 'key-derived' uses the identifier derived from the signing key;
+   *  'key-derived-other' uses one derived from a DIFFERENT key (a mismatch);
+   *  'urn' uses an opaque, non-key-derived identifier. */
+  identifier: 'key-derived' | 'key-derived-other' | 'urn';
+  bindingTier: string;
+  /** Carry the registry inline in the bundle (`trustRegistry`). */
+  inlineRegistry: boolean;
+  /** Declare `trustRegistryUrl` on the view. */
+  declareUrl: boolean;
+  /** Carry the §8.8.1 informational provider block. */
+  signerIdentityBlock?: boolean;
+}
+
+interface Minted {
+  commitment: Record<string, unknown>;
+  registry: Record<string, unknown>;
+  identifier: string;
+}
+
+function spkiB64(publicKey: ReturnType<typeof generateKeyPairSync>['publicKey']): string {
+  return Buffer.from(publicKey.export({ type: 'spki', format: 'der' })).toString('base64');
+}
+
+function mintSigned(o: MintOptions): Minted {
+  const { publicKey, privateKey } = generateKeyPairSync('ed25519');
+  const publicKeyB64 = spkiB64(publicKey);
+  const identifier =
+    o.identifier === 'key-derived'
+      ? deriveKeyDerivedIdentifier(publicKeyB64)
+      : o.identifier === 'key-derived-other'
+        ? deriveKeyDerivedIdentifier(spkiB64(generateKeyPairSync('ed25519').publicKey))
+        : 'urn:civic-record:platform:synthetic-publisher';
+  // ADR-0030 §5: under a key-derived identifier `kid` SHOULD be the identifier.
+  const kid = o.identifier === 'urn' ? 'test:synthetic-2026' : identifier;
+  const signer = { bindingTier: o.bindingTier, identifier, displayName: SELF_NAME };
+  const pkg: Record<string, unknown> = {
+    protocolVersion: '0.1.0',
+    type: 'analysis/datHere/v1',
+    signer,
+    metadata: { signingKeyId: kid },
+    subject: { title: 'Synthetic self-certifying fixture' },
+    output: 'A minted record package for the site-side self-certifying tests.',
+  };
+  const packageHash = recomputePackageHash(pkg);
+  const signature = {
+    algorithm: 'Ed25519',
+    publicKey: publicKeyB64,
+    signature: Buffer.from(nodeSign(null, Buffer.from(packageHash, 'utf8'), privateKey)).toString('base64'),
+    kid,
+  };
+  // The registry lists the envelope's (kid, publicKey) as ACTIVE, recording the
+  // signer's own identifier — the most a registry could say for it.
+  const registry = {
+    generatedAt: '2026-09-21T00:00:00.000Z',
+    keys: [
+      {
+        kid,
+        publicKey: publicKeyB64,
+        status: 'active',
+        activatedAt: '2026-01-01T00:00:00.000Z',
+        deprecatedAt: null,
+        revokedAt: null,
+        signerIdentity: signer,
+      },
+    ],
+  };
+  const commitment: Record<string, unknown> = {
+    protocolVersion: '0.1.0',
+    packageHash,
+    package: pkg,
+    signer: { bindingTier: o.bindingTier, identifier, displayName: SELF_NAME },
+    signature,
+    ...(o.inlineRegistry ? { trustRegistry: registry } : {}),
+    ...(o.declareUrl ? { trustRegistryUrl: SC_REGISTRY_URL } : {}),
+    ...(o.signerIdentityBlock
+      ? { signerIdentity: { provider: 'example-provider', providerId: 'abcdef', displayName: PROVIDER_NAME } }
+      : {}),
+  };
+  return { commitment, registry, identifier };
+}
+
+interface FlowRun {
+  result: VerifyResult;
+  rows: CheckRow[];
+  steps: ResolveStep[];
+  provenance: string | undefined;
+  preview: ReturnType<typeof buildPreview>;
+  verdict: ReturnType<typeof rollupVerdict>;
+}
+
+/** Run the site's flow. `bundle` reads everything inline with a fetch stub that
+ *  throws; `hosted` serves the commitment (without an inline registry) and the
+ *  registry at its declared URL, and 404s everything else. */
+async function runFlow(m: Minted, mode: 'bundle' | 'hosted'): Promise<FlowRun> {
+  const real = globalThis.fetch;
+  globalThis.fetch = ((input: unknown) => {
+    const url = String(input);
+    if (mode === 'bundle') throw new Error(`NETWORK BLOCKED in bundle mode: ${url}`);
+    const json = (body: unknown) =>
+      Promise.resolve(
+        new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } }),
+      );
+    if (url === SC_COMMITMENT_URL) return json(m.commitment);
+    if (url === SC_REGISTRY_URL) return json(m.registry);
+    return Promise.resolve(new Response('not found', { status: 404, headers: { 'content-type': 'text/plain' } }));
+  }) as typeof globalThis.fetch;
+  try {
+    const steps: ResolveStep[] = [];
+    const resolved =
+      mode === 'bundle'
+        ? await resolveInput('bundle', JSON.stringify(m.commitment), undefined, (s) => steps.push(s))
+        : await resolveInput('url', SC_COMMITMENT_URL, undefined, (s) => steps.push(s));
+    const vinput = buildVerifyInput(resolved.commitment, resolved.pkg);
+    const result = await runVerify(vinput, resolved.registry, undefined, resolved.registryProvenance);
+    const rows = buildCheckRows(result, vinput, resolved.commitment, registryMetaOf(resolved));
+    return {
+      result,
+      rows,
+      steps,
+      provenance: resolved.registryProvenance,
+      preview: buildPreview(resolved.pkg, resolved.commitment),
+      verdict: rollupVerdict(result),
+    };
+  } finally {
+    globalThis.fetch = real;
+  }
+}
+
+const rowOf = (rows: CheckRow[], num: string): CheckRow => {
+  const r = rows.find((x) => x.num === num);
+  assert.ok(r, `row #${num} is rendered`);
+  return r;
+};
+
+/** Every string the check rows, verdict, preview and resolution steps put on the page. */
+function renderedText(run: FlowRun): string {
+  const parts: string[] = [];
+  for (const r of run.rows) {
+    parts.push(r.name, r.signal.label, r.signal.detail ?? '', r.depthNote ?? '');
+    for (const m of r.math) parts.push(m.label, m.value, m.full ?? '');
+  }
+  parts.push(run.verdict.headline, run.verdict.detail);
+  for (const s of run.steps) parts.push(s.label, s.url ?? '');
+  for (const v of Object.values(run.preview)) if (typeof v === 'string') parts.push(v);
+  return parts.join('\n');
+}
+
+test('registryProvenanceOf: inline → bundle; fetched from a declared URL → declared-url; no registry → none claimed', () => {
+  const reg = { keys: [] } as unknown as Parameters<typeof registryProvenanceOf>[0];
+  assert.equal(registryProvenanceOf(reg, { kind: 'inline' }), 'bundle');
+  assert.equal(registryProvenanceOf(reg, { kind: 'fetched', url: SC_REGISTRY_URL }), 'declared-url');
+  assert.equal(registryProvenanceOf(undefined, { kind: 'fetched' }), undefined);
+  assert.equal(registryProvenanceOf(undefined, { kind: 'inline' }), undefined);
+});
+
+test('provenance: a key-derived pseudonymous signer whose BUNDLE registry lists its key active renders self_certified, not "active registered key"', async () => {
+  const m = mintSigned({ identifier: 'key-derived', bindingTier: 'pseudonymous', inlineRegistry: true, declareUrl: true });
+  const run = await runFlow(m, 'bundle');
+  assert.equal(run.provenance, 'bundle');
+  assert.equal(run.result.keyTrust?.status, 'self_certified');
+  assert.equal(run.result.keyTrust?.verified, false);
+  const kt = rowOf(run.rows, '5');
+  assert.equal(kt.signal.label, KEY_TRUST_SIGNALS.self_certified.label);
+  assert.equal(kt.signal.tier, 'normal');
+  assert.notEqual(kt.signal.label, KEY_TRUST_SIGNALS.active.label);
+  assert.doesNotMatch(renderedText(run), /registered key/i);
+  // The registry's source is stated beside the status.
+  assert.deepEqual(
+    kt.math.find((x) => x.label === 'Registry source')?.value,
+    'carried in the bundle (can lower this signer’s key status, never raise it)',
+  );
+  assert.notEqual(run.verdict.tier, 'verified');
+  assert.equal(run.verdict.tier, 'normal');
+});
+
+test('provenance: the SAME key-derived signer with the registry fetched from its declared URL renders active', async () => {
+  const m = mintSigned({ identifier: 'key-derived', bindingTier: 'pseudonymous', inlineRegistry: false, declareUrl: true });
+  const run = await runFlow(m, 'hosted');
+  assert.equal(run.provenance, 'declared-url');
+  assert.equal(run.result.keyTrust?.status, 'active');
+  const kt = rowOf(run.rows, '5');
+  assert.equal(kt.signal.label, KEY_TRUST_SIGNALS.active.label);
+  assert.equal(
+    kt.math.find((x) => x.label === 'Registry source')?.value,
+    'fetched from the registry URL the record declares',
+  );
+  // Check #14 never reports `ok` under a key-derived identifier, whatever the source.
+  assert.equal(rowOf(run.rows, '14').signal.label, SIGNER_IDENTITY_SIGNALS.key_derived_match.label);
+});
+
+test('provenance: a signer whose identifier is NOT key-derived renders exactly as before in both modes (#78 out of scope)', async () => {
+  for (const mode of ['bundle', 'hosted'] as const) {
+    const m = mintSigned({ identifier: 'urn', bindingTier: 'platform', inlineRegistry: mode === 'bundle', declareUrl: true });
+    const run = await runFlow(m, mode);
+    assert.equal(run.result.keyTrust?.status, 'active', `${mode}: the inline registry is used as given`);
+    const kt = rowOf(run.rows, '5');
+    assert.equal(kt.signal.label, KEY_TRUST_SIGNALS.active.label, mode);
+    // Today's math lines, unchanged: `kid` and `Registry status`, no source line.
+    assert.deepEqual(
+      kt.math.map((x) => x.label),
+      ['kid', 'Registry status'],
+      `${mode}: the #5 math is today's`,
+    );
+    assert.equal(rowOf(run.rows, '14').signal.label, SIGNER_IDENTITY_SIGNALS.ok.label, mode);
+    assert.equal(run.verdict.tier, 'verified', mode);
+    assert.equal(run.verdict.headline, 'Verified', mode);
+    // displayName keeps the byline position for a non-key-derived signer.
+    assert.equal(run.preview.signerDisplayName, SELF_NAME, mode);
+    assert.equal(run.preview.signerSelfDescribedName, undefined, mode);
+    const registryStep = run.steps.find((s) => s.key === 'registry');
+    assert.equal(
+      registryStep?.label,
+      mode === 'bundle' ? 'Read trust registry from bundle' : 'Fetched publisher trust registry',
+    );
+  }
+});
+
+test('key_derived_match: the #14 row for a derived match, with the derived identifier in the math', async () => {
+  const m = mintSigned({ identifier: 'key-derived', bindingTier: 'pseudonymous', inlineRegistry: false, declareUrl: false });
+  const run = await runFlow(m, 'bundle');
+  assert.equal(run.result.signerIdentity?.status, 'key_derived_match');
+  const si = rowOf(run.rows, '14');
+  assert.equal(si.signal.label, 'Signer identifier matches the signing key');
+  assert.equal(si.signal.tier, 'normal');
+  assert.equal(si.math.find((x) => x.label === 'Derived from the signing key')?.value, m.identifier);
+  assert.equal(si.math.find((x) => x.label === 'Claimed signer')?.value, m.identifier);
+});
+
+test('key_derived_mismatch: a wrong key-derived identifier renders the fatal #14 row and the verdict alarms', async () => {
+  const m = mintSigned({ identifier: 'key-derived-other', bindingTier: 'pseudonymous', inlineRegistry: false, declareUrl: false });
+  const run = await runFlow(m, 'bundle');
+  assert.equal(run.result.signatureValid, true, 'the signature itself verifies');
+  assert.equal(run.result.signerIdentity?.status, 'key_derived_mismatch');
+  const si = rowOf(run.rows, '14');
+  assert.equal(si.signal.label, SIGNER_IDENTITY_SIGNALS.key_derived_mismatch.label);
+  assert.equal(si.signal.tier, 'alarm');
+  assert.notEqual(si.math.find((x) => x.label === 'Derived from the signing key')?.value, m.identifier);
+  assert.equal(run.verdict.tier, 'alarm');
+  assert.equal(run.verdict.headline, 'Verification failed');
+});
+
+test('self_certified with no registry: no provenance claimed, the registry step says none was fetched', async () => {
+  const m = mintSigned({ identifier: 'key-derived', bindingTier: 'pseudonymous', inlineRegistry: false, declareUrl: false });
+  const run = await runFlow(m, 'bundle');
+  assert.equal(run.provenance, undefined);
+  assert.equal(run.result.keyTrust?.status, 'self_certified');
+  const kt = rowOf(run.rows, '5');
+  assert.equal(kt.signal.label, KEY_TRUST_SIGNALS.self_certified.label);
+  assert.equal(kt.math.find((x) => x.label === 'Registry source')?.value, 'none supplied');
+  assert.equal(kt.depthNote, undefined, 'no registry snapshot caveat when no registry was used');
+  const step = run.steps.find((s) => s.key === 'registry');
+  assert.equal(step?.label, 'No trust registry declared — none fetched');
+  assert.equal(step?.state, 'skipped');
+  assert.equal(run.verdict.tier, 'normal');
+});
+
+test('registry_unavailable under a SET-ASIDE bundle registry: the #5 detail says the bundle registry was not used', async () => {
+  // A key-derived identifier at a tier other than pseudonymous: verify-core sets
+  // the bundle registry's `active` aside and returns registry_unavailable.
+  const m = mintSigned({ identifier: 'key-derived', bindingTier: 'platform', inlineRegistry: true, declareUrl: true });
+  const run = await runFlow(m, 'bundle');
+  assert.equal(run.result.keyTrust?.status, 'registry_unavailable');
+  assert.equal(run.result.keyTrust?.verified, false);
+  const kt = rowOf(run.rows, '5');
+  assert.equal(kt.signal.label, KEY_TRUST_BUNDLE_REGISTRY_NOT_USED.label);
+  assert.equal(kt.signal.detail, KEY_TRUST_BUNDLE_REGISTRY_NOT_USED.detail);
+  assert.equal(kt.signal.tier, KEY_TRUST_SIGNALS.registry_unavailable.tier, 'same tier, no new status');
+  assert.doesNotMatch(kt.signal.detail ?? '', /could not be loaded/);
+  assert.notEqual(run.verdict.tier, 'verified');
+});
+
+test('registry_unavailable with NO registry at all keeps its own sentence', () => {
+  const rows = buildCheckRows(
+    mkResult({ keyTrust: { status: 'registry_unavailable', verified: false } as VerifyResult['keyTrust'] }),
+    buildVerifyInput({ packageHash: 'ab'.repeat(32) }, {
+      signer: { bindingTier: 'platform', identifier: `${KEY_DERIVED_IDENTIFIER_PREFIX}zfixture` },
+    }),
+    { packageHash: 'ab'.repeat(32) },
+    { kind: 'fetched', available: false },
+  );
+  assert.equal(rowOf(rows, '5').signal.label, KEY_TRUST_SIGNALS.registry_unavailable.label);
+});
+
+test('§10 displayName: under a key-derived identifier it is self-description, never the signer byline', async () => {
+  const m = mintSigned({ identifier: 'key-derived', bindingTier: 'pseudonymous', inlineRegistry: true, declareUrl: true });
+  const run = await runFlow(m, 'bundle');
+  assert.equal(run.preview.signerDisplayName, undefined, 'not in the byline position');
+  assert.equal(run.preview.signerSelfDescribedName, SELF_NAME);
+  // Never beside a check mark: no verified-tier row carries the name.
+  for (const r of run.rows.filter((x) => x.signal.tier === 'verified')) {
+    for (const line of r.math) assert.doesNotMatch(line.value, new RegExp(SELF_NAME), `row #${r.num}`);
+  }
+});
+
+test('§10 signerIdentity block: never rendered for a self-certified signer', async () => {
+  const m = mintSigned({
+    identifier: 'key-derived',
+    bindingTier: 'pseudonymous',
+    inlineRegistry: false,
+    declareUrl: false,
+    signerIdentityBlock: true,
+  });
+  const run = await runFlow(m, 'bundle');
+  assert.equal(run.result.keyTrust?.status, 'self_certified');
+  assert.doesNotMatch(renderedText(run), new RegExp(PROVIDER_NAME));
+  assert.doesNotMatch(renderedText(run), /example-provider/);
+});
+
+test('§10 bindingTier: the tier value is not rendered as anything a check established', async () => {
+  const m = mintSigned({ identifier: 'key-derived', bindingTier: 'pseudonymous', inlineRegistry: true, declareUrl: true });
+  const run = await runFlow(m, 'bundle');
+  assert.doesNotMatch(renderedText(run), /pseudonymous/i);
+});
+
+test('§10 kid: shown as the envelope key label only, never as a registered key', async () => {
+  const m = mintSigned({ identifier: 'key-derived', bindingTier: 'pseudonymous', inlineRegistry: true, declareUrl: true });
+  const run = await runFlow(m, 'bundle');
+  const kt = rowOf(run.rows, '5');
+  assert.deepEqual(kt.math.map((x) => x.label), ['Envelope key label (kid)', 'Key-trust status', 'Registry source']);
+  assert.equal(kt.math[0].value, m.identifier);
+  assert.doesNotMatch(renderedText(run), /registered key|Registry status/i);
+});
+
+test('§10 continuity: the self-certified run says "same key", never "same publisher" or "same person"', async () => {
+  const m = mintSigned({ identifier: 'key-derived', bindingTier: 'pseudonymous', inlineRegistry: false, declareUrl: false });
+  const text = renderedText(await runFlow(m, 'bundle'));
+  assert.match(text, /same key/);
+  assert.doesNotMatch(text, /same (publisher|person)/i);
+});
+
+test('rollupVerdict: a self-certified package that passes every other check reads normal, never verified', () => {
+  const v = rollupVerdict(
+    mkResult({
+      keyTrust: { status: 'self_certified', verified: false } as VerifyResult['keyTrust'],
+      signerIdentity: { status: 'key_derived_match' } as VerifyResult['signerIdentity'],
+      contentProfile: { status: 'ok' } as VerifyResult['contentProfile'],
+    }),
+  );
+  assert.equal(v.tier, 'normal');
+  assert.equal(v.headline, 'Signature valid — self-certified signer');
+  assert.doesNotMatch(v.headline, /^Verified/);
+});
+
+test('rollupVerdict: key_derived_mismatch alarms even when everything else is green', () => {
+  const v = rollupVerdict(
+    mkResult({ signerIdentity: { status: 'key_derived_mismatch' } as VerifyResult['signerIdentity'] }),
+  );
+  assert.equal(v.tier, 'alarm');
+});
+
+test('#16 content profile: each status renders its ADR-0029 §5 tier in row #16', () => {
+  const expected = {
+    ok: 'verified',
+    contentProfile_absent: 'normal',
+    contentProfile_unknown: 'attention',
+    contentProfile_inconsistent: 'attention',
+  } as const;
+  for (const [status, tier] of Object.entries(expected)) {
+    const rows = buildCheckRows(
+      mkResult({
+        contentProfile: {
+          status,
+          ...(status === 'contentProfile_absent' ? {} : { contentProfile: 'default' }),
+          producerProfile: 'scripted-recomputation/eval-run',
+        } as VerifyResult['contentProfile'],
+      }),
+      buildVerifyInput({ packageHash: 'ab'.repeat(32) }, {}),
+      { packageHash: 'ab'.repeat(32) },
+    );
+    const r = rowOf(rows, '16');
+    assert.equal(r.name, 'Content profile');
+    assert.equal(r.signal.tier, tier, status);
+    assert.equal(r.signal.label, CONTENT_PROFILE_SIGNALS[status as keyof typeof expected].label);
+    assert.equal(r.math.find((x) => x.label === 'producerProfile')?.value, 'scripted-recomputation/eval-run');
+  }
+});
+
+test('#16 content profile: the verdict treats it by tier — inconsistent never alarms, absent keeps a green package verified', () => {
+  const inconsistent = rollupVerdict(
+    mkResult({ contentProfile: { status: 'contentProfile_inconsistent' } as VerifyResult['contentProfile'] }),
+  );
+  assert.notEqual(inconsistent.tier, 'alarm');
+  const absent = rollupVerdict(
+    mkResult({ contentProfile: { status: 'contentProfile_absent' } as VerifyResult['contentProfile'] }),
+  );
+  assert.equal(absent.tier, 'verified');
+});
+
+test('#16 content profile: a real package with no contentProfile key renders the calm absent row', async () => {
+  const m = mintSigned({ identifier: 'urn', bindingTier: 'platform', inlineRegistry: true, declareUrl: false });
+  const run = await runFlow(m, 'bundle');
+  assert.equal(run.result.contentProfile?.status, 'contentProfile_absent');
+  const r = rowOf(run.rows, '16');
+  assert.equal(r.signal.tier, 'normal');
+  assert.equal(r.math[0].value, 'absent (read as default)');
+});
+
+test('#4 content_bytes_unavailable: rendered attention with its own label, never verified', () => {
+  const rows = buildCheckRows(
+    mkResult({ contentHash: { status: 'content_bytes_unavailable' } as VerifyResult['contentHash'] }),
+    buildVerifyInput({ packageHash: 'ab'.repeat(32) }, {}),
+    { packageHash: 'ab'.repeat(32) },
+  );
+  const r = rowOf(rows, '4');
+  assert.equal(r.signal.label, CONTENT_HASH_SIGNALS.content_bytes_unavailable.label);
+  assert.equal(r.signal.tier, 'attention');
+});
+
+test('#15 capture-method labels: script-run and tool-emitted render their plain-language readings', () => {
+  for (const method of ['script-run', 'tool-emitted'] as const) {
+    const rows = buildCheckRows(
+      mkResult({ captureMethodVocab: { status: 'ok', captureMethod: method, profileType: 'scripted-recomputation' } as VerifyResult['captureMethodVocab'] }),
+      buildVerifyInput({ packageHash: 'ab'.repeat(32) }, {}),
+      { packageHash: 'ab'.repeat(32) },
+    );
+    const r = rowOf(rows, '15');
+    assert.equal(r.math.find((x) => x.label === 'How it was captured')?.value, CAPTURE_METHOD_LABELS[method]);
   }
 });

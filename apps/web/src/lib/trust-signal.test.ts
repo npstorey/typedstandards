@@ -8,7 +8,19 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { resolveTimestamp, resolveRekor, resolveEnvelopeIntegrity } from './trust-signal.ts';
+import * as signals from './trust-signal.ts';
+import {
+  resolveTimestamp,
+  resolveRekor,
+  resolveEnvelopeIntegrity,
+  resolveKeyTrust,
+  resolveCaptureMethodLabel,
+  KEY_TRUST_SIGNALS,
+  KEY_TRUST_BUNDLE_REGISTRY_NOT_USED,
+  SIGNER_IDENTITY_SIGNALS,
+  CONTENT_HASH_SIGNALS,
+  CONTENT_PROFILE_SIGNALS,
+} from './trust-signal.ts';
 
 const detailOf = (d: { detail?: string }): string => {
   assert.ok(d.detail, 'descriptor carries a detail string');
@@ -66,4 +78,80 @@ test('resolveEnvelopeIntegrity: tri-state — content-unavailable is NOT tamperi
   const unfetchable = resolveEnvelopeIntegrity({ status: 'unavailable', reason: 'unfetchable' });
   assert.equal(unfetchable.tier, 'attention');
   assert.doesNotMatch(unfetchable.label, /changed since signing/);
+});
+
+// --- Wave N14 rows (hub ADR-0029, ADR-0030 §10) ----------------------------
+
+test('self_certified: tier normal, never verified; says what the key proves and what it does not', () => {
+  const d = resolveKeyTrust({ status: 'self_certified' });
+  assert.equal(d.tier, 'normal');
+  assert.equal(d.label, 'Signed with a self-certifying key');
+  assert.equal(
+    detailOf(d),
+    "The signer's identifier is derived from the signing key, so it proves that the same key signed everything under this identifier — not who holds the key. No registry vouches for it, and the key cannot be rotated or revoked.",
+  );
+  assert.doesNotMatch(d.label, /registered/i);
+});
+
+test('key_derived_match: its own #14 row, tier normal, never the registry-match label', () => {
+  const d = SIGNER_IDENTITY_SIGNALS.key_derived_match;
+  assert.equal(d.tier, 'normal');
+  assert.equal(d.label, 'Signer identifier matches the signing key');
+  assert.equal(
+    detailOf(d),
+    'The identifier is derived from the key that signed this package. This shows the same key signed anything else under this identifier, and nothing about who holds it.',
+  );
+  assert.notEqual(d.label, SIGNER_IDENTITY_SIGNALS.ok.label);
+});
+
+test('key_derived_mismatch: fatal (alarm), and says the identifier does not name the signing key', () => {
+  const d = SIGNER_IDENTITY_SIGNALS.key_derived_mismatch;
+  assert.equal(d.tier, 'alarm');
+  assert.equal(d.label, 'Signer identifier does not match the signing key');
+  assert.match(detailOf(d), /do not trust/);
+});
+
+test('content_bytes_unavailable: attention, says the bytes were not checked — never verified, never alarm', () => {
+  const d = CONTENT_HASH_SIGNALS.content_bytes_unavailable;
+  assert.equal(d.tier, 'attention');
+  assert.equal(d.label, 'Content file not checked');
+  assert.match(detailOf(d), /not hashed/);
+});
+
+test('content-profile statuses: ADR-0029 §5 tiers, and no status is alarm', () => {
+  assert.equal(CONTENT_PROFILE_SIGNALS.ok.tier, 'verified');
+  assert.equal(CONTENT_PROFILE_SIGNALS.contentProfile_absent.tier, 'normal');
+  assert.equal(CONTENT_PROFILE_SIGNALS.contentProfile_unknown.tier, 'attention');
+  assert.equal(CONTENT_PROFILE_SIGNALS.contentProfile_inconsistent.tier, 'attention');
+  assert.match(detailOf(CONTENT_PROFILE_SIGNALS.contentProfile_inconsistent), /malformed/);
+  for (const d of Object.values(CONTENT_PROFILE_SIGNALS)) assert.notEqual(d.tier, 'alarm');
+});
+
+test('capture-method labels: script-run and tool-emitted each have a plain-language reading', () => {
+  assert.equal(
+    resolveCaptureMethodLabel('script-run'),
+    'Read into the package by a packaging program from files that already existed on disk.',
+  );
+  assert.equal(
+    resolveCaptureMethodLabel('tool-emitted'),
+    'Written into the package by the program that computed the content.',
+  );
+});
+
+test('set-aside bundle registry: same tier as registry_unavailable, and says the registry was not used', () => {
+  assert.equal(KEY_TRUST_BUNDLE_REGISTRY_NOT_USED.tier, KEY_TRUST_SIGNALS.registry_unavailable.tier);
+  assert.match(detailOf(KEY_TRUST_BUNDLE_REGISTRY_NOT_USED), /came with this bundle/);
+  assert.match(detailOf(KEY_TRUST_BUNDLE_REGISTRY_NOT_USED), /cannot raise/);
+  assert.doesNotMatch(detailOf(KEY_TRUST_BUNDLE_REGISTRY_NOT_USED), /could not be loaded/);
+});
+
+test('continuity: no signal anywhere says "same publisher" or "same person"', () => {
+  const texts: string[] = [];
+  const visit = (v: unknown): void => {
+    if (typeof v === 'string') texts.push(v);
+    else if (v && typeof v === 'object') for (const x of Object.values(v)) visit(x);
+  };
+  visit(signals);
+  assert.ok(texts.length > 50, 'the scan reached the signal maps');
+  for (const t of texts) assert.doesNotMatch(t, /same (publisher|person)/i, t);
 });

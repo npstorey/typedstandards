@@ -19,7 +19,7 @@
 // must itself carry CORS headers, or the fetch fails regardless of the request's
 // simplicity. Server-side/Node fetches follow redirects without that constraint.
 // Verification depth MATCHES verify-core / the civicaitools.org
-// server: full client-side crypto for #1–#6/#9/#12–#15; #7 (RFC 3161) is the TSA
+// server: full client-side crypto for #1–#6/#9/#12–#16; #7 (RFC 3161) is the TSA
 // signature + cert chain verified offline to the pinned FreeTSA root; #8 (Rekor) is
 // the RFC 6962 Merkle inclusion proof recomputed against a signed checkpoint when one
 // is carried (else online hash-parity); #10 (lifecycle) resolves from the carried
@@ -32,6 +32,7 @@ import {
   verifyKeyTrust,
   legacyEmbeddedKeyTrust,
   parseInclusionProof,
+  isKeyDerivedIdentifier,
   type VerifyInput,
   type VerifyResult,
   type VerifySignatureEnvelope,
@@ -40,6 +41,7 @@ import {
   type LifecycleResolution,
   type TrustRegistry,
   type KeyTrustStatus,
+  type TrustRegistryProvenance,
 } from '@typedstandards/verify-core';
 import {
   type TrustTier,
@@ -58,6 +60,8 @@ import {
   TYPE_RESOLUTION_SIGNALS,
   SIGNER_IDENTITY_SIGNALS,
   CAPTURE_METHOD_VOCAB_SIGNALS,
+  CONTENT_PROFILE_SIGNALS,
+  KEY_TRUST_BUNDLE_REGISTRY_NOT_USED,
   LIFECYCLE_STATE_SIGNALS,
   LIFECYCLE_SOURCE_SIGNALS,
 } from './trust-signal.ts';
@@ -207,6 +211,12 @@ export interface ResolvedInput {
     pkg: { kind: SourceKind; url?: string };
     registry: { kind: SourceKind; url?: string };
   };
+  /** Where `registry` came from, in verify-core's terms (hub ADR-0030 §4 rule 3):
+   *  `bundle` when it was read inline from the bundle, `declared-url` when it was
+   *  fetched from the view's `trustRegistryUrl` / `trustRegistryUrlLegacy`.
+   *  Absent when no registry was loaded — no provenance is claimed for nothing.
+   *  verify-core reads it only for a signer whose identifier is key-derived. */
+  registryProvenance?: TrustRegistryProvenance;
   /** True only when EVERYTHING was read from the bundle — i.e. a true offline
    *  verification, fetching nothing. */
   fullyOffline: boolean;
@@ -767,12 +777,23 @@ export async function resolveInput(
       registrySource = { kind: 'fetched' };
     }
   }
-  onStep?.({
-    key: 'registry',
-    label: registrySource.kind === 'inline' ? 'Read trust registry from bundle' : 'Fetched publisher trust registry',
-    kind: registrySource.kind,
-    ...(registrySource.url ? { url: registrySource.url } : {}),
-  });
+  const registryProvenance = registryProvenanceOf(registry, registrySource);
+  // A key-derived signer may declare no registry at all (hub ADR-0030 §6). Then
+  // nothing was fetched, and the step says so rather than claiming a publisher
+  // registry. Every other signer keeps today's step unchanged (see the report's
+  // flag on the no-URL case in general).
+  const noRegistryForKeyDerived =
+    registry === undefined && !registrySource.url && isKeyDerivedIdentifier(signerIdentifierOf(pkg));
+  onStep?.(
+    noRegistryForKeyDerived
+      ? { key: 'registry', label: 'No trust registry declared — none fetched', kind: 'fetched', state: 'skipped' }
+      : {
+          key: 'registry',
+          label: registrySource.kind === 'inline' ? 'Read trust registry from bundle' : 'Fetched publisher trust registry',
+          kind: registrySource.kind,
+          ...(registrySource.url ? { url: registrySource.url } : {}),
+        },
+  );
 
   // Host directory (Phase D recognition dimension). It is the verifier's curator
   // data, not the package's, so it is resolved separately from the publisher
@@ -816,8 +837,40 @@ export async function resolveInput(
       pkg: pkgSource,
       registry: registrySource,
     },
+    ...(registryProvenance ? { registryProvenance } : {}),
     fullyOffline,
   };
+}
+
+/**
+ * The registry's provenance for verify-core's `VerifyDeps.registryProvenance`
+ * (hub ADR-0030 §4 rule 3): read from the bundle → `bundle`; fetched from the
+ * view's declared URL → `declared-url`. `undefined` when no registry was loaded.
+ * A fetched source always carries the declared URL it was fetched from; a
+ * `fetched` source with no URL means nothing was fetched.
+ */
+export function registryProvenanceOf(
+  registry: TrustRegistry | undefined,
+  source: { kind: SourceKind; url?: string },
+): TrustRegistryProvenance | undefined {
+  if (registry === undefined) return undefined;
+  if (source.kind === 'inline') return 'bundle';
+  return source.url ? 'declared-url' : undefined;
+}
+
+/** The package's `signer.identifier`, when it is a string. */
+function signerIdentifierOf(pkg: Record<string, unknown> | null | undefined): string | undefined {
+  const signer = pkg?.['signer'];
+  if (!signer || typeof signer !== 'object') return undefined;
+  const id = (signer as { identifier?: unknown }).identifier;
+  return typeof id === 'string' ? id : undefined;
+}
+
+/** Whether the package's signer identifier is key-derived (hub ADR-0030 §3:
+ *  it begins `did:key:`). The site's ADR-0030 §10 display rules key on this,
+ *  never on `bindingTier`. */
+export function hasKeyDerivedSigner(pkg: Record<string, unknown> | null | undefined): boolean {
+  return isKeyDerivedIdentifier(signerIdentifierOf(pkg));
 }
 
 /** Map the resolved commitment + package to the verify-core input. The carried Rekor
@@ -876,15 +929,20 @@ export function resolveCarriedLifecycle(commitment: Commitment): LifecycleResolu
 }
 
 /** Run the §9.2 check suite in the browser. A browser-resolved lifecycle chain (from
- *  `resolveCarriedLifecycle`) is injected as the deeper #10 resolution when present. */
+ *  `resolveCarriedLifecycle`) is injected as the deeper #10 resolution when present.
+ *  `registryProvenance` (from `ResolvedInput.registryProvenance`) tells verify-core
+ *  where the registry came from; omitted, verify-core treats a registry as carried
+ *  in the bundle, which is the conservative reading. */
 export function runVerify(
   input: VerifyInput,
   registry: TrustRegistry | undefined,
   lifecycleResolution?: LifecycleResolution,
+  registryProvenance?: TrustRegistryProvenance,
 ): Promise<VerifyResult> {
   return verifyRecord(input, {
     registry,
     fetch: globalThis.fetch,
+    ...(registryProvenance ? { registryProvenance } : {}),
     ...(lifecycleResolution ? { lifecycleResolution } : {}),
   });
 }
@@ -1153,7 +1211,29 @@ export function buildCheckRows(
   // #5 — key trust (trust-registry lookup). The staleness note (#119 P4) makes the
   // offline-revocation limit legible: a snapshot can't reflect a key revoked after
   // its `generatedAt`; the recheck affordance closes that gap when connected.
-  if (result.keyTrust) {
+  // Under a key-derived signer identifier (hub ADR-0030 §10) the row states the
+  // registry's source beside the status, labels `kid` as the envelope's key label
+  // only, and says what happened when a bundle-carried registry was set aside.
+  // Every other signer renders exactly as before.
+  const keyDerived = hasKeyDerivedSigner(input.package);
+  if (result.keyTrust && keyDerived) {
+    const status = result.keyTrust.status;
+    const bundleRegistrySetAside =
+      status === 'registry_unavailable' && registryMeta?.kind === 'inline' && registryMeta.available;
+    rows.push(
+      row(
+        '5',
+        'Key trust',
+        bundleRegistrySetAside ? KEY_TRUST_BUNDLE_REGISTRY_NOT_USED : resolveKeyTrust(result.keyTrust),
+        [
+          { label: 'Envelope key label (kid)', value: result.kid ?? '—', mono: true },
+          { label: 'Key-trust status', value: status },
+          { label: 'Registry source', value: registrySourceOf(registryMeta) },
+        ],
+        keyTrustStalenessNote(status, registryMeta),
+      ),
+    );
+  } else if (result.keyTrust) {
     const stalenessNote = keyTrustStalenessNote(result.keyTrust.status, registryMeta);
     rows.push(
       row(
@@ -1255,6 +1335,7 @@ export function buildCheckRows(
     const si = result.signerIdentity;
     const math: MathLine[] = [];
     if (si.claimed) math.push({ label: 'Claimed signer', value: si.claimed, mono: true });
+    if (si.derived) math.push({ label: 'Derived from the signing key', value: si.derived, mono: true });
     if (si.registered) math.push({ label: 'Registry identity', value: si.registered, mono: true });
     rows.push(row('14', 'Signer identity', SIGNER_IDENTITY_SIGNALS[si.status], math.length ? math : [{ label: 'Status', value: si.status }]));
   }
@@ -1268,7 +1349,26 @@ export function buildCheckRows(
     rows.push(row('15', 'Capture method', CAPTURE_METHOD_VOCAB_SIGNALS[cm.status], math));
   }
 
+  // #16 — metadata.contentProfile (hub ADR-0029 §5).
+  if (result.contentProfile) {
+    const cp = result.contentProfile;
+    const math: MathLine[] = [
+      { label: 'contentProfile', value: cp.contentProfile ?? 'absent (read as default)', mono: !!cp.contentProfile },
+    ];
+    if (cp.producerProfile) math.push({ label: 'producerProfile', value: cp.producerProfile, mono: true });
+    rows.push(row('16', 'Content profile', CONTENT_PROFILE_SIGNALS[cp.status], math));
+  }
+
   return rows;
+}
+
+/** The registry's source, stated beside a key-derived signer's key-trust status
+ *  (hub ADR-0030 §10). */
+function registrySourceOf(meta: RegistryMeta | undefined): string {
+  if (!meta || !meta.available) return 'none supplied';
+  return meta.kind === 'inline'
+    ? 'carried in the bundle (can lower this signer’s key status, never raise it)'
+    : 'fetched from the registry URL the record declares';
 }
 
 // --- Verdict roll-up ------------------------------------------------------
@@ -1300,6 +1400,8 @@ export function rollupVerdict(result: VerifyResult): Verdict {
     result.contentHash?.status === 'content_hash_mismatch' ||
     result.blobRefsVerified === false ||
     result.signerIdentity?.status === 'signer_identity_mismatch' ||
+    // Hub ADR-0030 §3: the identifier does not name the key that signed — fatal.
+    result.signerIdentity?.status === 'key_derived_mismatch' ||
     result.keyTrust?.status === 'revoked' ||
     result.keyTrust?.status === 'deprecated_invalid';
 
@@ -1357,6 +1459,23 @@ export function rollupVerdict(result: VerifyResult): Verdict {
     result.signatureValid === true &&
     result.keyTrust?.status === 'active';
 
+  // Hub ADR-0030 §10: a self-certified signer never reads `verified` overall.
+  // `self_certified` is tier `normal` with `verified: false` — no registry vouched
+  // for the key — so a package that is intact and validly signed by one reads at
+  // most `normal`, and the headline says what was and was not established.
+  if (
+    integrity.status === 'verified' &&
+    result.signatureValid === true &&
+    result.keyTrust?.status === 'self_certified'
+  ) {
+    return {
+      tier: 'normal',
+      headline: 'Signature valid — self-certified signer',
+      detail:
+        'The bytes are intact and the signature verifies. The signer’s identifier is derived from the signing key, so this shows the same key signed this package — not who holds the key. No registry vouches for the key. This confirms integrity, not identity, and not whether the content is correct.',
+    };
+  }
+
   if (fullyGreen) {
     return {
       tier: 'verified',
@@ -1385,7 +1504,14 @@ export interface PagePreview {
    *  uses for `contentUnavailableReason`. */
   unavailableReason?: 'private' | 'unfetchable';
   type?: string;
+  /** The signer's `displayName`, shown in the signer byline. Set only when the
+   *  signer's identifier is NOT key-derived. */
   signerDisplayName?: string;
+  /** Under a key-derived signer identifier (hub ADR-0030 §10), `displayName` is
+   *  unverified text the signer wrote about itself. It is carried here instead of
+   *  `signerDisplayName`, so it never takes the byline position, and it is
+   *  rendered as self-description ("calls itself …"). */
+  signerSelfDescribedName?: string;
   captureMethod?: string;
   summary?: string;
   answer?: string;
@@ -1416,10 +1542,15 @@ export function buildPreview(
   }
   const signer = pkg['signer'] as { displayName?: string } | undefined;
   const metadata = pkg['metadata'] as { captureMethod?: string } | undefined;
+  const displayName = str(signer?.displayName);
   return {
     available: true,
     ...(str(pkg['type']) ? { type: pkg['type'] as string } : {}),
-    ...(str(signer?.displayName) ? { signerDisplayName: signer!.displayName } : {}),
+    ...(displayName
+      ? hasKeyDerivedSigner(pkg)
+        ? { signerSelfDescribedName: displayName }
+        : { signerDisplayName: displayName }
+      : {}),
     ...(str(metadata?.captureMethod) ? { captureMethod: metadata!.captureMethod } : {}),
     ...(str(pkg['summary']) ? { summary: pkg['summary'] as string } : {}),
     ...(str(pkg['output']) ? { answer: pkg['output'] as string } : {}),

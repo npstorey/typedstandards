@@ -32,6 +32,7 @@ import type {
   LifecycleSource,
   BlobRefVerifyReason,
   CaptureMethod,
+  ContentProfileStatus,
 } from '@typedstandards/verify-core';
 
 // --- Tiers ---------------------------------------------------------------
@@ -321,6 +322,22 @@ export const KEY_TRUST_SIGNALS: Record<KeyTrustStatus, TrustSignalDescriptor> = 
     detail:
       "The signer's identifier is derived from the signing key, so it proves that the same key signed everything under this identifier — not who holds the key. No registry vouches for it, and the key cannot be rotated or revoked.",
   },
+};
+
+/**
+ * #5 under a key-derived signer identifier (hub ADR-0030 §4 rule 3, as amended
+ * at G2): a registry carried in the bundle listed the key with a verdict that
+ * would raise the status, and verify-core set that verdict aside, returning
+ * `registry_unavailable`. That status's own sentence ("could not be loaded")
+ * under-describes this case, so the site renders this descriptor in its place
+ * when it knows both facts: the identifier is key-derived and the registry was
+ * read from the bundle. Same tier as `registry_unavailable`; no new status.
+ */
+export const KEY_TRUST_BUNDLE_REGISTRY_NOT_USED: TrustSignalDescriptor = {
+  tier: 'attention',
+  label: 'Key status not established — the bundle’s registry was not used',
+  detail:
+    'A trust registry came with this bundle and lists the signing key, but a registry carried in the bundle cannot raise the key status of a signer whose identifier is derived from its key. Only a registry fetched from the URL the record declares can. The key status was not established.',
 };
 
 /**
@@ -698,6 +715,38 @@ export const CAPTURE_METHOD_VOCAB_SIGNALS: Record<
     tier: 'normal',
     label: 'No capture method (earlier-format package)',
     detail: 'This package predates capture-method labeling.',
+  },
+};
+
+// --- #16 metadata.contentProfile (hub ADR-0029 §5) ------------------------
+//
+// Tiers exactly as ADR-0029 §5 sets them. No status is `alarm`: both labels are
+// inside the signed bytes, so an unknown value is an unrecognized identifier and
+// a contradiction is a producer error — neither is evidence of alteration.
+
+export const CONTENT_PROFILE_SIGNALS: Record<ContentProfileStatus, TrustSignalDescriptor> = {
+  ok: {
+    tier: 'verified',
+    label: 'Content profile recognized',
+    detail: 'The content profile is a known value and agrees with the producer profile.',
+  },
+  // Load-bearing: the signed eval-run packages carry no contentProfile key. Calm.
+  contentProfile_absent: {
+    tier: 'normal',
+    label: 'No content profile stated (read as default)',
+    detail: 'This package carries no content-profile label, which the standard reads as “default”.',
+  },
+  contentProfile_unknown: {
+    tier: 'attention',
+    label: 'Unrecognized content profile',
+    detail:
+      'This package names a content profile this verifier does not recognize. The label is signature-covered, so this is an unrecognized value, not an alteration. It is shown, not rejected.',
+  },
+  contentProfile_inconsistent: {
+    tier: 'attention',
+    label: 'Content profile contradicts the producer profile',
+    detail:
+      'The content-profile label and the producer profile disagree, so this package is malformed. Both labels are signature-covered, so this is a producer error, not evidence of alteration; the envelope and signature checks are unaffected.',
   },
 };
 

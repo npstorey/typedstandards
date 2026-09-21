@@ -118,7 +118,12 @@ export function Verifier({
       // Independently resolve #10 from the carried signed attestation chain (#119 P3);
       // undefined ⇒ verifyRecord resolves lifecycle at STATE depth.
       const lifecycleResolution = resolveCarriedLifecycle(resolvedInput.commitment);
-      const result = await runVerify(vinput, resolvedInput.registry, lifecycleResolution);
+      const result = await runVerify(
+        vinput,
+        resolvedInput.registry,
+        lifecycleResolution,
+        resolvedInput.registryProvenance,
+      );
       if (ac.signal.aborted) return;
       setResult(result);
 
