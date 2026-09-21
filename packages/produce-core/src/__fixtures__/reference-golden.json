@@ -869,6 +869,115 @@
         "contentHashSha256": "664b5725c3137fcee53d77ff45e56d38fc0ab62462d7fc1b2d62f0099293e142",
         "envelopeHash": "39d3e537569b946a4c1d298c24574046788fb7c86bf7d24c2b2cbd59054635ce"
       }
+    },
+    {
+      "name": "v01-self-certified-signer",
+      "sourceTests": [
+        "civic-ai-tools-website src/lib/evidence/packager.test.ts :: buildEvidencePackage: signer is emitted at top level when supplied",
+        "civic-ai-tools-website src/lib/evidence/packager.test.ts :: buildEvidencePackage: explicit producerProfile is preserved (not overridden by auto-derive)",
+        "civic-ai-tools-website src/lib/evidence/packager.test.ts :: buildEvidencePackage: type is emitted at top level when supplied"
+      ],
+      "capture": "Captured 2026-09-21 from the reference implementation (civic-ai-tools-website src/lib/evidence/packager.ts) at d39fdc17e8e237b5cac225e83cf7ca686b42b115, extracted read-only with git archive and run unmodified, with clock, RNG, and key-id env stubbed as in _meta except the key-id env: EVIDENCE_KEY_ID is the did:key below, so metadata.signingKeyId equals the signer identifier and the kid (hub ADR-0030 §5). Input: packager.test.ts baseInput() with the overrides of the v01-signer-producer-capture case, and the caller-supplied signer below, which the reference packager emits verbatim. Calibration: the same harness with the platform signer and adopter:test-key-1 reproduces v01-signer-producer-capture byte-identically. Cross-check: the content hash and envelope hash were recomputed independently (Python RFC 8785 JCS + SHA-256) and match.",
+      "signerKeySource": "RFC 8032 §7.1 TEST 1 public key d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a; its did:key is the value verify-core did-key.test.ts asserts (hub ADR-0030 §9).",
+      "input": {
+        "packageId": "11111111-2222-4333-8444-555555555555",
+        "createdAt": "2026-01-02T03:04:05.000Z",
+        "signingKeyId": "did:key:z6MktwupdmLXVVqTzCw4i46r4uGyosGXRnR3XjN4Zq7oMMsw",
+        "prompt": "How many 311 noise complaints last year?",
+        "promptVisibility": "full_text",
+        "queries": [
+          {
+            "tool": "get_data",
+            "operationType": "query",
+            "arguments": {
+              "type": "query",
+              "portal": "data.cityofnewyork.us",
+              "dataset_id": "erm2-nwe9",
+              "select": "count(*)"
+            },
+            "datasetId": "erm2-nwe9",
+            "portal": "data.cityofnewyork.us",
+            "resultRows": 1,
+            "resultColumns": 1
+          }
+        ],
+        "dataSources": [
+          {
+            "sourceId": "socrata",
+            "catalogType": "socrata",
+            "portalUrl": "https://data.cityofnewyork.us",
+            "datasetId": "erm2-nwe9",
+            "datasetUrl": "https://data.cityofnewyork.us/d/erm2-nwe9",
+            "accessTimestamp": "2026-01-02T03:04:05.000Z"
+          }
+        ],
+        "cost": {
+          "promptTokens": 100,
+          "completionTokens": 20,
+          "totalTokens": 120,
+          "model": "openai/gpt-4o"
+        },
+        "skillMetadata": {},
+        "output": "Around 400,000.",
+        "trace": {
+          "resourceSpans": []
+        },
+        "captureMethod": "claude-code-jsonl-readback",
+        "producerProfile": "ai-assisted-analysis/civicaitools-default",
+        "type": "content/analysis/v1",
+        "signer": {
+          "bindingTier": "pseudonymous",
+          "identifier": "did:key:z6MktwupdmLXVVqTzCw4i46r4uGyosGXRnR3XjN4Zq7oMMsw",
+          "displayName": "Example Self-Certifying Signer"
+        },
+        "contentCanonicalization": "https://typedstandards.org/canonicalization/legacy-json/v1",
+        "provenance": {
+          "@context": {
+            "prov": "http://www.w3.org/ns/prov#",
+            "xsd": "http://www.w3.org/2001/XMLSchema#",
+            "civic": "https://civicaitools.org/ns/evidence/",
+            "dcterms": "http://purl.org/dc/terms/"
+          },
+          "@graph": [
+            {
+              "@id": "urn:civic-evidence:11111111-2222-4333-8444-555555555555:prompt:3e7a528652636c5c2f9f9dab2eb23881f15dcdfae1fb446fba1389b15b9e43c0",
+              "@type": "prov:Entity",
+              "civic:contentHash": "sha256:3e7a528652636c5c2f9f9dab2eb23881f15dcdfae1fb446fba1389b15b9e43c0",
+              "dcterms:description": "User query prompt",
+              "prov:value": "How many 311 noise complaints last year?"
+            },
+            {
+              "@id": "urn:civic-evidence:11111111-2222-4333-8444-555555555555:output:97166bfed6ba462fd890e9f5cde53e4a359efad8a92286705f959c69e157f7d2",
+              "@type": "prov:Entity",
+              "civic:contentHash": "sha256:97166bfed6ba462fd890e9f5cde53e4a359efad8a92286705f959c69e157f7d2",
+              "dcterms:description": "AI-generated analysis output"
+            },
+            {
+              "@id": "urn:civic-evidence:model:openai-gpt-4o",
+              "@type": [
+                "prov:Agent",
+                "prov:SoftwareAgent"
+              ],
+              "dcterms:title": "openai/gpt-4o",
+              "dcterms:description": "Large language model via OpenRouter"
+            },
+            {
+              "@id": "urn:civic-evidence:platform:civic-ai-tools",
+              "@type": [
+                "prov:Agent",
+                "prov:SoftwareAgent"
+              ],
+              "dcterms:title": "Civic AI Tools",
+              "civic:url": "https://civicaitools.org"
+            }
+          ]
+        }
+      },
+      "expected": {
+        "serializedJson": "{\"metadata\":{\"schemaVersion\":\"0.1.0\",\"packageId\":\"11111111-2222-4333-8444-555555555555\",\"createdAt\":\"2026-01-02T03:04:05.000Z\",\"signingKeyId\":\"did:key:z6MktwupdmLXVVqTzCw4i46r4uGyosGXRnR3XjN4Zq7oMMsw\",\"captureMethod\":\"claude-code-jsonl-readback\"},\"producerProfile\":\"ai-assisted-analysis/civicaitools-default\",\"type\":\"content/analysis/v1\",\"signer\":{\"bindingTier\":\"pseudonymous\",\"identifier\":\"did:key:z6MktwupdmLXVVqTzCw4i46r4uGyosGXRnR3XjN4Zq7oMMsw\",\"displayName\":\"Example Self-Certifying Signer\"},\"contentCanonicalization\":\"https://typedstandards.org/canonicalization/legacy-json/v1\",\"prompt\":{\"hash\":\"3e7a528652636c5c2f9f9dab2eb23881f15dcdfae1fb446fba1389b15b9e43c0\",\"visibility\":\"full_text\",\"text\":\"How many 311 noise complaints last year?\"},\"queries\":[{\"tool\":\"get_data\",\"operationType\":\"query\",\"arguments\":{\"type\":\"query\",\"portal\":\"data.cityofnewyork.us\",\"dataset_id\":\"erm2-nwe9\",\"select\":\"count(*)\"},\"datasetId\":\"erm2-nwe9\",\"portal\":\"data.cityofnewyork.us\",\"resultRows\":1,\"resultColumns\":1}],\"dataSources\":[{\"sourceId\":\"socrata\",\"catalogType\":\"socrata\",\"portalUrl\":\"https://data.cityofnewyork.us\",\"datasetId\":\"erm2-nwe9\",\"datasetUrl\":\"https://data.cityofnewyork.us/d/erm2-nwe9\",\"accessTimestamp\":\"2026-01-02T03:04:05.000Z\"}],\"cost\":{\"promptTokens\":100,\"completionTokens\":20,\"totalTokens\":120,\"model\":\"openai/gpt-4o\"},\"skillMetadata\":{},\"output\":\"Around 400,000.\",\"trace\":{\"resourceSpans\":[]},\"provenance\":{\"@context\":{\"prov\":\"http://www.w3.org/ns/prov#\",\"xsd\":\"http://www.w3.org/2001/XMLSchema#\",\"civic\":\"https://civicaitools.org/ns/evidence/\",\"dcterms\":\"http://purl.org/dc/terms/\"},\"@graph\":[{\"@id\":\"urn:civic-evidence:11111111-2222-4333-8444-555555555555:prompt:3e7a528652636c5c2f9f9dab2eb23881f15dcdfae1fb446fba1389b15b9e43c0\",\"@type\":\"prov:Entity\",\"civic:contentHash\":\"sha256:3e7a528652636c5c2f9f9dab2eb23881f15dcdfae1fb446fba1389b15b9e43c0\",\"dcterms:description\":\"User query prompt\",\"prov:value\":\"How many 311 noise complaints last year?\"},{\"@id\":\"urn:civic-evidence:11111111-2222-4333-8444-555555555555:output:97166bfed6ba462fd890e9f5cde53e4a359efad8a92286705f959c69e157f7d2\",\"@type\":\"prov:Entity\",\"civic:contentHash\":\"sha256:97166bfed6ba462fd890e9f5cde53e4a359efad8a92286705f959c69e157f7d2\",\"dcterms:description\":\"AI-generated analysis output\"},{\"@id\":\"urn:civic-evidence:model:openai-gpt-4o\",\"@type\":[\"prov:Agent\",\"prov:SoftwareAgent\"],\"dcterms:title\":\"openai/gpt-4o\",\"dcterms:description\":\"Large language model via OpenRouter\"},{\"@id\":\"urn:civic-evidence:platform:civic-ai-tools\",\"@type\":[\"prov:Agent\",\"prov:SoftwareAgent\"],\"dcterms:title\":\"Civic AI Tools\",\"civic:url\":\"https://civicaitools.org\"}]},\"contentHash\":{\"sha256\":\"6b04b0d9732e57aa1624987f0bbe02d0f52628b38da11594eddca13eb4000151\"}}",
+        "contentHashSha256": "6b04b0d9732e57aa1624987f0bbe02d0f52628b38da11594eddca13eb4000151",
+        "envelopeHash": "935f9d899a9cabc8ec71e5f7d09b10be4080638f7fb9d09c1a56c58ec000bc39"
+      }
     }
   ],
   "attestationCases": [

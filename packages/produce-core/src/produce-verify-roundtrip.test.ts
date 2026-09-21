@@ -26,6 +26,7 @@ import {
   buildEnvelope,
   signEnvelopeHash,
   buildCommitmentView,
+  deriveKeyDerivedIdentifierFromKey,
   DEFAULT_CONTENT_TYPE,
   type EnvelopeInput,
 } from './index.ts';
@@ -297,4 +298,141 @@ test('unsigned tier (ADR-0020): not signing yields a complete package + envelope
   assert.equal(result.hasSigning, false);
   assert.equal(result.signatureValid, null);
   assert.equal(result.keyTrust, null);
+});
+
+// --- The self-certifying signer (hub ADR-0030; Wave N14 P5) ---
+//
+// A signer with no domain: its identifier is derived from its key with
+// produce-core's helper, the package carries kid = metadata.signingKeyId =
+// that identifier (ADR-0030 §5; spec §8.1.2), and the commitment view carries
+// no trustRegistryUrl. verify-core, given NO registry, reports key trust
+// `self_certified` and check #14 `key_derived_match`; every other check reads
+// exactly as it does for a signed package with a registry-bound signer
+// verified without a registry (the control below).
+
+/** RFC 8032 §7.1 TEST 1's published secret seed (test material only). */
+const RFC8032_T1_SEED = Uint8Array.from(
+  Buffer.from(
+    '9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60',
+    'hex',
+  ),
+);
+
+/** Build, sign and carry one package through the commitment view. With
+ *  `selfCertified`, the signer is the key-derived pseudonymous one and the
+ *  view has no trustRegistryUrl; otherwise the file's registry-bound SIGNER
+ *  and KID with the registry URL (the control). */
+function produceForNoRegistry(selfCertified: boolean) {
+  const did = deriveKeyDerivedIdentifierFromKey(RFC8032_T1_SEED);
+  const kid = selfCertified ? did : KID;
+  const signer = selfCertified
+    ? { bindingTier: 'pseudonymous', identifier: did, displayName: 'Example Self-Certifying Signer' }
+    : SIGNER;
+  const { pkg, envelopeHash } = buildEnvelope({ ...envelopeInput(), signingKeyId: kid, signer });
+  const signed = signEnvelopeHash(envelopeHash, RFC8032_T1_SEED, kid);
+  const sidecar = buildCommitmentView({
+    packageHash: envelopeHash,
+    packageUrl: 'https://packages.example.org/evidence/example.json',
+    visibility: 'public',
+    captureMethod: 'chat-flow-stream',
+    producerProfile: pkg.producerProfile,
+    type: pkg.type,
+    signer: pkg.signer,
+    contentHash: pkg.contentHash,
+    contentCanonicalization: pkg.contentCanonicalization,
+    signature: { ...signed } as unknown as Record<string, unknown>,
+    ...(selfCertified ? {} : { trustRegistryUrl: TRUST_REGISTRY_URL }),
+    subjectTitle: 'Example analysis',
+    subjectSummary: 'A short summary.',
+  });
+  return { did, pkg, envelopeHash, signed, sidecar };
+}
+
+async function verifyWithNoRegistry(p: ReturnType<typeof produceForNoRegistry>) {
+  return verifyEvidence(
+    {
+      package: storageRoundTrip(p.pkg),
+      packageHash: p.sidecar.packageHash as string,
+      signature: p.sidecar.signature as VerifySignatureEnvelope,
+    },
+    { registry: undefined, fetch: offlineFetch },
+  );
+}
+
+test('round-trip (self-certifying): helper identifier + no trustRegistryUrl + no registry → self_certified, key_derived_match', async () => {
+  const p = produceForNoRegistry(true);
+
+  // The producer side: one identifier everywhere, and no registry URL.
+  assert.ok(p.did.startsWith('did:key:z6Mk'));
+  assert.equal(p.pkg.signer?.identifier, p.did);
+  assert.equal(p.pkg.metadata.signingKeyId, p.did, 'metadata.signingKeyId = the identifier');
+  assert.equal(p.signed.kid, p.did, 'kid = the identifier');
+  assert.ok(!('trustRegistryUrl' in p.sidecar), 'the view omits trustRegistryUrl');
+
+  const result = await verifyWithNoRegistry(p);
+
+  // #5 key trust: self_certified, never verified.
+  assert.deepEqual(
+    result.keyTrust,
+    { status: 'self_certified', verified: false, kid: p.did },
+    '#5 keyTrust',
+  );
+  // #14: the derived match — never `ok`, nothing registered.
+  assert.deepEqual(
+    result.signerIdentity,
+    { status: 'key_derived_match', claimed: p.did, derived: p.did },
+    '#14 signerIdentity',
+  );
+  // #6: the envelope kid equals metadata.signingKeyId.
+  assert.equal(result.kid, p.pkg.metadata.signingKeyId, '#6 kid ↔ metadata.signingKeyId');
+
+  // Every check the self-certifying mechanism does not touch.
+  assert.deepEqual(result.envelopeIntegrity, { status: 'verified' }, '#1');
+  assert.equal(result.hashMatch, true, '#1 hashMatch');
+  assert.equal(result.recomputedHash, p.envelopeHash, '#1 recomputedHash');
+  assert.equal(result.nodeId, p.envelopeHash, '#13 nodeId');
+  assert.equal(result.hasSigning, true, '#2 hasSigning');
+  assert.equal(result.signatureValid, true, '#2 signatureValid');
+  assert.deepEqual(
+    result.contentCanonicalization,
+    { status: 'ok', rule: LEGACY_JSON_CANONICALIZATION },
+    '#3',
+  );
+  assert.equal(result.contentHash?.status, 'ok', '#4');
+  assert.deepEqual(result.typeResolution, { status: 'ok', type: DEFAULT_CONTENT_TYPE }, '#12');
+  assert.equal(result.captureMethodVocab?.status, 'ok', '#15');
+});
+
+test('round-trip (self-certifying): every other check reads as a signed package without a registry reads today', async () => {
+  const self = await verifyWithNoRegistry(produceForNoRegistry(true));
+  const control = await verifyWithNoRegistry(produceForNoRegistry(false));
+
+  // Today's no-registry reading of a registry-bound signer.
+  assert.deepEqual(control.keyTrust, { status: 'registry_unavailable', verified: false, kid: KID });
+  assert.deepEqual(control.signerIdentity, {
+    status: 'no_registry_identity',
+    claimed: SIGNER.identifier,
+  });
+
+  // The two packages differ only in signer, key id and hence hash; every
+  // result field other than those the mechanism owns (#5 keyTrust, #14
+  // signerIdentity) or that carry the per-package hash / kid is identical.
+  const strip = (r: Record<string, unknown>) => {
+    const {
+      keyTrust: _keyTrust,
+      signerIdentity: _signerIdentity,
+      recomputedHash: _recomputedHash,
+      nodeId: _nodeId,
+      kid: _kid,
+      contentHash,
+      ...rest
+    } = r;
+    // #4's reported digest is per package; its status, algorithms and match are compared.
+    const { contentHash: _digest, ...contentHashRest } = (contentHash ?? {}) as Record<string, unknown>;
+    return { ...rest, contentHash: contentHashRest };
+  };
+  assert.deepEqual(
+    strip(self as unknown as Record<string, unknown>),
+    strip(control as unknown as Record<string, unknown>),
+  );
 });
