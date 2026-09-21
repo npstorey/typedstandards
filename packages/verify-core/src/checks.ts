@@ -28,6 +28,8 @@ import {
 } from './blob-ref.ts';
 import type { CaptureMethod, FetchLike, SignerIdentity } from './types.ts';
 import type { TrustRegistry } from './trust-registry.ts';
+import { isKeyDerivedIdentifier } from './did-key.ts';
+import { compareKeyDerivedIdentifier } from './self-certifying.ts';
 
 /**
  * Recompute a package's envelope hash, routed by the §8.2 detection rule: v0.1
@@ -382,6 +384,8 @@ export const SIGNER_IDENTITY_CHECK_STATUSES = [
   'signer_identity_mismatch',
   'no_signer',
   'no_registry_identity',
+  'key_derived_match',
+  'key_derived_mismatch',
 ] as const;
 export type SignerIdentityCheckStatus =
   (typeof SIGNER_IDENTITY_CHECK_STATUSES)[number];
@@ -392,6 +396,10 @@ export interface SignerIdentityCheck {
   claimed?: string;
   /** The identifier the registry records for the signing `kid`, when present. */
   registered?: string;
+  /** The identifier derived from the envelope's `publicKey`, under a
+   *  key-derived `signer.identifier` (hub ADR-0030 §2). Absent on a
+   *  `key_derived_mismatch` whose key could not be decoded. */
+  derived?: string;
 }
 
 /**
@@ -401,11 +409,28 @@ export interface SignerIdentityCheck {
  * verifier derives the signer from the registry and skips the cross-check. A
  * registry entry without a `signerIdentity` (legacy registry) yields
  * `no_registry_identity`.
+ *
+ * A key-derived `signer.identifier` (one beginning `did:key:`, hub ADR-0030 §3)
+ * is checked against the envelope's `publicKey` instead, whatever the
+ * `bindingTier` and whatever the registry's source:
+ *   - the identifier derived from `publicKey` differs → `key_derived_mismatch`,
+ *     fatal, carrying `claimed` and `derived`;
+ *   - it matches, and a registry entry for the `kid` records a different
+ *     identifier → `signer_identity_mismatch`, fatal (a contradiction only
+ *     lowers, so any registry may report it);
+ *   - it matches otherwise → `key_derived_match`.
+ * `ok` ("matches the registry") is never reported under a key-derived
+ * identifier. Without `publicKey` the derivation cannot run; the registry
+ * cross-check runs as for any signer, except that its `ok` reads
+ * `no_registry_identity`, since nothing established the identifier.
  */
 export function checkSignerIdentity(
   pkg: Record<string, unknown>,
   kid: string | undefined,
   registry: TrustRegistry | undefined,
+  /** The signature envelope's base64 SPKI `publicKey`. Read only when the
+   *  signer's identifier is key-derived. */
+  publicKey?: string,
 ): SignerIdentityCheck {
   const signer = pkg['signer'] as SignerIdentity | undefined;
   if (!signer || typeof signer !== 'object' || typeof signer.identifier !== 'string') {
@@ -413,6 +438,30 @@ export function checkSignerIdentity(
   }
   const entry = kid && registry ? registry.keys.find((k) => k.kid === kid) : undefined;
   const registered = entry?.signerIdentity?.identifier;
+
+  if (isKeyDerivedIdentifier(signer.identifier)) {
+    const comparison = compareKeyDerivedIdentifier(signer, publicKey);
+    if (comparison && !comparison.match) {
+      return {
+        status: 'key_derived_mismatch',
+        claimed: comparison.claimed,
+        ...(comparison.derived !== undefined ? { derived: comparison.derived } : {}),
+      };
+    }
+    if (registered && registered !== signer.identifier) {
+      return { status: 'signer_identity_mismatch', claimed: signer.identifier, registered };
+    }
+    if (comparison) {
+      return {
+        status: 'key_derived_match',
+        claimed: signer.identifier,
+        derived: comparison.derived,
+        ...(registered ? { registered } : {}),
+      };
+    }
+    return { status: 'no_registry_identity', claimed: signer.identifier };
+  }
+
   if (!registered) {
     return { status: 'no_registry_identity', claimed: signer.identifier };
   }

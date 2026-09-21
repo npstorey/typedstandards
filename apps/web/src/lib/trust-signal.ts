@@ -313,6 +313,14 @@ export const KEY_TRUST_SIGNALS: Record<KeyTrustStatus, TrustSignalDescriptor> = 
     detail:
       'The signature uses an embedded public key that is not listed in the publisher’s trust registry, so it cannot vouch for it.',
   },
+  // Hub ADR-0030 §10: calm, never `verified` — the identifier proves the same
+  // key signed, not who holds it.
+  self_certified: {
+    tier: 'normal',
+    label: 'Signed with a self-certifying key',
+    detail:
+      "The signer's identifier is derived from the signing key, so it proves that the same key signed everything under this identifier — not who holds the key. No registry vouches for it, and the key cannot be rotated or revoked.",
+  },
 };
 
 /**
@@ -645,6 +653,21 @@ export const SIGNER_IDENTITY_SIGNALS: Record<SignerIdentityCheckStatus, TrustSig
     tier: 'normal',
     label: 'Registry has no identity for this key',
     detail: 'The registry entry for this key predates identity binding, so the cross-check is skipped.',
+  },
+  // Hub ADR-0030 §10: a derived match has its own row; `ok` ("matches the
+  // registry") is never reported under a key-derived identifier.
+  key_derived_match: {
+    tier: 'normal',
+    label: 'Signer identifier matches the signing key',
+    detail:
+      'The identifier is derived from the key that signed this package. This shows the same key signed anything else under this identifier, and nothing about who holds it.',
+  },
+  // Hub ADR-0030 §3: fatal.
+  key_derived_mismatch: {
+    tier: 'alarm',
+    label: 'Signer identifier does not match the signing key',
+    detail:
+      'The stated signer’s identifier is not the one derived from the key that signed this package — do not trust.',
   },
 };
 

@@ -43,7 +43,13 @@ import {
   legacyEmbeddedKeyTrust,
   type KeyTrustResult,
   type TrustRegistry,
+  type TrustRegistryProvenance,
 } from './trust-registry.ts';
+import {
+  applyKeyDerivedRegistryRule,
+  applySelfCertifiedKeyTrust,
+  compareKeyDerivedIdentifier,
+} from './self-certifying.ts';
 import {
   resolveContentCanonicalization,
   verifyContentHashWithFetch,
@@ -164,6 +170,11 @@ export interface VerifyDeps {
   /** Parsed trust registry (server: loaded; browser: fetched from the sidecar's
    *  `trustRegistryUrl`). */
   registry: TrustRegistry | undefined;
+  /** Where `registry` came from (hub ADR-0030 §4 rule 3): `declared-url` when
+   *  it was fetched from the view's declared `trustRegistryUrl`, `bundle` when
+   *  it was carried in the bundle. Read only for a signer whose identifier is
+   *  key-derived; absent is treated as `bundle`. */
+  registryProvenance?: TrustRegistryProvenance;
   /** Injected fetcher for #8 / #9, and for #4 under raw-bytes/v1 when `output`
    *  is a BlobRef. Defaults to `globalThis.fetch`. */
   fetch?: FetchLike;
@@ -333,6 +344,28 @@ export async function verifyRecord(
     keyTrust = legacyEmbeddedKeyTrust();
   }
 
+  // Step 4b — the self-certifying signer (hub ADR-0030 §3-§4, rule 3 as
+  // amended at G2; spec v0.1.9 §9.4). Runs only when the package is present,
+  // its `signer.identifier` is key-derived, and the envelope carries a
+  // `publicKey`. For a key-derived identifier, match or mismatch, only a
+  // registry fetched from the declared URL can raise the status; a
+  // bundle-carried or provenance-less one contributes only lowering verdicts.
+  // On a match, rules 2-3 then decide the status (`self_certified` at
+  // `pseudonymous`); on a mismatch (fatal at check #14) the lowering-only rule
+  // applies to the registry-path verdict. A signer whose identifier is not
+  // key-derived is untouched.
+  const pkgSigner = pkg ? pkg['signer'] : undefined;
+  const keyDerived = compareKeyDerivedIdentifier(pkgSigner, sigPublicKey);
+  if (keyTrust && keyDerived) {
+    keyTrust = keyDerived.match
+      ? applySelfCertifiedKeyTrust(
+          keyTrust,
+          (pkgSigner as { bindingTier?: unknown }).bindingTier,
+          deps.registryProvenance,
+        )
+      : applyKeyDerivedRegistryRule(keyTrust, deps.registryProvenance);
+  }
+
   // Step 5 — canonicalization, content-hash, and envelope checks
   // (#3/#4/#12/#14/#15/#16). #4 fetches only for a raw-bytes/v1 BlobRef output.
   let contentCanonicalization: ContentCanonicalizationResolution | null = null;
@@ -350,7 +383,7 @@ export async function verifyRecord(
       { fetch: deps.fetch },
     );
     typeResolution = resolvePackageType(pkg);
-    signerIdentity = checkSignerIdentity(pkg, sigKid, deps.registry);
+    signerIdentity = checkSignerIdentity(pkg, sigKid, deps.registry, sigPublicKey);
     captureMethodVocab = checkCaptureMethodVocab(pkg);
     contentProfile = checkContentProfile(pkg);
   }

@@ -1,0 +1,18 @@
+{
+  "$comment": "Key registry for the record packages in https://github.com/npstorey/typedstandards-eval-run-example. A verifier matches a signature's (kid, publicKey) pair against this list. The signing seed is held outside the repository.",
+  "keys": [
+    {
+      "kid": "eval-run-example:ed25519-2026-09",
+      "publicKey": "MCowBQYDK2VwAyEA0af1lmbg+p+OQDcQUje+9f6CE1Wq5hFbPfDNBvsdOaw=",
+      "status": "active",
+      "activatedAt": "2026-09-13T22:07:00Z",
+      "deprecatedAt": null,
+      "revokedAt": null,
+      "signerIdentity": {
+        "bindingTier": "pseudonymous",
+        "identifier": "https://github.com/npstorey",
+        "displayName": "Nathan Storey"
+      }
+    }
+  ]
+}

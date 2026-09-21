@@ -21,6 +21,11 @@ export * from './attestation.ts';
 export * from './blob-ref.ts';
 export * from './signature.ts';
 export * from './trust-registry.ts';
+export {
+  deriveKeyDerivedIdentifier,
+  isKeyDerivedIdentifier,
+  KEY_DERIVED_IDENTIFIER_PREFIX,
+} from './did-key.ts';
 export * from './checks.ts';
 export * from './lifecycle.ts';
 export * from './rekor.ts';
