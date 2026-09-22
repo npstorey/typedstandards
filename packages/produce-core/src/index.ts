@@ -29,6 +29,8 @@ export * from './provenance.ts';
 // 0.2.0 (`sha256Hex`, `isBlobRef`, the canonicalization-rule URIs, the Q32
 // captureMethod vocabulary table) were flagged in civic-ai-tools#116 P1:
 // the S2 harness imported them from verify-core transitively, undeclared.
+// `RAW_BYTES_CANONICALIZATION`, the third rule URI (verify-core 0.10.0), joined
+// them under typedstandards#91.
 export type {
   BlobRef,
   CaptureMethod,
@@ -38,6 +40,7 @@ export type {
 export {
   DATHERE_AG_JUPYTER_CANONICALIZATION,
   LEGACY_JSON_CANONICALIZATION,
+  RAW_BYTES_CANONICALIZATION,
   PROFILE_CAPTURE_VOCAB,
   computeContentHashSha256,
   computeEnvelopeHash,

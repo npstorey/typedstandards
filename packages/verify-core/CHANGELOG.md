@@ -6,6 +6,38 @@ references are to `npstorey/civic-ai-tools-website` (#119 is the offline-crypto
 hardening arc; #116 is the standalone-verifier arc this package was extracted
 in).
 
+## Unreleased
+
+Not yet released; no version is assigned. **A minor-bump item** — new exports, and `VerifyResult`
+gains a field, so a consumer that builds a `VerifyResult` literal (a test double, say) needs it.
+
+- **Check #6, `metadata.signingKeyId` consistency (`checkSigningKeyIdConsistency`,
+  `SIGNING_KEY_ID_CONSISTENCY_STATUSES`; typedstandards#88).** Specification §9.2 check #6 was
+  implemented nowhere. It compares the signature envelope's `kid` with the package's
+  `metadata.signingKeyId` and reports one of:
+  - `ok` — both present and equal;
+  - `signingKeyId_mismatch` — both present and different; the one failing status (§8.3.1: the field
+    MUST equal the envelope `kid`). The result carries `kid` and `signingKeyId`;
+  - `kid_absent` — the envelope carries no `kid`; legitimate under a key-derived identifier, and on
+    legacy packages, which carry neither field;
+  - `signingKeyId_absent` — a `kid` that the signed bytes do not name, so the check cannot confirm
+    it.
+
+  `signer.identifier` is not compared: under a key-derived identifier the `kid` SHOULD be the
+  identifier, which is not a condition of this check. `VerifyResult` gains `signingKeyIdConsistency`,
+  null when there is no package, no signature envelope, or a malformed one. The captured and
+  published packages measured for this change (the three captured commitment bundles, the
+  self-certified interop fixture, the two ADR-0028 eval-run packages, and two published example
+  bundles under a key-derived identifier) read `ok`, except the legacy capture, which carries neither
+  field and reads `kid_absent`.
+- **Check #12 registers `attestation/revises/v1` (typedstandards#96).** The ratified set is sixteen
+  attestation sub-types plus `content/analysis/v1`; a node of that type read `unknown_type` and now
+  reads `ok`.
+- **One fetch per BlobRef URL per `verifyRecord` (typedstandards#90).** Under `raw-bytes/v1` with a
+  BlobRef `output`, checks #9 and #4 each fetched the file. They now share one request per URL within a
+  `verifyRecord` call, and report exactly what they reported before, including when the fetch fails and
+  when the bytes do not match. No public signature changes, and no request is added.
+
 ## 0.10.0 — 2026-09-22
 
 Specification v0.1.9 (hub ADR-0029 and ADR-0030, anchored at `typedstandards#77`): a Producer Profile

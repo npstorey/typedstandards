@@ -126,3 +126,20 @@ test('no export labels signing status or embeds a default identity', async () =>
     );
   }
 });
+
+// typedstandards#91: produce-core re-exports all three of verify-core's
+// content-canonicalization rule URIs, so a producer using raw-bytes/v1 needs
+// no direct verify-core import. Read through a dynamic import, so this file
+// loads on a produce-core that lacks the export and the assertion fails.
+test('RAW_BYTES_CANONICALIZATION is re-exported with verify-core\'s value', async () => {
+  const api = (await import('./index.ts')) as Record<string, unknown>;
+  const verifyCore = (await import('@typedstandards/verify-core')) as Record<string, unknown>;
+  assert.equal(
+    verifyCore['RAW_BYTES_CANONICALIZATION'],
+    'https://typedstandards.org/canonicalization/raw-bytes/v1',
+  );
+  assert.equal(api['RAW_BYTES_CANONICALIZATION'], verifyCore['RAW_BYTES_CANONICALIZATION']);
+  for (const name of ['LEGACY_JSON_CANONICALIZATION', 'DATHERE_AG_JUPYTER_CANONICALIZATION']) {
+    assert.equal(api[name], verifyCore[name], name);
+  }
+});
