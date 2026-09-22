@@ -3,6 +3,15 @@
 Factual record of what changed per published version. Check numbers (#1–#16)
 refer to the Typed Standards specification §9.2 verification sequence.
 
+## Unreleased
+
+Not yet released; no version is assigned. **A minor-bump item** — a new export.
+
+- **`RAW_BYTES_CANONICALIZATION` is re-exported from verify-core (typedstandards#91)**, beside
+  `LEGACY_JSON_CANONICALIZATION` and `DATHERE_AG_JUPYTER_CANONICALIZATION`, with verify-core's value.
+  A producer using `raw-bytes/v1` no longer imports the rule URI from verify-core directly. It needs
+  no change to the verify-core range: the constant has been in verify-core since 0.10.0.
+
 ## 0.5.0 — 2026-09-22
 
 Specification v0.1.9 (hub ADR-0030, anchored at `typedstandards#77`): producing for a self-certifying
