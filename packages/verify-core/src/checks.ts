@@ -336,7 +336,9 @@ export function checkContentProfile(pkg: Record<string, unknown>): ContentProfil
 // today, but the full ratified set is registered so conformant packages don't
 // render as `unknown_type`. The sixteen attestation sub-types are in the order
 // of the §8.12.1 table; `type-resolution.test.ts` holds that table's copy.
-const KNOWN_TYPE_URIS: readonly string[] = [
+// Exported and frozen so a check outside this package can compare the registered
+// set with the specification's list without being able to change it.
+export const KNOWN_TYPE_URIS: readonly string[] = Object.freeze([
   'content/analysis/v1',
   'attestation/withdraws/v1',
   'attestation/reinstates/v1',
@@ -354,7 +356,7 @@ const KNOWN_TYPE_URIS: readonly string[] = [
   'attestation/certifies/v1',
   'attestation/evaluates/v1',
   'attestation/conforms/v1',
-];
+]);
 
 export const TYPE_RESOLUTION_STATUSES = ['ok', 'implicit', 'unknown_type'] as const;
 export type TypeResolutionStatus = (typeof TYPE_RESOLUTION_STATUSES)[number];
