@@ -11,7 +11,9 @@
 //   4. the signing cert carries EKU id-kp-timeStamping and its validity covers
 //      genTime;
 //   5. the TSA's ECDSA-P384 signature over SHA-512(signedAttrs) verifies under THAT
-//      chain-validated leaf key.
+//      leaf's key. The signature is evaluated whether or not step 3 reaches a pinned
+//      root (typedstandards#94), so a token that does not verify reads differently
+//      from one whose only fault is its chain; `verified` still requires all five.
 //
 // Crypto: the leaf TSA signature is `@noble` ECDSA-P384 (the cert key); the cert
 // chain is RSASSA-PKCS1-v1.5/SHA-512 via WebCrypto (`globalThis.crypto.subtle`, a
@@ -99,11 +101,24 @@ export interface Rfc3161VerifyResult {
   ekuTimestamping: boolean | null;
   /** genTime within the signing cert's validity window. */
   withinValidity: boolean | null;
-  /** The TSA ECDSA-P384 signature verifies under the chain-validated leaf key. */
+  /**
+   * The TSA ECDSA-P384 signature verifies under the embedded signing cert's key.
+   * Evaluated whenever the token parses, uses the checked algorithms, binds this
+   * package and carries a timestamping signing cert — whether or not that cert chains
+   * to a pinned root (`chainVerified`), which is what makes the key trusted. `null`
+   * only when an earlier step returned first.
+   */
   signatureValid: boolean | null;
   genTime?: number;
   /** The matched root anchor name. */
   tsa?: string;
+  /**
+   * The first failing step. After the signing-cert step the token's own faults come
+   * first: `genTime_outside_validity`, then `signature_invalid`, then the chain's
+   * reason. So `untrusted_root`, `chain_incomplete` and `chain_signature_invalid` are
+   * reported only for a token whose TSA signature verifies and whose genTime is within
+   * the signing cert's validity.
+   */
   reason?: Rfc3161FailReason;
 }
 
@@ -248,8 +263,10 @@ function fail(base: Rfc3161VerifyResult, reason: Rfc3161FailReason): Rfc3161Veri
  * Verify an RFC 3161 token (base64) attests `expectedHashHex` (the package SHA-256),
  * chaining the token's embedded signing cert to a pinned TSA root. Async (the cert
  * chain uses WebCrypto RSA). A parse failure / untrusted chain is reported, not
- * thrown; `imprint_mismatch` / `content_not_bound` / `chain_signature_invalid` /
- * `signature_invalid` are the alarm signals.
+ * thrown. The TSA signature is evaluated even when the chain does not reach a pinned
+ * root, and a fault of the token itself (`genTime_outside_validity`,
+ * `signature_invalid`) is reported ahead of a chain fault; `parse_error` and
+ * `unexpected_algorithm` still return before any signature is evaluated.
  */
 export async function verifyRfc3161Timestamp(
   tokenB64: string,
@@ -312,12 +329,12 @@ export async function verifyRfc3161Timestamp(
 
   const chain = await validateChainToRoot(token.certs, leaf, anchors, tst.genTime);
   base.chainVerified = chain.ok;
-  if (!chain.ok) return fail(base, chain.reason ?? 'untrusted_root');
-  base.tsa = chain.tsa;
-  if (!base.withinValidity) return fail(base, 'genTime_outside_validity');
+  if (chain.ok) base.tsa = chain.tsa;
 
   // The TSA signature: ECDSA-P384 over SHA-512(signedAttrs re-tagged [0]→SET),
-  // under the chain-validated leaf key. lowS:false — a TSA emits high-S (#119 fix).
+  // under the leaf's key. lowS:false — a TSA emits high-S (#119 fix). Evaluated
+  // whatever the chain read (#94): the key is trusted only if `chain.ok`, but a
+  // signature that does not verify under it is a fault of the token itself.
   const signedBytes = Uint8Array.from(rawTlv(buf, token.signedAttrs));
   signedBytes[0] = 0x31;
   try {
@@ -330,7 +347,12 @@ export async function verifyRfc3161Timestamp(
   } catch {
     base.signatureValid = false;
   }
+
+  // The token's own faults first, then the chain's: a chain reason is reported only
+  // for a token whose signature verifies and whose genTime is within validity.
+  if (!base.withinValidity) return fail(base, 'genTime_outside_validity');
   if (!base.signatureValid) return fail(base, 'signature_invalid');
+  if (!chain.ok) return fail(base, chain.reason ?? 'untrusted_root');
 
   return { ...base, verified: true };
 }
