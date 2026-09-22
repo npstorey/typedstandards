@@ -76,19 +76,25 @@ export const FREETSA_ROOT_ANCHORS: readonly TsaRootAnchor[] = [
   },
 ];
 
-export type Rfc3161FailReason =
-  | 'parse_error'
-  | 'unexpected_algorithm'
-  | 'no_message_digest'
-  | 'content_not_bound'
-  | 'imprint_mismatch'
-  | 'no_signing_cert'
-  | 'eku_not_timestamping'
-  | 'genTime_outside_validity'
-  | 'chain_incomplete'
-  | 'chain_signature_invalid'
-  | 'untrusted_root'
-  | 'signature_invalid';
+// Source-of-truth array (not just a type), as BLOB_REF_VERIFY_REASONS in blob-ref.ts,
+// so a consumer can enumerate every reason `verifyRfc3161Timestamp` can return at
+// runtime and fail when a new one arrives unclassified. Frozen: reading it cannot
+// change it.
+export const RFC3161_FAIL_REASONS = Object.freeze([
+  'parse_error',
+  'unexpected_algorithm',
+  'no_message_digest',
+  'content_not_bound',
+  'imprint_mismatch',
+  'no_signing_cert',
+  'eku_not_timestamping',
+  'genTime_outside_validity',
+  'chain_incomplete',
+  'chain_signature_invalid',
+  'untrusted_root',
+  'signature_invalid',
+] as const);
+export type Rfc3161FailReason = (typeof RFC3161_FAIL_REASONS)[number];
 
 export interface Rfc3161VerifyResult {
   /** All checks passed: a chain-trusted TSA signed this package hash at genTime. */
