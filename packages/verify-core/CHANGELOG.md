@@ -6,10 +6,14 @@ references are to `npstorey/civic-ai-tools-website` (#119 is the offline-crypto
 hardening arc; #116 is the standalone-verifier arc this package was extracted
 in).
 
-## Unreleased
+## 0.11.0 — 2026-09-22
 
-Not yet released; no version is assigned. **A minor-bump item** — new exports, and `VerifyResult`
-gains a field, so a consumer that builds a `VerifyResult` literal (a test double, say) needs it.
+The verifier follow-ons (anchored at `typedstandards#98`): specification check #6, the ratified
+`attestation/revises/v1` (specification v0.1.10), one fetch per referenced file, and a timestamp result
+that tells a token that does not verify from one whose only fault is its chain. **A minor bump** — new
+exports, `VerifyResult` gains a field, and `Rfc3161FailReason` gains a member, so a consumer that
+builds a `VerifyResult` literal (a test double, say), or has an exhaustive `switch` or `Record` over
+the reasons, needs the new cases.
 
 - **Check #6, `metadata.signingKeyId` consistency (`checkSigningKeyIdConsistency`,
   `SIGNING_KEY_ID_CONSISTENCY_STATUSES`; typedstandards#88).** Specification §9.2 check #6 was
