@@ -1,7 +1,32 @@
 # Changelog — @typedstandards/produce-core
 
-Factual record of what changed per published version. Check numbers (#1–#15)
+Factual record of what changed per published version. Check numbers (#1–#16)
 refer to the Typed Standards specification §9.2 verification sequence.
+
+## 0.5.0 — 2026-09-22
+
+Specification v0.1.9 (hub ADR-0030, anchored at `typedstandards#77`): producing for a self-certifying
+signer. **A minor bump** — a new export and one relaxed input rule; no envelope hash moves.
+
+- **`deriveKeyDerivedIdentifierFromKey(key)`** returns the `did:key:z…` identifier for a caller-supplied
+  Ed25519 key. It runs `derivePublicKeySpki` and then verify-core's `deriveKeyDerivedIdentifier`, so the
+  producer and the verifier compute one value from one implementation. ADR-0030 §5 says the envelope
+  `kid` and `metadata.signingKeyId` SHOULD be that string.
+- **`buildCommitmentView` accepts an absent `trustRegistryUrl` in exactly one case:** the signer's
+  identifier is key-derived and its `bindingTier` is `pseudonymous`.
+  - In that case the builder derives the identifier from `signature.publicKey` and throws when it
+    differs from `signer.identifier`, or when the key is missing or is not an Ed25519 SPKI.
+  - The view omits the `trustRegistryUrl` key; it does not emit it as `null`.
+  - Every other case keeps the ADR-0024 throw with its message unchanged.
+  - `trustRegistryUrl` is optional in `CommitmentViewInput`.
+- **Re-exported from verify-core 0.10.0:**
+  - `CaptureMethod` gains `'script-run' | 'tool-emitted'`;
+  - `PROFILE_CAPTURE_VOCAB` gains the `scripted-recomputation` entry;
+  - `computeContentHashSha256` accepts the `raw-bytes/v1` rule.
+- **Byte-golden suite.** It gains `v01-self-certified-signer`, captured from the reference packager at
+  `civic-ai-tools-website` `d39fdc17`, with a caller-supplied pseudonymous `did:key` signer, and
+  cross-checked by an independent RFC 8785 JCS computation. The existing cases pass unmodified.
+- **Dependency.** `@typedstandards/verify-core` `^0.10.0`, which this version's new code requires.
 
 ## 0.4.0 — 2026-09-02
 
