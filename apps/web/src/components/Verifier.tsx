@@ -14,6 +14,7 @@ import {
   deriveShareTarget,
   registryMetaOf,
   canRecheckKeyTrust,
+  bundleRegistrySetAside,
   recheckKeyTrustLive,
   VerifyFlowError,
   DEFAULT_HOST,
@@ -341,6 +342,7 @@ export function Verifier({
                     onRecheck={onRecheck}
                     registryHost={hostOf(registryMetaOf(resolved).url)}
                     bundleStatus={result.keyTrust?.status}
+                    setAside={bundleRegistrySetAside(registryMetaOf(resolved), result)}
                   />
                 )}
 
@@ -486,6 +488,7 @@ function KeyTrustRecheckPanel({
   onRecheck,
   registryHost,
   bundleStatus,
+  setAside,
 }: {
   state: { phase: "idle" | "loading" | "done" | "error"; data?: KeyTrustRecheck; error?: string };
   onRecheck: () => void;
@@ -493,17 +496,29 @@ function KeyTrustRecheckPanel({
   registryHost: string;
   /** The key-trust status the registry carried in the bundle gave. */
   bundleStatus?: string;
+  /** verify-core set the bundle's registry aside for a key-derived signer (#97), so
+   *  the bundle established no key status. */
+  setAside: boolean;
 }) {
   // The rows, headline and recognition carry the re-checked reading, so the panel
   // reports what the live registry said and gives no verdict of its own (#93 item 3).
   return (
     <div className="rounded-lg border border-border bg-surface p-3 text-xs leading-relaxed">
-      {state.phase !== "done" && (
+      {state.phase !== "done" && !setAside && (
         <p className="text-muted">
           <strong className="text-foreground">Key trust used the registry carried in this bundle.</strong>{" "}
           It was not checked against the publisher&apos;s domain, and a key revoked after the
           snapshot&apos;s date can&apos;t be seen offline. Re-check against the live registry at{" "}
           <span className="font-mono">{registryHost}</span> to close both gaps.
+        </p>
+      )}
+      {state.phase !== "done" && setAside && (
+        <p className="text-muted">
+          <strong className="text-foreground">The registry carried in this bundle was not used.</strong>{" "}
+          A registry that comes with the bundle cannot establish the key status of a signer whose
+          identifier is derived from its key, so no key status was established. Re-check against the
+          live registry the record declares, at <span className="font-mono">{registryHost}</span>, to
+          establish it.
         </p>
       )}
       {state.phase === "idle" && (
@@ -531,7 +546,9 @@ function KeyTrustRecheckPanel({
           at <span className="font-mono">{registryHost}</span>
           {state.data.generatedAt ? ` (as of ${asOfDate(state.data.generatedAt)})` : ""}: key trust is{" "}
           <strong>{state.data.status}</strong>
-          {state.data.changed ? (
+          {setAside ? (
+            <>; the registry carried in the bundle was not used</>
+          ) : state.data.changed ? (
             <>
               ; the registry carried in the bundle said <strong>{bundleStatus ?? "—"}</strong>
             </>

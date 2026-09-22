@@ -1269,18 +1269,46 @@ export function registryMetaOf(resolved: ResolvedInput): RegistryMeta {
   };
 }
 
-/** The online recheck is offered only when an inline SNAPSHOT backed a
- *  registry-dependent verdict AND a live `https:` URL is known — i.e. exactly when
- *  the snapshot could be stale or not the publisher's, and that is closeable. The
- *  URL must be `https:` for every signer: only a registry fetched from an `https:`
- *  URL is the declared registry (hub ADR-0030 §4 rule 3; #78). */
+/** The online recheck is offered only when a registry carried in the bundle decided
+ *  the key status AND a live `https:` URL is known — i.e. exactly when that reading
+ *  could be stale or not the publisher's, and that is closeable. That is either an
+ *  inline SNAPSHOT that backed a registry-dependent verdict, or one verify-core set
+ *  aside for a key-derived signer (#97; see `bundleRegistrySetAside`), whose key
+ *  status only the declared registry can establish. The URL must be `https:` for
+ *  every signer: only a registry fetched from an `https:` URL is the declared
+ *  registry (hub ADR-0030 §4 rule 3; #78). */
 export function canRecheckKeyTrust(meta: RegistryMeta, result: VerifyResult): boolean {
   return (
     meta.kind === 'inline' &&
     isHttpsUrl(meta.url) &&
     !!result.keyTrust &&
-    REGISTRY_BACKED_STATUSES.has(result.keyTrust.status)
+    (REGISTRY_BACKED_STATUSES.has(result.keyTrust.status) || bundleRegistrySetAside(meta, result))
   );
+}
+
+/**
+ * Whether verify-core set aside the registry carried in the bundle (#97): the signer's
+ * identifier is derived from its key and matches it (#14 `key_derived_match`), a valid
+ * registry came with the bundle, and #5 reads `registry_unavailable` — a bundle
+ * registry cannot raise such a signer's key status (hub ADR-0030 §4 rule 3), so no
+ * status was established. Read from the result, so the offer needs nothing else. A
+ * key-derived identifier that does not match its key fails the package at #14, and
+ * no re-check is offered for it.
+ */
+export function bundleRegistrySetAside(meta: RegistryMeta, result: VerifyResult): boolean {
+  return (
+    result.signerIdentity?.status === 'key_derived_match' &&
+    result.keyTrust?.status === 'registry_unavailable' &&
+    meta.kind === 'inline' &&
+    meta.available
+  );
+}
+
+/** The #5 invitation under a set-aside bundle registry when the re-check is offered
+ *  (#97), or `undefined`. */
+function setAsideRecheckNote(meta: RegistryMeta | undefined, result: VerifyResult): string | undefined {
+  if (!meta || !bundleRegistrySetAside(meta, result) || !canRecheckKeyTrust(meta, result)) return undefined;
+  return `Only the registry the record declares can establish it. Re-check against the live registry at ${hostOf(meta.url!)} to do so.`;
 }
 
 /** A check's number, name and trust signal. */
@@ -1479,7 +1507,7 @@ export function buildCheckRows(
           { label: 'Key-trust status', value: status },
           { label: 'Registry source', value: registrySourceOf(registryMeta) },
         ],
-        keyTrustStalenessNote(status, registryMeta),
+        keyTrustStalenessNote(status, registryMeta) ?? setAsideRecheckNote(registryMeta, result),
       ),
     );
   } else if (result.keyTrust) {
