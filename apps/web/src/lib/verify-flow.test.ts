@@ -32,6 +32,9 @@ import {
   buildCheckRows,
   registryMetaOf,
   registryProvenanceOf,
+  recheckKeyTrustLive,
+  canRecheckKeyTrust,
+  HOST_DIRECTORY,
   type CheckRow,
   type ResolveStep,
   buildVerifyInput,
@@ -1518,4 +1521,166 @@ test('#15 capture-method labels: script-run and tool-emitted render their plain-
     const r = rowOf(rows, '15');
     assert.equal(r.math.find((x) => x.label === 'How it was captured')?.value, CAPTURE_METHOD_LABELS[method]);
   }
+});
+
+// --- Registry provenance for a key-derived signer (Wave N14 P9) ---------------
+//
+// A trust registry counts as declared only when fetched from an https: URL. A
+// bundle registry that is not valid is described as such.
+// Every signer whose identifier is not key-derived keeps today's behaviour.
+
+const LISTED_REGISTRY_URL = `${HOST_DIRECTORY.publishers[0].registryOrigin}/.well-known/typed-publisher.json`;
+const HTTP_REGISTRY_URL = 'http://registry-host.test/trust-registry.json';
+const EMPTY_REGISTRY = { generatedAt: '2026-09-21T00:00:00.000Z', keys: [] };
+const dataUrlOf = (doc: unknown): string => `data:application/json,${encodeURIComponent(JSON.stringify(doc))}`;
+
+/** Install a fetch stub serving `routes` (URL → JSON body); a `data:` URL is read by
+ *  the platform fetch; anything else 404s. Returns the restore function. */
+function stubFetch(routes: Record<string, unknown>): () => void {
+  const real = globalThis.fetch;
+  globalThis.fetch = ((input: unknown, init?: RequestInit) => {
+    const url = String(input);
+    if (url.startsWith('data:')) return real(url, init);
+    if (url in routes) {
+      return Promise.resolve(
+        new Response(JSON.stringify(routes[url]), { status: 200, headers: { 'content-type': 'application/json' } }),
+      );
+    }
+    return Promise.resolve(new Response('not found', { status: 404, headers: { 'content-type': 'text/plain' } }));
+  }) as typeof globalThis.fetch;
+  return () => {
+    globalThis.fetch = real;
+  };
+}
+
+/** Resolve and verify `commitment` in bundle mode, or from SC_COMMITMENT_URL in url
+ *  mode, with `routes` served. */
+async function runWith(
+  commitment: Record<string, unknown>,
+  routes: Record<string, unknown>,
+  mode: 'bundle' | 'url' = 'bundle',
+) {
+  const restore = stubFetch({ ...routes, [SC_COMMITMENT_URL]: commitment });
+  try {
+    const steps: ResolveStep[] = [];
+    const resolved =
+      mode === 'bundle'
+        ? await resolveInput('bundle', JSON.stringify(commitment), undefined, (s) => steps.push(s))
+        : await resolveInput('url', SC_COMMITMENT_URL, undefined, (s) => steps.push(s));
+    const vinput = buildVerifyInput(resolved.commitment, resolved.pkg, { offline: resolved.fullyOffline });
+    const result = await runVerify(vinput, resolved.registry, undefined, resolved.registryProvenance);
+    const rows = buildCheckRows(result, vinput, resolved.commitment, registryMetaOf(resolved));
+    return { resolved, vinput, result, rows, steps, registryStep: steps.find((s) => s.key === 'registry') };
+  } finally {
+    restore();
+  }
+}
+
+test('registryProvenanceOf: a registry counts as declared only when fetched from an https: URL', () => {
+  const reg = { keys: [] } as unknown as Parameters<typeof registryProvenanceOf>[0];
+  assert.equal(registryProvenanceOf(reg, { kind: 'fetched', url: 'https://registry-host.test/r.json' }), 'declared-url');
+  for (const url of [HTTP_REGISTRY_URL, dataUrlOf({ keys: [] }), 'blob:https://registry-host.test/abc', '/r.json']) {
+    assert.equal(registryProvenanceOf(reg, { kind: 'fetched', url }), 'bundle', url.slice(0, 20));
+  }
+});
+
+test('recheck: a key-derived signer is never re-checked to active from a registry URL that is not https:', async () => {
+  for (const which of ['data', 'http'] as const) {
+    const m = mintSigned({ identifier: 'key-derived', bindingTier: 'pseudonymous', inlineRegistry: true, declareUrl: false });
+    const url = which === 'data' ? dataUrlOf(m.registry) : HTTP_REGISTRY_URL;
+    const commitment = { ...m.commitment, trustRegistryUrl: url };
+    const run = await runWith(commitment, {});
+    assert.equal(run.result.keyTrust?.status, 'self_certified', which);
+    // Not offered: only an https: URL is the declared registry.
+    assert.equal(
+      canRecheckKeyTrust(registryMetaOf(run.resolved), {
+        ...run.result,
+        keyTrust: { status: 'revoked', verified: false },
+      } as VerifyResult),
+      false,
+      `${which}: no recheck offered`,
+    );
+    // And the recheck itself treats it as carried in the bundle.
+    const restore = stubFetch({ [HTTP_REGISTRY_URL]: m.registry });
+    try {
+      const live = await recheckKeyTrustLive(run.resolved.commitment as Commitment, run.result, run.vinput);
+      assert.equal(live.status, 'self_certified', which);
+      assert.equal(live.verified, false, which);
+      assert.equal(live.changed, false, which);
+    } finally {
+      restore();
+    }
+  }
+});
+
+test('recheck: a key-derived signer re-checked against its https: registry applies the key-derived rule', async () => {
+  const m = mintSigned({ identifier: 'key-derived', bindingTier: 'pseudonymous', inlineRegistry: true, declareUrl: true });
+  const run = await runWith(m.commitment, {});
+  assert.equal(run.result.keyTrust?.status, 'self_certified');
+  assert.equal(
+    canRecheckKeyTrust(registryMetaOf(run.resolved), {
+      ...run.result,
+      keyTrust: { status: 'revoked', verified: false },
+    } as VerifyResult),
+    true,
+    'offered for an https: URL',
+  );
+  // The live https: registry does not list the key: self_certified, not unknown_key.
+  let restore = stubFetch({ [SC_REGISTRY_URL]: EMPTY_REGISTRY });
+  try {
+    const live = await recheckKeyTrustLive(run.resolved.commitment as Commitment, run.result, run.vinput);
+    assert.equal(live.status, 'self_certified');
+    assert.equal(live.verified, false);
+  } finally {
+    restore();
+  }
+  // The live https: registry lists the key active: active (ADR-0030 §4 rule 3).
+  restore = stubFetch({ [SC_REGISTRY_URL]: m.registry });
+  try {
+    const live = await recheckKeyTrustLive(run.resolved.commitment as Commitment, run.result, run.vinput);
+    assert.equal(live.status, 'active');
+    assert.equal(live.verified, true);
+  } finally {
+    restore();
+  }
+});
+
+test('recheck: a signer that is not key-derived is re-checked as before, whatever the URL scheme', async () => {
+  const m = mintSigned({ identifier: 'urn', bindingTier: 'platform', inlineRegistry: true, declareUrl: false });
+  const commitment = { ...m.commitment, trustRegistryUrl: HTTP_REGISTRY_URL };
+  const run = await runWith(commitment, {});
+  assert.equal(run.result.keyTrust?.status, 'active');
+  assert.equal(canRecheckKeyTrust(registryMetaOf(run.resolved), run.result), true);
+  const restore = stubFetch({ [HTTP_REGISTRY_URL]: m.registry });
+  try {
+    const live = await recheckKeyTrustLive(run.resolved.commitment as Commitment, run.result, run.vinput);
+    assert.equal(live.status, 'active');
+    assert.equal(live.verified, true);
+  } finally {
+    restore();
+  }
+});
+
+test('registry step: a key-derived signer whose bundle registry is not valid is told so, not "No trust registry declared"', async () => {
+  const m = mintSigned({ identifier: 'key-derived', bindingTier: 'pseudonymous', inlineRegistry: false, declareUrl: false });
+  const run = await runWith({ ...m.commitment, trustRegistry: { keys: 'not a list' } }, {});
+  assert.equal(run.resolved.registry, undefined);
+  assert.equal(run.registryStep?.label, 'Trust registry in bundle is not valid — not used');
+  assert.equal(run.registryStep?.kind, 'inline');
+  assert.equal(run.registryStep?.state, 'skipped');
+  assert.equal(
+    rowOf(run.rows, '5').math.find((x) => x.label === 'Registry source')?.value,
+    'carried in the bundle, not valid — not used',
+  );
+  assert.equal(run.result.keyTrust?.status, 'self_certified');
+});
+
+test('registry step: a signer that is not key-derived keeps today’s steps, whatever the registry source', async () => {
+  const m = mintSigned({ identifier: 'urn', bindingTier: 'platform', inlineRegistry: false, declareUrl: false });
+  const invalid = await runWith({ ...m.commitment, trustRegistry: { keys: 'not a list' } }, {});
+  assert.equal(invalid.registryStep?.label, 'Read trust registry from bundle');
+  const http = await runWith({ ...m.commitment, trustRegistryUrl: HTTP_REGISTRY_URL }, { [HTTP_REGISTRY_URL]: m.registry });
+  assert.equal(http.registryStep?.label, 'Fetched publisher trust registry');
+  assert.equal(http.result.keyTrust?.status, 'active');
+  assert.equal(rollupVerdict(http.result).headline, 'Verified');
 });

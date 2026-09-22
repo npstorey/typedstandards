@@ -778,22 +778,33 @@ export async function resolveInput(
     }
   }
   const registryProvenance = registryProvenanceOf(registry, registrySource);
-  // A key-derived signer may declare no registry at all (hub ADR-0030 §6). Then
-  // nothing was fetched, and the step says so rather than claiming a publisher
-  // registry. Every other signer keeps today's step unchanged (see the report's
-  // flag on the no-URL case in general).
-  const noRegistryForKeyDerived =
-    registry === undefined && !registrySource.url && isKeyDerivedIdentifier(signerIdentifierOf(pkg));
-  onStep?.(
-    noRegistryForKeyDerived
-      ? { key: 'registry', label: 'No trust registry declared — none fetched', kind: 'fetched', state: 'skipped' }
-      : {
-          key: 'registry',
-          label: registrySource.kind === 'inline' ? 'Read trust registry from bundle' : 'Fetched publisher trust registry',
-          kind: registrySource.kind,
-          ...(registrySource.url ? { url: registrySource.url } : {}),
-        },
-  );
+  // Under a key-derived signer (hub ADR-0030 §6, §10) the step says where the
+  // registry came from: none declared; a bundle registry that is not valid; or a
+  // registry URL that is not https:, which counts as carried in the bundle. Every
+  // other signer keeps today's step unchanged.
+  const keyDerivedSigner = isKeyDerivedIdentifier(signerIdentifierOf(pkg));
+  const registryStep: ResolveStep = !keyDerivedSigner
+    ? {
+        key: 'registry',
+        label: registrySource.kind === 'inline' ? 'Read trust registry from bundle' : 'Fetched publisher trust registry',
+        kind: registrySource.kind,
+        ...(registrySource.url ? { url: registrySource.url } : {}),
+      }
+    : registrySource.kind === 'inline'
+      ? registry === undefined
+        ? { key: 'registry', label: 'Trust registry in bundle is not valid — not used', kind: 'inline', state: 'skipped' }
+        : { key: 'registry', label: 'Read trust registry from bundle', kind: 'inline' }
+      : !registrySource.url
+        ? { key: 'registry', label: 'No trust registry declared — none fetched', kind: 'fetched', state: 'skipped' }
+        : isHttpsUrl(registrySource.url)
+          ? { key: 'registry', label: 'Fetched publisher trust registry', kind: 'fetched', url: registrySource.url }
+          : {
+              key: 'registry',
+              label: 'Read trust registry from a URL that is not https: — it can lower key trust, never raise it',
+              kind: 'fetched',
+              url: registrySource.url,
+            };
+  onStep?.(registryStep);
 
   // Host directory (Phase D recognition dimension). It is the verifier's curator
   // data, not the package's, so it is resolved separately from the publisher
@@ -851,12 +862,25 @@ export async function resolveInput(
   };
 }
 
+/** Whether `url` is an absolute `https:` URL. */
+export function isHttpsUrl(url: string | undefined): boolean {
+  if (!url) return false;
+  try {
+    return new URL(url).protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
 /**
  * The registry's provenance for verify-core's `VerifyDeps.registryProvenance`
  * (hub ADR-0030 §4 rule 3): read from the bundle → `bundle`; fetched from the
- * view's declared URL → `declared-url`. `undefined` when no registry was loaded.
- * A fetched source always carries the declared URL it was fetched from; a
- * `fetched` source with no URL means nothing was fetched.
+ * view's declared `https:` URL → `declared-url`. A trust registry counts as
+ * declared only when fetched from an `https:` URL: one read from any other URL
+ * (`data:`, `blob:`, `http:`, a relative URL) is `bundle`, so for a key-derived
+ * signer it can lower the status and never raise it. `undefined` when no
+ * registry was loaded. A `fetched` source with no URL means nothing was fetched.
+ * verify-core reads the provenance only for a key-derived signer.
  */
 export function registryProvenanceOf(
   registry: TrustRegistry | undefined,
@@ -864,7 +888,8 @@ export function registryProvenanceOf(
 ): TrustRegistryProvenance | undefined {
   if (registry === undefined) return undefined;
   if (source.kind === 'inline') return 'bundle';
-  return source.url ? 'declared-url' : undefined;
+  if (!source.url) return undefined;
+  return isHttpsUrl(source.url) ? 'declared-url' : 'bundle';
 }
 
 /** The package's `signer.identifier`, when it is a string. */
@@ -1021,6 +1046,11 @@ export interface RegistryMeta {
   generatedAt?: string;
   /** Whether a registry was actually loaded (vs. unavailable). */
   available: boolean;
+  /** The registry's provenance as passed to verify-core (see
+   *  `registryProvenanceOf`), when a registry was loaded. */
+  provenance?: TrustRegistryProvenance;
+  /** Whether the package's signer identifier is key-derived (hub ADR-0030 §3). */
+  keyDerived?: boolean;
 }
 
 // Key-trust statuses whose verdict actually CONSULTED the registry — the only ones
@@ -1081,10 +1111,18 @@ export interface KeyTrustRecheck {
  * attested time) so a `changed` result reflects a real registry change — e.g. a key
  * revoked AFTER the snapshot's `generatedAt`. Throws (not a silent pass) when the
  * commitment names no registry URL or the live registry can't be fetched/validated.
+ *
+ * `input` is the verify-core input the verdict was computed from. Under a
+ * key-derived signer (hub ADR-0030 §3-§4) the check is re-run through
+ * `verifyRecord` with the live registry, so the key-derived rule applies, and the
+ * registry counts as declared only when the URL is `https:`; from any other URL
+ * it can lower the status, never raise it. Every other signer is re-checked
+ * exactly as before.
  */
 export async function recheckKeyTrustLive(
   commitment: Commitment,
   result: VerifyResult,
+  input: VerifyInput,
   signal?: AbortSignal,
 ): Promise<KeyTrustRecheck> {
   const url = commitment.trustRegistryUrl ?? commitment.trustRegistryUrlLegacy;
@@ -1092,10 +1130,21 @@ export async function recheckKeyTrustLive(
   const liveRegistry = validateRegistry(await getJson(url, signal));
   const publicKey = commitment.signature?.publicKey;
   const kid = result.kid;
-  const live =
-    publicKey && kid
-      ? verifyKeyTrust(publicKey, kid, signedBeforeTimeOf(result), liveRegistry)
-      : legacyEmbeddedKeyTrust();
+  let live: { status: KeyTrustStatus; verified: boolean };
+  if (hasKeyDerivedSigner(input.package)) {
+    const provenance = registryProvenanceOf(liveRegistry, { kind: 'fetched', url });
+    const rerun = await verifyRecord(input, {
+      registry: liveRegistry,
+      fetch: globalThis.fetch,
+      ...(provenance ? { registryProvenance: provenance } : {}),
+    });
+    live = rerun.keyTrust ?? legacyEmbeddedKeyTrust();
+  } else {
+    live =
+      publicKey && kid
+        ? verifyKeyTrust(publicKey, kid, signedBeforeTimeOf(result), liveRegistry)
+        : legacyEmbeddedKeyTrust();
+  }
   return {
     status: live.status,
     verified: live.verified,
@@ -1118,16 +1167,21 @@ export function registryMetaOf(resolved: ResolvedInput): RegistryMeta {
     available: !!resolved.registry,
     ...(url ? { url } : {}),
     ...(generatedAt ? { generatedAt } : {}),
+    ...(resolved.registryProvenance ? { provenance: resolved.registryProvenance } : {}),
+    ...(hasKeyDerivedSigner(resolved.pkg) ? { keyDerived: true } : {}),
   };
 }
 
 /** The online recheck is offered only when an inline SNAPSHOT backed a
  *  registry-dependent verdict AND a live URL is known — i.e. exactly when an
- *  offline-revocation gap could exist and is closeable. */
+ *  offline-revocation gap could exist and is closeable. For a key-derived signer
+ *  the URL must also be `https:`: only a registry fetched from an `https:` URL is
+ *  the declared registry (hub ADR-0030 §4 rule 3). */
 export function canRecheckKeyTrust(meta: RegistryMeta, result: VerifyResult): boolean {
   return (
     meta.kind === 'inline' &&
     !!meta.url &&
+    (!meta.keyDerived || isHttpsUrl(meta.url)) &&
     !!result.keyTrust &&
     REGISTRY_BACKED_STATUSES.has(result.keyTrust.status)
   );
@@ -1239,7 +1293,11 @@ export function buildCheckRows(
           { label: 'Key-trust status', value: status },
           { label: 'Registry source', value: registrySourceOf(registryMeta) },
         ],
-        keyTrustStalenessNote(status, registryMeta),
+        // A registry read from a URL that is not https: is not the live declared
+        // registry, so the "checked against the live registry" note does not apply.
+        registryMeta?.kind === 'fetched' && registryMeta.provenance === 'bundle'
+          ? undefined
+          : keyTrustStalenessNote(status, registryMeta),
       ),
     );
   } else if (result.keyTrust) {
@@ -1374,10 +1432,12 @@ export function buildCheckRows(
 /** The registry's source, stated beside a key-derived signer's key-trust status
  *  (hub ADR-0030 §10). */
 function registrySourceOf(meta: RegistryMeta | undefined): string {
+  if (meta && !meta.available && meta.kind === 'inline') return 'carried in the bundle, not valid — not used';
   if (!meta || !meta.available) return 'none supplied';
-  return meta.kind === 'inline'
-    ? 'carried in the bundle (can lower this signer’s key status, never raise it)'
-    : 'fetched from the registry URL the record declares';
+  if (meta.kind === 'inline') return 'carried in the bundle (can lower this signer’s key status, never raise it)';
+  return meta.provenance === 'declared-url'
+    ? 'fetched from the registry URL the record declares'
+    : 'read from a registry URL that is not https: (can lower this signer’s key status, never raise it)';
 }
 
 // --- Verdict roll-up ------------------------------------------------------
