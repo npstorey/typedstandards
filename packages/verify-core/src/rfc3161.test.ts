@@ -247,3 +247,40 @@ test('P1b (pin): a token lifted from another package fails on its imprint before
   assert.equal(r.signatureValid, null);
   assert.equal(r.verified, false);
 });
+
+/** The same token with the timestamping leaf's namedCurve OID moved from secp384r1
+ *  (1.3.132.0.34) to secp521r1 (1.3.132.0.35): a leaf key outside the set this verifier
+ *  checks. The leaf's TBS changes, so its link signature no longer verifies either. */
+function withLeafCurveSecp521r1(tokenB64: string): string {
+  const raw = tokenBytes(tokenB64);
+  const certsNode = signedDataKids(raw).find((c) => c.tag === 0xa0)!;
+  const leaf = children(raw, certsNode)
+    .map((n) => parseCertificate(raw, n))
+    .find((c) => c.ekus.includes(OID_EKU_TIMESTAMPING))!;
+  const spki = leaf.spkiDer;
+  let at = -1;
+  for (let i = 0; i + spki.length <= raw.length && at < 0; i++) {
+    if (spki.every((b, k) => raw[i + k] === b)) at = i;
+  }
+  assert.ok(at >= 0, 'the leaf SPKI is found in the token');
+  // SEQ { SEQ { OID ecPublicKey, OID namedCurve }, BIT STRING }: the curve OID's last
+  // content byte is at offset 19 of the 23-byte P-384 SPKI prefix.
+  assert.deepEqual([...raw.slice(at + 13, at + 20)], [0x06, 0x05, 0x2b, 0x81, 0x04, 0x00, 0x22]);
+  raw[at + 19] = 0x23;
+  return b64(raw);
+}
+
+test('P1b: bound token, leaf key on a curve other than P-384 (secp521r1 OID), chain unpinned -> unexpected_algorithm, signatureValid null', async () => {
+  const otherCurve = withLeafCurveSecp521r1(fx.tokenB64);
+  for (const anchors of [[], undefined]) {
+    const r = await verifyRfc3161Timestamp(otherCurve, fx.expectedHashHex, anchors);
+    assert.equal(r.imprintMatches, true);
+    assert.equal(r.contentBound, true);
+    assert.equal(r.ekuTimestamping, true);
+    assert.equal(r.withinValidity, true);
+    assert.equal(r.chainVerified, false);
+    assert.equal(r.signatureValid, null, 'a key this verifier cannot evaluate is not an invalid signature');
+    assert.equal(r.verified, false);
+    assert.equal(r.reason, 'unexpected_algorithm');
+  }
+});
