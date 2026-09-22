@@ -40,6 +40,7 @@ import {
   type CarriedLifecycleNode,
   type LifecycleResolution,
   type TrustRegistry,
+  type KeyTrustResult,
   type KeyTrustStatus,
   type TrustRegistryProvenance,
 } from '@typedstandards/verify-core';
@@ -1142,16 +1143,34 @@ export interface KeyTrustRecheck {
   changed: boolean;
   /** The live registry's `generatedAt`, when stamped. */
   generatedAt?: string;
+  /** The registry URL the re-check fetched. */
+  url: string;
+  /** When the re-check completed (ISO 8601). */
+  checkedAt: string;
+  /** The live registry, and its provenance as passed to verify-core. */
+  registry: TrustRegistry;
+  provenance: TrustRegistryProvenance;
+  /** The typedstandards.org directory, loaded for recognition. */
+  directory: HostDirectory;
+  /** The verdict with the registry-dependent checks (#5, #14) read from the live
+   *  registry; every other check is the bundle's. */
+  result: VerifyResult;
 }
 
 /**
- * Re-run ONLY the registry-dependent key-trust check (#5) against the LIVE
- * registry, closing the offline-revocation gap when the verifier is connected. The
- * rest of the verdict is offline-complete and registry-independent, so it is not
- * recomputed. Reproduces verify-core's #5 inputs (public key, kid, earliest
- * attested time) so a `changed` result reflects a real registry change — e.g. a key
- * revoked AFTER the snapshot's `generatedAt`. Throws (not a silent pass) when the
- * commitment names no registry URL or the live registry can't be fetched/validated.
+ * Re-run the registry-dependent checks (#5, #14) against the LIVE registry,
+ * closing the offline-revocation gap when the verifier is connected, and load the
+ * typedstandards.org directory so recognition can be read too (#93 item 3, ruling
+ * C). The rest of the verdict is offline-complete and registry-independent, so it
+ * keeps the bundle's reading. #5 reproduces verify-core's inputs (public key, kid,
+ * earliest attested time) so a `changed` result reflects a real registry change —
+ * e.g. a key revoked AFTER the snapshot's `generatedAt`.
+ *
+ * Throws, and so changes no reading, when the re-check cannot complete: no
+ * registry URL, a registry that cannot be fetched or is not valid, or a directory
+ * that cannot be loaded. Only a completed re-check reaches the page (see
+ * `presentVerification`), so a blocked fetch never lowers a reading; an unlisted or
+ * revoked key does.
  *
  * `input` is the verify-core input the verdict was computed from. Under a
  * key-derived signer (hub ADR-0030 §3-§4) the check is re-run through
@@ -1176,29 +1195,56 @@ export async function recheckKeyTrustLive(
     );
   }
   const liveRegistry = validateRegistry(await getJson(url, signal));
+  if (!liveRegistry) {
+    throw new VerifyFlowError(`The live registry at ${shortUrl(url)} is not a valid trust registry.`);
+  }
+  const directory = await fetchHostDirectory(globalThis.fetch, HOST_DIRECTORY_PATH, signal);
+  if (directory === 'unavailable') {
+    throw new VerifyFlowError('The typedstandards.org publisher directory could not be loaded.');
+  }
+  const provenance: TrustRegistryProvenance = isHttpsUrl(url) ? 'declared-url' : 'bundle';
+  // #14 is read from a full re-run; verify-core does not export it alone.
+  const rerun = await verifyRecord(input, {
+    registry: liveRegistry,
+    fetch: globalThis.fetch,
+    registryProvenance: provenance,
+  });
   const publicKey = commitment.signature?.publicKey;
   const kid = result.kid;
-  let live: { status: KeyTrustStatus; verified: boolean };
-  if (keyDerived) {
-    const provenance = registryProvenanceOf(liveRegistry, { kind: 'fetched', url });
-    const rerun = await verifyRecord(input, {
-      registry: liveRegistry,
-      fetch: globalThis.fetch,
-      ...(provenance ? { registryProvenance: provenance } : {}),
-    });
-    live = rerun.keyTrust ?? legacyEmbeddedKeyTrust();
-  } else {
-    live =
-      publicKey && kid
-        ? verifyKeyTrust(publicKey, kid, signedBeforeTimeOf(result), liveRegistry)
-        : legacyEmbeddedKeyTrust();
-  }
+  const live: KeyTrustResult = keyDerived
+    ? (rerun.keyTrust ?? legacyEmbeddedKeyTrust())
+    : publicKey && kid
+      ? verifyKeyTrust(publicKey, kid, signedBeforeTimeOf(result), liveRegistry)
+      : legacyEmbeddedKeyTrust();
+  const generatedAt = registryGeneratedAt(liveRegistry);
   return {
     status: live.status,
     verified: live.verified,
     changed: live.status !== result.keyTrust?.status,
-    ...(registryGeneratedAt(liveRegistry) ? { generatedAt: registryGeneratedAt(liveRegistry) } : {}),
+    ...(generatedAt ? { generatedAt } : {}),
+    url,
+    checkedAt: new Date().toISOString(),
+    registry: liveRegistry,
+    provenance,
+    directory,
+    result: { ...result, keyTrust: live, signerIdentity: rerun.signerIdentity },
   };
+}
+
+/** The line each re-checked reading carries: where, when, and the registry's date. */
+function recheckedLine(recheck: KeyTrustRecheck): string {
+  const when = new Date(recheck.checkedAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+  const asOf = recheck.generatedAt ? `registry as of ${fmtAsOf(recheck.generatedAt)}` : 'registry date not stated';
+  return `Re-checked live against ${hostOf(recheck.url)} at ${when}, ${asOf}.`;
+}
+
+/** The URL's host, or the URL itself when it has none (a `data:` URL). */
+function hostOf(url: string): string {
+  try {
+    return new URL(url).host || url;
+  } catch {
+    return url;
+  }
 }
 
 /** Build the #5 registry meta from a resolved input. The recheck URL falls back to
@@ -1242,7 +1288,8 @@ export interface CheckSignal {
 
 /**
  * The trust signal of every check but #2, in row order: the one place the rows and
- * the headline read a check's tier from (#86). A check the result does not carry is
+ * the headline read a check's tier from (#86). #2 cannot be non-green without
+ * alarming the headline first. A check the result does not carry is
  * left out, as its row is. #2 is left out because its row also reads the input, and
  * the headline reads the signature itself.
  *
@@ -1561,6 +1608,8 @@ export interface Verdict {
   tier: TrustTier;
   headline: string;
   detail: string;
+  /** Set after a live re-check: where and when the reading was confirmed. */
+  provenance?: string;
 }
 
 /**
@@ -1581,21 +1630,23 @@ export interface Verdict {
  * verify-core reads an unstated provenance (#93); the page always passes it (see
  * `presentVerification`).
  *
- * An attention-tier check (see `checkSignalsOf`) withholds every unqualified
- * headline — "Verified", "Commitment verified — content private" and the
- * self-certified reading alike — and the caveated headline names the checks (#86).
+ * A check that is not green — attention or alarm tier (see `checkSignalsOf`) —
+ * withholds every unqualified headline: "Verified", "Commitment verified — content
+ * private" and the self-certified reading alike. The caveated headline names the
+ * checks (#86). The alarm set above still alone decides "Verification failed"; an
+ * alarm-tier row outside it (a timestamp that did not verify) reads caveated.
  */
 export function rollupVerdict(result: VerifyResult, registry: RegistryMeta = UNSTATED_REGISTRY): Verdict {
   const integrity = result.envelopeIntegrity;
   const contentUnavailable = integrity.status === 'unavailable';
   const keySuppliedOnly = confirmedOnlyBySuppliedRegistry(result.keyTrust, registry);
   const keyConfirmed = result.keyTrust?.status === 'active' && !keySuppliedOnly;
-  const attention = checkSignalsOf(result, registry, false).filter((c) => c.signal.tier === 'attention');
-  const noAttention = attention.length === 0;
-  /** The attention-tier checks, named, for the detail of a caveated headline. */
-  const named = noAttention
-    ? ''
-    : ` Unconfirmed or unrecognized: ${attention.map((c) => `#${c.num} ${c.name}`).join(', ')}.`;
+  const notGreen = checkSignalsOf(result, registry, false).filter(
+    (c) => c.signal.tier === 'attention' || c.signal.tier === 'alarm',
+  );
+  const allGreen = notGreen.length === 0;
+  /** The checks that are not green, named, for the detail of a caveated headline. */
+  const named = allGreen ? '' : ` Not affirmed: ${notGreen.map((c) => `#${c.num} ${c.name}`).join(', ')}.`;
 
   const alarm =
     integrity.status === 'altered' || // bytes present + hash mismatch — real tampering
@@ -1631,7 +1682,7 @@ export function rollupVerdict(result: VerifyResult, registry: RegistryMeta = UNS
   // value proposition — a publicly verifiable commitment without disclosing content —
   // so it must read CALM, never as "Verification failed".
   if (contentUnavailable) {
-    const commitmentGreen = result.signatureValid === true && keyConfirmed && noAttention;
+    const commitmentGreen = result.signatureValid === true && keyConfirmed && allGreen;
     if (integrity.reason === 'private') {
       return commitmentGreen
         ? {
@@ -1659,14 +1710,14 @@ export function rollupVerdict(result: VerifyResult, registry: RegistryMeta = UNS
   // Hub ADR-0030 §10: a self-certified signer never reads `verified` overall.
   // `self_certified` is tier `normal` with `verified: false` — no registry vouched
   // for the key — so a package that is intact and validly signed by one reads at
-  // most `normal`, and the headline says what was and was not established. An
-  // attention-tier check lowers it as it lowers "Verified" (#86).
+  // most `normal`, and the headline says what was and was not established. A check
+  // that is not green lowers it as it lowers "Verified" (#86).
   if (
     integrity.status === 'verified' &&
     result.signatureValid === true &&
     result.keyTrust?.status === 'self_certified'
   ) {
-    return noAttention
+    return allGreen
       ? {
           tier: 'normal',
           headline: 'Signature valid — self-certified signer',
@@ -1688,7 +1739,7 @@ export function rollupVerdict(result: VerifyResult, registry: RegistryMeta = UNS
     };
   }
 
-  if (fullyGreen && noAttention) {
+  if (fullyGreen && allGreen) {
     return {
       tier: 'verified',
       headline: 'Verified',
@@ -1700,7 +1751,7 @@ export function rollupVerdict(result: VerifyResult, registry: RegistryMeta = UNS
   return {
     tier: 'attention',
     headline: 'Verified, with caveats',
-    detail: noAttention
+    detail: allGreen
       ? 'The core signature and integrity checks pass, but something is unconfirmed or unrecognized (see the checks below). Not proven bad — just not fully affirmed.'
       : `The core signature and integrity checks pass, but not every check is affirmed. Not proven bad — just not fully affirmed.${named}`,
   };
@@ -1716,29 +1767,124 @@ export interface Presentation {
   rows: CheckRow[];
   verdict: Verdict;
   recognition: HostRecognition;
+  independence: IndependenceNote;
 }
 
 /**
- * The check rows, the rolled-up verdict and the recognition card for one run — what
- * the <Verifier> renders. One place computes all three from the same resolved input
- * and result, so the registry's provenance reaches each of them (#78).
+ * The check rows, the rolled-up verdict, the recognition card and the independence
+ * note for one run — what the <Verifier> renders. One place computes them from the
+ * same resolved input and result, so the registry's provenance reaches each (#78).
+ *
+ * With a completed live re-check (`recheckKeyTrustLive`), #5, #14, the headline and
+ * recognition read as URL mode would, from the live registry and the directory, and
+ * #5, the headline and recognition each say when (#93 item 3, ruling C).
  */
 export function presentVerification(
   resolved: ResolvedInput,
   input: VerifyInput,
   result: VerifyResult,
+  recheck?: KeyTrustRecheck,
 ): Presentation {
-  const registryMeta = registryMetaOf(resolved);
-  return {
-    rows: buildCheckRows(result, input, resolved.commitment, registryMeta),
-    verdict: rollupVerdict(result, registryMeta),
-    recognition: resolveHostRecognition(
-      resolved.commitment,
-      result.keyTrust,
-      resolved.directory,
-      resolved.registryProvenance,
-    ),
+  if (!recheck) {
+    const registryMeta = registryMetaOf(resolved);
+    return {
+      rows: buildCheckRows(result, input, resolved.commitment, registryMeta),
+      verdict: rollupVerdict(result, registryMeta),
+      recognition: resolveHostRecognition(
+        resolved.commitment,
+        result.keyTrust,
+        resolved.directory,
+        resolved.registryProvenance,
+      ),
+      independence: independenceNoteOf(resolved),
+    };
+  }
+  const live: ResolvedInput = {
+    ...resolved,
+    registry: recheck.registry,
+    directory: recheck.directory,
+    sources: { ...resolved.sources, registry: { kind: 'fetched', url: recheck.url } },
+    registryProvenance: recheck.provenance,
   };
+  const registryMeta = registryMetaOf(live);
+  const provenance = recheckedLine(recheck);
+  return {
+    rows: buildCheckRows(recheck.result, input, resolved.commitment, registryMeta).map((r) =>
+      r.num === '5' ? { ...r, depthNote: provenance } : r,
+    ),
+    verdict: { ...rollupVerdict(recheck.result, registryMeta), provenance },
+    recognition: {
+      ...resolveHostRecognition(resolved.commitment, recheck.result.keyTrust, recheck.directory, recheck.provenance),
+      provenance,
+    },
+    independence: independenceNoteOf(resolved, recheck),
+  };
+}
+
+/** The independence note: a lead, then text, with hosts set in monospace. */
+export interface IndependenceNote {
+  lead: string;
+  parts: { text: string; mono?: boolean }[];
+}
+
+/**
+ * What the run did and did not trust. An offline bundle leaves the signing key
+ * unconfirmed until it is re-checked (#93 item 4); after a re-check the note says
+ * the session went online (#93 item 3).
+ */
+export function independenceNoteOf(resolved: ResolvedInput, recheck?: KeyTrustRecheck): IndependenceNote {
+  // A registry the record supplied — carried in it, or read from a URL that is not
+  // https: — was not checked against the publisher's domain (#78).
+  const supplied =
+    !recheck && resolved.registryProvenance === 'bundle'
+      ? ' The trust registry was supplied with the record, so the signing key was not checked against the publisher’s domain.'
+      : '';
+  const rechecked: IndependenceNote['parts'] = recheck
+    ? [
+        { text: ' Key trust was then re-checked live against ' },
+        { text: hostOf(recheck.url), mono: true },
+        {
+          text: ` at ${new Date(recheck.checkedAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}, and publisher recognition read the typedstandards.org directory.`,
+        },
+      ]
+    : [];
+  if (resolved.fullyOffline) {
+    return recheck
+      ? {
+          lead: 'Verified offline, then re-checked online.',
+          parts: [{ text: 'Every proof was read from your bundle and verified in your browser.' }, ...rechecked],
+        }
+      : {
+          lead: 'Fully offline.',
+          parts: [
+            {
+              text: `Every proof was read from your bundle and verified in your browser — nothing was fetched.${supplied} Publisher recognition was skipped: it reads only the typedstandards.org directory, which an offline check does not fetch.`,
+            },
+          ],
+        };
+  }
+  const host = hostOfOptional(resolved.sources.pkg.url) || hostOfOptional(resolved.sources.commitment.url) || 'the publisher';
+  return {
+    lead: 'Verified in your browser.',
+    parts: [
+      { text: 'The checks ran client-side here — but the package and proofs were fetched from ' },
+      { text: host, mono: true },
+      {
+        text: `. Publisher recognition was a separate lookup in typedstandards.org’s curated host directory, independent of that host.${supplied} To verify the package and proofs without trusting the host, download and verify an offline bundle. Its signing key stays unconfirmed until you re-check it against the publisher’s live registry.`,
+      },
+      ...rechecked,
+    ],
+  };
+}
+
+/** The host of `url`, or '' when there is none. */
+function hostOfOptional(url?: string): string {
+  if (!url) return '';
+  try {
+    return new URL(url).host;
+  } catch {
+    return '';
+  }
 }
 
 // --- Page preview (from the VERIFIED package bytes) -----------------------

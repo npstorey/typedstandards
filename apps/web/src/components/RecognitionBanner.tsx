@@ -9,7 +9,7 @@ import { VerdictCard } from "./VerdictBanner";
  *  publisher" gets a profile link — a recognized-but-unconfirmed host does not,
  *  so the click-through never implies a recognition the registry itself withholds. */
 export function RecognitionBanner({ recognition }: { recognition: HostRecognition }) {
-  const { signal, status, publisher } = recognition;
+  const { signal, status, publisher, provenance } = recognition;
   const headlineHref =
     status === "known_publisher" && publisher?.profileUrl ? publisher.profileUrl : undefined;
   return (
@@ -19,6 +19,7 @@ export function RecognitionBanner({ recognition }: { recognition: HostRecognitio
       headline={signal.label}
       detail={signal.detail}
       headlineHref={headlineHref}
+      provenance={provenance}
     />
   );
 }

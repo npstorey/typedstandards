@@ -20,6 +20,7 @@ import {
   HOST_DIRECTORY,
   type CheckRow as CheckRowData,
   type HostRecognition,
+  type IndependenceNote as IndependenceNoteData,
   type IdentifierResolution,
   type InputMode,
   type KeyTrustRecheck,
@@ -57,6 +58,7 @@ export function Verifier({
   const [revealCount, setRevealCount] = useState(0);
   const [verdict, setVerdict] = useState<Verdict | null>(null);
   const [recognition, setRecognition] = useState<HostRecognition | null>(null);
+  const [independence, setIndependence] = useState<IndependenceNoteData | null>(null);
   const [preview, setPreview] = useState<PreviewData | null>(null);
   const [resolved, setResolved] = useState<ResolvedInput | null>(null);
   const [result, setResult] = useState<VerifyResult | null>(null);
@@ -86,6 +88,7 @@ export function Verifier({
     setRevealCount(0);
     setVerdict(null);
     setRecognition(null);
+    setIndependence(null);
     setPreview(null);
     setResolved(null);
     setResult(null);
@@ -134,6 +137,7 @@ export function Verifier({
       setRows(builtRows);
       setVerdict(presentation.verdict);
       setRecognition(presentation.recognition);
+      setIndependence(presentation.independence);
       setPreview(buildPreview(resolvedInput.pkg, resolvedInput.commitment));
 
       setPhase("revealing");
@@ -189,8 +193,10 @@ export function Verifier({
     [raw, run],
   );
 
-  // Online recheck (#119 P4): re-run the registry-dependent #5 check against the
-  // LIVE registry, closing the offline-revocation gap a carried snapshot leaves.
+  // Online recheck (#119 P4): re-run the registry-dependent checks against the
+  // LIVE registry, closing the offline-revocation gap a carried snapshot leaves. A
+  // completed re-check re-reads #5, the headline and recognition (#93 item 3); one
+  // that cannot run throws, and nothing on the page changes.
   const onRecheck = useCallback(async () => {
     if (!resolved || !result) return;
     setRecheck({ phase: "loading" });
@@ -200,6 +206,11 @@ export function Verifier({
         offline: resolved.fullyOffline,
       });
       const data = await recheckKeyTrustLive(resolved.commitment, result, vinput);
+      const shown = presentVerification(resolved, vinput, result, data);
+      setRows(shown.rows);
+      setVerdict(shown.verdict);
+      setRecognition(shown.recognition);
+      setIndependence(shown.independence);
       setRecheck({ phase: "done", data });
     } catch (e) {
       setRecheck({ phase: "error", error: e instanceof Error ? e.message : String(e) });
@@ -333,7 +344,7 @@ export function Verifier({
                   />
                 )}
 
-              {phase === "done" && resolved && <IndependenceNote resolved={resolved} />}
+              {phase === "done" && independence && <IndependenceNote note={independence} />}
 
               {phase === "done" && preview && <PagePreview preview={preview} />}
 
@@ -483,14 +494,18 @@ function KeyTrustRecheckPanel({
   /** The key-trust status the registry carried in the bundle gave. */
   bundleStatus?: string;
 }) {
+  // The rows, headline and recognition carry the re-checked reading, so the panel
+  // reports what the live registry said and gives no verdict of its own (#93 item 3).
   return (
     <div className="rounded-lg border border-border bg-surface p-3 text-xs leading-relaxed">
-      <p className="text-muted">
-        <strong className="text-foreground">Key trust used the registry carried in this bundle.</strong>{" "}
-        It was not checked against the publisher&apos;s domain, and a key revoked after the
-        snapshot&apos;s date can&apos;t be seen offline. Re-check against the live registry at{" "}
-        <span className="font-mono">{registryHost}</span> to close both gaps.
-      </p>
+      {state.phase !== "done" && (
+        <p className="text-muted">
+          <strong className="text-foreground">Key trust used the registry carried in this bundle.</strong>{" "}
+          It was not checked against the publisher&apos;s domain, and a key revoked after the
+          snapshot&apos;s date can&apos;t be seen offline. Re-check against the live registry at{" "}
+          <span className="font-mono">{registryHost}</span> to close both gaps.
+        </p>
+      )}
       {state.phase === "idle" && (
         <button
           type="button"
@@ -507,66 +522,42 @@ function KeyTrustRecheckPanel({
       )}
       {state.phase === "error" && (
         <p className="mt-2" style={{ color: "var(--trust-attention)" }}>
-          Couldn&apos;t reach the live registry — you may be offline. {state.error}
+          The re-check could not run, so nothing on this page changed. {state.error}
         </p>
       )}
       {state.phase === "done" && state.data && (
-        <p
-          className="mt-2"
-          style={{ color: state.data.changed ? "var(--trust-alarm)" : "var(--trust-verified)" }}
-          aria-live="polite"
-        >
-          {state.data.changed ? "⚠ " : "✓ "}
-          Live registry
-          {state.data.generatedAt ? ` (as of ${asOfDate(state.data.generatedAt)})` : ""}:{" "}
+        <p className="text-muted" aria-live="polite">
+          <strong className="text-foreground">Re-checked against the live registry</strong>{" "}
+          at <span className="font-mono">{registryHost}</span>
+          {state.data.generatedAt ? ` (as of ${asOfDate(state.data.generatedAt)})` : ""}: key trust is{" "}
+          <strong>{state.data.status}</strong>
           {state.data.changed ? (
             <>
-              key trust is <strong>{state.data.status}</strong>; the registry carried in the
-              bundle said <strong>{bundleStatus ?? "—"}</strong>.
+              ; the registry carried in the bundle said <strong>{bundleStatus ?? "—"}</strong>
             </>
           ) : (
-            <>
-              key trust is <strong>{state.data.status}</strong>, the same as the registry
-              carried in the bundle.
-            </>
+            <>, the same as the registry carried in the bundle</>
           )}
+          . The checks, headline and recognition above now read the live registry.
         </p>
       )}
     </div>
   );
 }
 
-function IndependenceNote({ resolved }: { resolved: ResolvedInput }) {
-  // A registry the record supplied — carried in it, or read from a URL that is not
-  // https: — was not checked against the publisher's domain (#78).
-  const suppliedRegistry =
-    resolved.registryProvenance === "bundle"
-      ? " The trust registry was supplied with the record, so the signing key was not checked against the publisher’s domain."
-      : "";
-  if (resolved.fullyOffline) {
-    return (
-      <p className="text-xs leading-relaxed text-muted">
-        <strong className="text-foreground">Fully offline.</strong> Every proof was
-        read from your bundle and verified in your browser — nothing was fetched.
-        {suppliedRegistry} Publisher recognition was skipped: it reads only the
-        typedstandards.org directory, which an offline check does not fetch.
-      </p>
-    );
-  }
-  const host =
-    hostOf(resolved.sources.pkg.url) ||
-    hostOf(resolved.sources.commitment.url) ||
-    "the publisher";
+function IndependenceNote({ note }: { note: IndependenceNoteData }) {
   return (
     <p className="text-xs leading-relaxed text-muted">
-      <strong className="text-foreground">Verified in your browser.</strong> The
-      checks ran client-side here — but the package and proofs were fetched from{" "}
-      <span className="font-mono">{host}</span>. Publisher recognition was a
-      separate lookup in typedstandards.org&apos;s curated host directory,
-      independent of that host.{suppliedRegistry} To verify the package and proofs
-      without trusting the host, download and verify an offline bundle. Its signing
-      key stays unconfirmed until you re-check it against the publisher’s live
-      registry.
+      <strong className="text-foreground">{note.lead}</strong>{" "}
+      {note.parts.map((part, i) =>
+        part.mono ? (
+          <span key={i} className="font-mono">
+            {part.text}
+          </span>
+        ) : (
+          <span key={i}>{part.text}</span>
+        ),
+      )}
     </p>
   );
 }

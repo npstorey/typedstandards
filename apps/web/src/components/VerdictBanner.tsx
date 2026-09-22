@@ -13,6 +13,7 @@ export function VerdictCard({
   headline,
   detail,
   headlineHref,
+  provenance,
 }: {
   tier: TrustTier;
   eyebrow: string;
@@ -21,6 +22,8 @@ export function VerdictCard({
   /** When set, the headline links here (used for a known publisher's profile —
    *  rendered, never trust-conferring). */
   headlineHref?: string;
+  /** Where and when the reading was confirmed, after a live re-check. */
+  provenance?: string;
 }) {
   const meta = TIER_META[tier];
   const signal = toResolvedSignal({ tier, label: headline });
@@ -52,6 +55,7 @@ export function VerdictCard({
         </h2>
       </div>
       {detail && <p className="mt-2 text-sm leading-relaxed text-foreground">{detail}</p>}
+      {provenance && <p className="mt-2 text-xs text-muted">{provenance}</p>}
     </div>
   );
 }
@@ -66,6 +70,7 @@ export function VerdictBanner({ verdict }: { verdict: Verdict }) {
       eyebrow="Cryptographic validity"
       headline={verdict.headline}
       detail={verdict.detail}
+      provenance={verdict.provenance}
     />
   );
 }

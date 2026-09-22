@@ -466,6 +466,8 @@ export interface HostRecognition {
   /** The trust signal (tier + glance label + detail) for this recognition,
    *  reusing the shared #110 trust-signal tiers. */
   signal: ResolvedTrustSignal;
+  /** Set after a live re-check: where and when the reading was confirmed. */
+  provenance?: string;
 }
 
 function descriptor(tier: TrustTier, label: string, detail: string): TrustSignalDescriptor {
