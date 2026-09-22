@@ -53,6 +53,7 @@ import {
   resolveSignature,
   resolveKeyTrust,
   resolveTimestamp,
+  classifyTimestamp,
   resolveRekor,
   resolveBlobRefs,
   resolveCaptureMethodLabel,
@@ -62,6 +63,7 @@ import {
   SIGNER_IDENTITY_SIGNALS,
   CAPTURE_METHOD_VOCAB_SIGNALS,
   CONTENT_PROFILE_SIGNALS,
+  TIMESTAMP_FAILURE_NOTES,
   KEY_TRUST_BUNDLE_REGISTRY_NOT_USED,
   KEY_TRUST_SUPPLIED_REGISTRY,
   SIGNER_IDENTITY_SUPPLIED_REGISTRY,
@@ -1327,6 +1329,8 @@ export function checkSignalsOf(
         : resolveKeyTrust(keyTrust),
   );
 
+  // #7: the row reads the same whatever the reason (#94, D1); `rollupVerdict` reads
+  // the reason for the headline.
   add('7', 'Timestamp', resolveTimestamp(result.hasTimestamp, result.rfc3161?.verified ?? null));
   if (result.hasRekor || result.rekorInclusion) {
     add('8', 'Transparency log', resolveRekor(result.hasRekor, rekorInclusionVerifiedOffline(result), result.rekorVerified));
@@ -1490,7 +1494,8 @@ export function buildCheckRows(
 
   // #7 — RFC 3161 timestamp (DEEP: TSA signature + cert chain to the pinned root,
   // verified offline by verify-core — #119 P2b). The row reflects that verdict, not
-  // mere presence.
+  // mere presence. A token that did not verify also shows its reason and what it
+  // does to the verdict (#94).
   {
     const ts = result.rfc3161;
     const tsMath: MathLine[] = [
@@ -1504,6 +1509,10 @@ export function buildCheckRows(
         label: 'Certificate chain',
         value: ts.chainVerified ? 'verified to the pinned FreeTSA root' : 'not verified',
       });
+      const reading = classifyTimestamp(result.hasTimestamp, ts);
+      if (!ts.verified && ts.reason && (reading === 'fails' || reading === 'caveats')) {
+        tsMath.push({ label: 'Reason', value: `${ts.reason} — ${TIMESTAMP_FAILURE_NOTES[reading]}` });
+      }
     }
     rows.push(checkRow('7', tsMath));
   }
@@ -1633,8 +1642,14 @@ export interface Verdict {
  * A check that is not green — attention or alarm tier (see `checkSignalsOf`) —
  * withholds every unqualified headline: "Verified", "Commitment verified — content
  * private" and the self-certified reading alike. The caveated headline names the
- * checks (#86). The alarm set above still alone decides "Verification failed"; an
- * alarm-tier row outside it (a timestamp that did not verify) reads caveated.
+ * checks (#86). The alarm set below alone decides "Verification failed"; an
+ * alarm-tier row outside it reads caveated — a timestamp whose only fault is this
+ * verifier's policy (#94).
+ *
+ * The alarm set reads reasons, not only verdicts (sprint #98):
+ *   - #7: a timestamp token that does not verify for this package fails it; one whose
+ *     only fault is an authority this verifier does not pin, intermediates it lacks
+ *     or an algorithm it does not check caveats (`classifyTimestamp`, #94 D1).
  */
 export function rollupVerdict(result: VerifyResult, registry: RegistryMeta = UNSTATED_REGISTRY): Verdict {
   const integrity = result.envelopeIntegrity;
@@ -1653,6 +1668,8 @@ export function rollupVerdict(result: VerifyResult, registry: RegistryMeta = UNS
     result.signatureValid === false ||
     result.contentHash?.status === 'content_hash_mismatch' ||
     result.blobRefsVerified === false ||
+    // A timestamp token that does not verify for this package (#94).
+    classifyTimestamp(result.hasTimestamp, result.rfc3161) === 'fails' ||
     result.signerIdentity?.status === 'signer_identity_mismatch' ||
     // Hub ADR-0030 §3: the identifier does not name the key that signed — fatal.
     result.signerIdentity?.status === 'key_derived_mismatch' ||

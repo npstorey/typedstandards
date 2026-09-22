@@ -33,6 +33,7 @@ import type {
   BlobRefVerifyReason,
   CaptureMethod,
   ContentProfileStatus,
+  Rfc3161FailReason,
 } from '@typedstandards/verify-core';
 
 // --- Tiers ---------------------------------------------------------------
@@ -382,7 +383,9 @@ export function resolveKeyTrust(
 // As of verify-core 0.6.0 (#119 P2b) the token is cryptographically verified
 // offline — TSA signature + embedded cert chain to the pinned FreeTSA root — not
 // merely detected. So the signal is driven by that verdict, not presence: a present-
-// but-unverified (e.g. forged) token reads as alarm, an absent one stays calm.
+// but-unverified (e.g. forged) token reads as alarm, an absent one stays calm. The row
+// reads the same whatever the reason; what the reason does to the headline is
+// `classifyTimestamp` below (#94).
 
 export const TIMESTAMP_SIGNALS = {
   verified: {
@@ -412,6 +415,81 @@ export const resolveTimestamp = (
     : rfc3161Verified === true
       ? TIMESTAMP_SIGNALS.verified
       : TIMESTAMP_SIGNALS.failed;
+
+/** What a timestamp token that did not verify does to the verdict. */
+export type TimestampFailureClass = 'fails' | 'caveats';
+
+/**
+ * #94, ruling D1 as amended (sprint #98): each reason verify-core reports for a token
+ * that did not verify, classified by the reason alone. Since verify-core's P1b the
+ * reason names the token's own faults before the chain's, so a chain reason is
+ * reported only beneath a TSA signature that verifies and a signing certificate
+ * valid at genTime.
+ *
+ * `fails` — the token does not verify for this package, and the package fails:
+ * it does not parse, does not bind this package's hash, carries no timestamping
+ * signing certificate, its signing certificate is not valid at genTime, or its TSA
+ * signature does not verify.
+ *
+ * `caveats` — the only fault is this verifier's policy, and the headline is caveated:
+ * an algorithm it does not check (including a signing key outside P-384), a root it
+ * does not pin, intermediates it lacks, an intermediate or root not valid at genTime,
+ * or a chain link it cannot verify. `chain_signature_invalid` is here because the
+ * chain validator reports a link signed with an algorithm it does not implement the
+ * same way as a link whose signature is wrong (#100); once the two are separated, the
+ * invalid-signature reason moves to `fails`.
+ *
+ * The `satisfies` clause makes a reason verify-core adds a compile error here, and
+ * `timestamp-classification.test.ts` fails on one at run time, read from verify-core's
+ * `RFC3161_FAIL_REASONS`.
+ */
+export const TIMESTAMP_FAILURE_CLASS = {
+  parse_error: 'fails',
+  imprint_mismatch: 'fails',
+  no_message_digest: 'fails',
+  content_not_bound: 'fails',
+  no_signing_cert: 'fails',
+  eku_not_timestamping: 'fails',
+  genTime_outside_validity: 'fails',
+  signature_invalid: 'fails',
+  unexpected_algorithm: 'caveats',
+  untrusted_root: 'caveats',
+  chain_incomplete: 'caveats',
+  chain_signature_invalid: 'caveats',
+  chain_outside_validity: 'caveats',
+} as const satisfies Record<Rfc3161FailReason, TimestampFailureClass>;
+
+/** How the verdict reads the timestamp: absent (calm), verified (green), or a token
+ *  that did not verify, which fails the package or caveats it. */
+export type TimestampReading = 'absent' | 'verified' | TimestampFailureClass;
+
+/**
+ * Read check #7 for the verdict (#94). A token that did not verify fails the package
+ * only when its reason is one `TIMESTAMP_FAILURE_CLASS` classes as `fails`. verify-core
+ * sets a reason on every token it evaluates and does not verify; a result with no
+ * reason (hand-built, or from an older result shape) and a token present but not
+ * evaluated (no package hash to check it against) read as caveats, as does a reason
+ * this site does not know — a code the classification guard would have caught.
+ */
+export function classifyTimestamp(
+  hasTimestamp: boolean,
+  rfc3161: { verified: boolean; reason?: string } | null | undefined,
+): TimestampReading {
+  if (!hasTimestamp) return 'absent';
+  if (!rfc3161) return 'caveats';
+  if (rfc3161.verified) return 'verified';
+  const reason = rfc3161.reason;
+  return reason !== undefined && Object.prototype.hasOwnProperty.call(TIMESTAMP_FAILURE_CLASS, reason)
+    ? TIMESTAMP_FAILURE_CLASS[reason as Rfc3161FailReason]
+    : 'caveats';
+}
+
+/** The #7 row's plain reading of a failure class, beside the reason code. */
+export const TIMESTAMP_FAILURE_NOTES: Record<TimestampFailureClass, string> = {
+  fails: 'the token does not verify for this package, so the package fails',
+  caveats:
+    'a limit of this verifier — an authority it does not pin, a chain it cannot complete or check, or an algorithm it does not check — not a fault of the token',
+};
 
 // --- #8 Transparency-log inclusion (DEEP: offline Merkle inclusion) -------
 // As of verify-core 0.6.0 (#119 P1), when an inclusion proof is carried the entry's
