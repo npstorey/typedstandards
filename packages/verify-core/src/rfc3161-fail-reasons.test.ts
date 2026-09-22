@@ -27,7 +27,7 @@ const resultReasonIsAMember: Equal<
   (typeof RFC3161_FAIL_REASONS)[number]
 > = true;
 
-test('RFC3161_FAIL_REASONS is exported, frozen, and holds the twelve reason codes', () => {
+test('RFC3161_FAIL_REASONS is exported, frozen, and holds the thirteen reason codes', () => {
   assert.ok(reasonTypeIsDerived && resultReasonIsAMember);
   assert.ok(Object.isFrozen(RFC3161_FAIL_REASONS), 'the reason list must be read-only at runtime');
   assert.throws(() => (RFC3161_FAIL_REASONS as unknown as string[]).push('example'), TypeError);
@@ -44,6 +44,7 @@ test('RFC3161_FAIL_REASONS is exported, frozen, and holds the twelve reason code
       'genTime_outside_validity',
       'chain_incomplete',
       'chain_signature_invalid',
+      'chain_outside_validity',
       'untrusted_root',
       'signature_invalid',
     ],

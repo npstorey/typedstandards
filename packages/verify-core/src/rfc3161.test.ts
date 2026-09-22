@@ -229,7 +229,7 @@ test('P1b (pin): unexpected_algorithm and parse_error return before any signatur
     assert.equal(r.reason, 'unexpected_algorithm');
     assert.equal(r.signatureValid, null);
     assert.equal(r.chainVerified, null);
-    assert.equal(r.imprintMatches, null);
+    assert.equal(r.imprintMatches, true, 'the imprint is compared before the SignerInfo algorithms');
     assert.equal(r.verified, false);
     const garbage = await verifyRfc3161Timestamp('bm90LWEtdG9rZW4=', fx.expectedHashHex, anchors);
     assert.equal(garbage.reason, 'parse_error');
@@ -282,5 +282,85 @@ test('P1b: bound token, leaf key on a curve other than P-384 (secp521r1 OID), ch
     assert.equal(r.signatureValid, null, 'a key this verifier cannot evaluate is not an invalid signature');
     assert.equal(r.verified, false);
     assert.equal(r.reason, 'unexpected_algorithm');
+  }
+});
+
+// --- Classifiable by the code alone (sprint #98 P1b, second fix) ---
+//
+// A lapsed intermediate or root is a chain fault with its own code, `chain_outside_validity`;
+// `genTime_outside_validity` names only the signing cert. And the message imprint is compared
+// before the SignerInfo algorithms are checked, so a token that does not bind this package's
+// hash reads `imprint_mismatch` whatever algorithms it uses.
+
+/** The same token with the embedded ROOT's notAfter rewritten (UTCTime, same length). Neither
+ *  the TSA signature (over signedAttrs) nor the leaf's link signature (over the leaf's TBS)
+ *  covers the root's TBS, and the chain walk does not check the terminus's self-signature. */
+function withRootNotAfter(tokenB64: string, utcTime: string): string {
+  const raw = tokenBytes(tokenB64);
+  const certsNode = signedDataKids(raw).find((c) => c.tag === 0xa0)!;
+  const rootNode = children(raw, certsNode).find((n) => {
+    const c = parseCertificate(raw, n);
+    return c.issuerDer.length === c.subjectDer.length && c.issuerDer.every((b, i) => b === c.subjectDer[i]);
+  })!;
+  const tbs = children(raw, children(raw, rootNode)[0]);
+  const validity = tbs.find((k) => {
+    if (k.tag !== 0x30) return false;
+    const kk = children(raw, k);
+    return kk.length === 2 && kk[0].tag === 0x17 && kk[1].tag === 0x17;
+  })!;
+  const notAfter = children(raw, validity)[1];
+  assert.equal(notAfter.contentEnd - notAfter.contentStart, utcTime.length);
+  raw.set(Uint8Array.from(utcTime, (c) => c.charCodeAt(0)), notAfter.contentStart);
+  return b64(raw);
+}
+
+/** The same token with the TSTInfo messageImprint hash algorithm moved from SHA-256
+ *  (2.16.840.1.101.3.4.2.1) to SHA-384 (…2.2). The TSTInfo changes, so the messageDigest
+ *  binding no longer holds either. */
+function withImprintAlgorithmSha384(tokenB64: string): string {
+  const raw = tokenBytes(tokenB64);
+  const encap = signedDataKids(raw).find((c) => c.tag === 0x30)!;
+  const tstOctet = children(raw, children(raw, encap)[1])[0];
+  const tstInfo = readNode(raw, tstOctet.contentStart);
+  const messageImprint = children(raw, tstInfo)[2];
+  const oid = children(raw, children(raw, messageImprint)[0])[0];
+  assert.equal(raw[oid.contentEnd - 1], 0x01);
+  raw[oid.contentEnd - 1] = 0x02;
+  return b64(raw);
+}
+
+test('P1b: leaf valid at genTime, embedded ROOT lapsed before it, genuine TSA signature -> chain_outside_validity', async () => {
+  // Root notAfter moved to 2026-01-01, before the token's genTime (2026-06-07); the leaf is
+  // valid 2026-02-15 .. 2040-02-02.
+  const lapsedRoot = withRootNotAfter(fx.tokenB64, '260101000000Z');
+  for (const anchors of [undefined, []]) {
+    const r = await verifyRfc3161Timestamp(lapsedRoot, fx.expectedHashHex, anchors);
+    assert.equal(r.imprintMatches, true);
+    assert.equal(r.contentBound, true);
+    assert.equal(r.withinValidity, true, 'the signing cert is valid at genTime');
+    assert.equal(r.signatureValid, true, 'the TSA signature is genuine');
+    assert.equal(r.chainVerified, false);
+    assert.equal(r.verified, false);
+    assert.equal(r.reason, 'chain_outside_validity', 'a lapsed root is a chain fault, not the token’s');
+  }
+});
+
+test('P1b: a token that does not bind this package fails on its imprint whatever its SignerInfo algorithms', async () => {
+  const sha384 = withSignatureAlgorithmSha384(fx.tokenB64);
+  // A foreign hash under an algorithm outside the checked set.
+  const foreign = await verifyRfc3161Timestamp(sha384, 'f'.repeat(64));
+  assert.equal(foreign.reason, 'imprint_mismatch');
+  assert.equal(foreign.imprintMatches, false);
+  assert.equal(foreign.contentBound, null);
+  assert.equal(foreign.signatureValid, null);
+  assert.equal(foreign.verified, false);
+  // A TSTInfo imprint that is not SHA-256 reads imprint_mismatch, with the SignerInfo
+  // algorithms checked or not.
+  const imprint384 = withImprintAlgorithmSha384(fx.tokenB64);
+  for (const token of [imprint384, withSignatureAlgorithmSha384(imprint384)]) {
+    const r = await verifyRfc3161Timestamp(token, fx.expectedHashHex);
+    assert.equal(r.reason, 'imprint_mismatch');
+    assert.equal(r.imprintMatches, false);
+    assert.equal(r.signatureValid, null);
   }
 });
