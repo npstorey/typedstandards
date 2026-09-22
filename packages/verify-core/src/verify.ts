@@ -55,6 +55,7 @@ import {
   verifyContentHashWithFetch,
   resolvePackageType,
   checkSignerIdentity,
+  checkSigningKeyIdConsistency,
   checkCaptureMethodVocab,
   checkContentProfile,
   verifyPackageBlobRefs,
@@ -62,6 +63,7 @@ import {
   type ContentHashCheck,
   type TypeResolution,
   type SignerIdentityCheck,
+  type SigningKeyIdConsistencyCheck,
   type CaptureMethodVocabCheck,
   type ContentProfileCheck,
   type BlobRefVerification,
@@ -220,6 +222,10 @@ export interface VerifyResult {
   contentHash: ContentHashCheck | null;
   typeResolution: TypeResolution | null;
   signerIdentity: SignerIdentityCheck | null;
+  /** Check #6 — the envelope `kid` against `metadata.signingKeyId`. Null when
+   *  the package is absent, no signature envelope was supplied, or the
+   *  signature was malformed: there is no envelope `kid` to read. */
+  signingKeyIdConsistency: SigningKeyIdConsistencyCheck | null;
   captureMethodVocab: CaptureMethodVocabCheck | null;
   /** Check #16 — `metadata.contentProfile` (hub ADR-0029 §5). */
   contentProfile: ContentProfileCheck | null;
@@ -367,11 +373,12 @@ export async function verifyRecord(
   }
 
   // Step 5 — canonicalization, content-hash, and envelope checks
-  // (#3/#4/#12/#14/#15/#16). #4 fetches only for a raw-bytes/v1 BlobRef output.
+  // (#3/#4/#6/#12/#14/#15/#16). #4 fetches only for a raw-bytes/v1 BlobRef output.
   let contentCanonicalization: ContentCanonicalizationResolution | null = null;
   let contentHashCheck: ContentHashCheck | null = null;
   let typeResolution: TypeResolution | null = null;
   let signerIdentity: SignerIdentityCheck | null = null;
+  let signingKeyIdConsistency: SigningKeyIdConsistencyCheck | null = null;
   let captureMethodVocab: CaptureMethodVocabCheck | null = null;
   let contentProfile: ContentProfileCheck | null = null;
   if (pkg) {
@@ -384,6 +391,9 @@ export async function verifyRecord(
     );
     typeResolution = resolvePackageType(pkg);
     signerIdentity = checkSignerIdentity(pkg, sigKid, deps.registry, sigPublicKey);
+    if (input.signature && !input.signatureMalformed) {
+      signingKeyIdConsistency = checkSigningKeyIdConsistency(pkg, input.signature.kid);
+    }
     captureMethodVocab = checkCaptureMethodVocab(pkg);
     contentProfile = checkContentProfile(pkg);
   }
@@ -421,6 +431,7 @@ export async function verifyRecord(
     contentHash: contentHashCheck,
     typeResolution,
     signerIdentity,
+    signingKeyIdConsistency,
     captureMethodVocab,
     contentProfile,
     lifecycle,

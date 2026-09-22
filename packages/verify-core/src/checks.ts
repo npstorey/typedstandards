@@ -1,5 +1,5 @@
 // Content-canonicalization, content-hash, and typed-standards envelope checks
-// (spec §9.2 checks #3, #4, #12, #13, #14, #15, #16) + the package-level
+// (spec §9.2 checks #3, #4, #6, #12, #13, #14, #15, #16) + the package-level
 // blob-ref walker (#9) — browser-safe.
 //
 // Factored verbatim from the server `verify.ts` (WS2); these functions were
@@ -379,6 +379,82 @@ export function resolvePackageType(pkg: Record<string, unknown>): TypeResolution
     return { status: 'ok', type: raw };
   }
   return { status: 'unknown_type', type: raw };
+}
+
+// --- Envelope kid ↔ metadata.signingKeyId (spec §9.2 check #6) ---
+
+export const SIGNING_KEY_ID_CONSISTENCY_STATUSES = [
+  'ok',
+  'signingKeyId_mismatch',
+  'kid_absent',
+  'signingKeyId_absent',
+] as const;
+export type SigningKeyIdConsistencyStatus =
+  (typeof SIGNING_KEY_ID_CONSISTENCY_STATUSES)[number];
+
+export interface SigningKeyIdConsistencyCheck {
+  status: SigningKeyIdConsistencyStatus;
+  /** On `signingKeyId_mismatch`: the signature envelope's `kid`. */
+  kid?: string;
+  /** On `signingKeyId_mismatch`: `metadata.signingKeyId` as carried, when it is
+   *  a string. */
+  signingKeyId?: string;
+}
+
+const isAbsent = (v: unknown): boolean => v === undefined || v === null || v === '';
+
+/**
+ * Check #6 — the signature envelope's `kid` against `metadata.signingKeyId`
+ * (spec §9.2 check #6, §8.3.1). The package's `signingKeyId` is inside the
+ * signed bytes and the envelope's `kid` is not, so a `kid` swapped on the
+ * envelope after signing leaves the signature valid; this comparison is what
+ * detects it.
+ *   - both present and equal → `ok`.
+ *   - both present and different → `signingKeyId_mismatch`, the one failing
+ *     status: §8.3.1 says `metadata.signingKeyId` MUST equal the envelope's
+ *     `kid`, and the spec reads a mismatch as envelope-vs-canonical drift. The
+ *     comparison is exact (no case or whitespace folding), and a present value
+ *     that is not a string is a mismatch.
+ *   - the envelope carries no `kid` → `kid_absent`: there is nothing to compare.
+ *     Under a key-derived `signer.identifier` (§8.5.1) `kid` is optional, and
+ *     legacy packages carry neither field; for a registry signer, check #5
+ *     carries the consequence of a missing `kid`.
+ *   - the envelope carries a `kid` and the package no `metadata.signingKeyId`
+ *     → `signingKeyId_absent`: the `kid` is bound by nothing signed, so the
+ *     check cannot confirm it. The package does not meet §8.3.1, which requires
+ *     the field; that is not evidence the envelope was changed.
+ * `undefined`, `null` and `''` count as absent on either side. Only a mismatch
+ * carries the two values, which are then the finding; otherwise they are
+ * `VerifyResult.kid` and the package's own field.
+ *
+ * `signer.identifier` is not read. Under a key-derived identifier the `kid`
+ * SHOULD be the identifier string (§8.3.1); that is not a condition of this
+ * check, and for a registry signer `kid` and `signer.identifier` differ by
+ * design. The identity cross-check is check #14's.
+ */
+export function checkSigningKeyIdConsistency(
+  pkg: Record<string, unknown>,
+  kid: string | undefined,
+): SigningKeyIdConsistencyCheck {
+  const metadata = pkg['metadata'];
+  const signingKeyId =
+    typeof metadata === 'object' && metadata !== null && !Array.isArray(metadata)
+      ? (metadata as Record<string, unknown>)['signingKeyId']
+      : undefined;
+  if (kid === undefined || isAbsent(kid)) {
+    return { status: 'kid_absent' };
+  }
+  if (isAbsent(signingKeyId)) {
+    return { status: 'signingKeyId_absent' };
+  }
+  if (signingKeyId === kid) {
+    return { status: 'ok' };
+  }
+  return {
+    status: 'signingKeyId_mismatch',
+    kid,
+    ...(typeof signingKeyId === 'string' ? { signingKeyId } : {}),
+  };
 }
 
 export const SIGNER_IDENTITY_CHECK_STATUSES = [
