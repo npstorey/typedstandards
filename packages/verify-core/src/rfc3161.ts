@@ -7,11 +7,21 @@
 //   2. signedAttrs.messageDigest == SHA-512(TSTInfo) — the signature is BOUND to it;
 //   3. the token's EMBEDDED signing cert chains to the PINNED FreeTSA RSA-4096 root
 //      (each link's signature verified; CA + validity-vs-genTime checked) — so the
-//      signer is trusted WITHOUT pinning the (rotatable) signing key;
+//      signer is trusted WITHOUT pinning the (rotatable) signing key. An intermediate
+//      or root not valid at genTime is a chain fault, `chain_outside_validity`;
 //   4. the signing cert carries EKU id-kp-timeStamping and its validity covers
 //      genTime;
 //   5. the TSA's ECDSA-P384 signature over SHA-512(signedAttrs) verifies under THAT
-//      chain-validated leaf key.
+//      leaf's key. The signature is evaluated whether or not step 3 reaches a pinned
+//      root (typedstandards#94), so a token that does not verify reads differently
+//      from one whose only fault is its chain; `verified` still requires all five. A
+//      leaf key that is not a P-384 key is outside the set this verifier checks: it
+//      reads `unexpected_algorithm`, not `signature_invalid`.
+//
+// Step 1 runs before the SignerInfo digest/signature algorithms are checked: it reads
+// only the TSTInfo, so a token that does not bind this package reads `imprint_mismatch`
+// whatever algorithms it uses. Each reason names one kind of fault, so a consumer can
+// classify a token by `reason` alone.
 //
 // Crypto: the leaf TSA signature is `@noble` ECDSA-P384 (the cert key); the cert
 // chain is RSASSA-PKCS1-v1.5/SHA-512 via WebCrypto (`globalThis.crypto.subtle`, a
@@ -74,19 +84,26 @@ export const FREETSA_ROOT_ANCHORS: readonly TsaRootAnchor[] = [
   },
 ];
 
-export type Rfc3161FailReason =
-  | 'parse_error'
-  | 'unexpected_algorithm'
-  | 'no_message_digest'
-  | 'content_not_bound'
-  | 'imprint_mismatch'
-  | 'no_signing_cert'
-  | 'eku_not_timestamping'
-  | 'genTime_outside_validity'
-  | 'chain_incomplete'
-  | 'chain_signature_invalid'
-  | 'untrusted_root'
-  | 'signature_invalid';
+// Source-of-truth array (not just a type), as BLOB_REF_VERIFY_REASONS in blob-ref.ts,
+// so a consumer can enumerate every reason `verifyRfc3161Timestamp` can return at
+// runtime and fail when a new one arrives unclassified. Frozen: reading it cannot
+// change it.
+export const RFC3161_FAIL_REASONS = Object.freeze([
+  'parse_error',
+  'unexpected_algorithm',
+  'no_message_digest',
+  'content_not_bound',
+  'imprint_mismatch',
+  'no_signing_cert',
+  'eku_not_timestamping',
+  'genTime_outside_validity',
+  'chain_incomplete',
+  'chain_signature_invalid',
+  'chain_outside_validity',
+  'untrusted_root',
+  'signature_invalid',
+] as const);
+export type Rfc3161FailReason = (typeof RFC3161_FAIL_REASONS)[number];
 
 export interface Rfc3161VerifyResult {
   /** All checks passed: a chain-trusted TSA signed this package hash at genTime. */
@@ -99,11 +116,34 @@ export interface Rfc3161VerifyResult {
   ekuTimestamping: boolean | null;
   /** genTime within the signing cert's validity window. */
   withinValidity: boolean | null;
-  /** The TSA ECDSA-P384 signature verifies under the chain-validated leaf key. */
+  /**
+   * The TSA ECDSA-P384 signature verifies under the embedded signing cert's key.
+   * Evaluated whenever the token parses, uses the checked algorithms, binds this
+   * package and carries a timestamping signing cert with a P-384 key — whether or not
+   * that cert chains to a pinned root (`chainVerified`), which is what makes the key
+   * trusted. `null` when an earlier step returned first, or when the signing cert's
+   * key is not a P-384 key (`unexpected_algorithm`): a key this verifier cannot
+   * evaluate is not an invalid signature. `false` covers a P-384 key under which the
+   * signature does not verify, including a malformed signature encoding.
+   */
   signatureValid: boolean | null;
   genTime?: number;
   /** The matched root anchor name. */
   tsa?: string;
+  /**
+   * The first failing step, in this order: `parse_error`; `imprint_mismatch` (the
+   * TSTInfo imprint is not SHA-256 of this package's hash; compared before the
+   * SignerInfo algorithms); `unexpected_algorithm` (SignerInfo digest or signature
+   * algorithm outside the checked set); `no_message_digest`, `content_not_bound`;
+   * `no_signing_cert`, `eku_not_timestamping`. After the signing-cert step the token's
+   * own faults come first: `genTime_outside_validity` (the signing cert only), then
+   * `unexpected_algorithm` (a signing-cert key that is not P-384), then
+   * `signature_invalid`, then the chain's reason — `untrusted_root`,
+   * `chain_incomplete`, `chain_signature_invalid`, or `chain_outside_validity` (an
+   * intermediate or root not valid at genTime). So a chain reason is reported only for
+   * a token whose TSA signature verifies and whose genTime is within the signing cert's
+   * validity, and each reason names one kind of fault.
+   */
   reason?: Rfc3161FailReason;
 }
 
@@ -204,11 +244,14 @@ function parseTstInfo(tst: Uint8Array): {
 // Map the X.509 chain verifier's precise reason onto this module's vocabulary. The
 // strict-RFC structural/policy rejections (#119 P4) collapse to `chain_incomplete`
 // (the chain could not be trusted) and only a real RSA link failure surfaces as
-// `chain_signature_invalid`; the chain layer keeps the fine-grained reason.
+// `chain_signature_invalid`; the chain layer keeps the fine-grained reason. The
+// chain's validity failure is `chain_outside_validity`: `verifyRfc3161Timestamp`
+// reports a signing cert not valid at genTime before the chain's reason, so here it
+// can only be an intermediate or the root (typedstandards#94).
 function toRfc3161ChainReason(reason: ChainFailReason): Rfc3161FailReason {
   switch (reason) {
     case 'genTime_outside_validity':
-      return 'genTime_outside_validity';
+      return 'chain_outside_validity';
     case 'untrusted_root':
       return 'untrusted_root';
     case 'link_signature_invalid':
@@ -248,8 +291,13 @@ function fail(base: Rfc3161VerifyResult, reason: Rfc3161FailReason): Rfc3161Veri
  * Verify an RFC 3161 token (base64) attests `expectedHashHex` (the package SHA-256),
  * chaining the token's embedded signing cert to a pinned TSA root. Async (the cert
  * chain uses WebCrypto RSA). A parse failure / untrusted chain is reported, not
- * thrown; `imprint_mismatch` / `content_not_bound` / `chain_signature_invalid` /
- * `signature_invalid` are the alarm signals.
+ * thrown. The message imprint is compared first, before the SignerInfo algorithms.
+ * The TSA signature is evaluated even when the chain does not reach a pinned
+ * root, and a fault of the token itself (`genTime_outside_validity`,
+ * `unexpected_algorithm` for a signing-cert key that is not P-384,
+ * `signature_invalid`) is reported ahead of a chain fault. `parse_error`, and
+ * `unexpected_algorithm` for the SignerInfo's digest or signature algorithm, still
+ * return before any signature is evaluated.
  */
 export async function verifyRfc3161Timestamp(
   tokenB64: string,
@@ -289,13 +337,15 @@ export async function verifyRfc3161Timestamp(
     genTime: tst.genTime,
   };
 
-  if (token.digestAlgOid !== OID_SHA512 || token.signatureAlgOid !== OID_ECDSA_SHA512) {
-    return fail(base, 'unexpected_algorithm');
-  }
-
+  // The imprint reads only the TSTInfo, not the SignerInfo algorithms, so it runs
+  // first: a token that does not bind this package fails whatever it is signed with.
   base.imprintMatches =
     tst.hashAlgOid === OID_SHA256 && bytesToHex(tst.hashedMessage) === expectedHashHex.toLowerCase();
   if (!base.imprintMatches) return fail(base, 'imprint_mismatch');
+
+  if (token.digestAlgOid !== OID_SHA512 || token.signatureAlgOid !== OID_ECDSA_SHA512) {
+    return fail(base, 'unexpected_algorithm');
+  }
 
   if (!mdAttr) return fail(base, 'no_message_digest');
   base.contentBound = bytesEqual(mdAttr, sha512(token.tstInfo));
@@ -312,25 +362,43 @@ export async function verifyRfc3161Timestamp(
 
   const chain = await validateChainToRoot(token.certs, leaf, anchors, tst.genTime);
   base.chainVerified = chain.ok;
-  if (!chain.ok) return fail(base, chain.reason ?? 'untrusted_root');
-  base.tsa = chain.tsa;
-  if (!base.withinValidity) return fail(base, 'genTime_outside_validity');
+  if (chain.ok) base.tsa = chain.tsa;
 
   // The TSA signature: ECDSA-P384 over SHA-512(signedAttrs re-tagged [0]→SET),
-  // under the chain-validated leaf key. lowS:false — a TSA emits high-S (#119 fix).
-  const signedBytes = Uint8Array.from(rawTlv(buf, token.signedAttrs));
-  signedBytes[0] = 0x31;
+  // under the leaf's key. lowS:false — a TSA emits high-S (#119 fix). Evaluated
+  // whatever the chain read (#94): the key is trusted only if `chain.ok`, but a
+  // signature that does not verify under it is a fault of the token itself.
+  //
+  // Two separate steps. A leaf key that is not a P-384 SPKI is one this verifier
+  // cannot evaluate: `signatureValid` stays null and the token reads
+  // `unexpected_algorithm`. Only a P-384 key under which the signature does not
+  // verify (a malformed signature encoding included) is `signature_invalid`.
+  let point: Uint8Array | null = null;
   try {
-    const point = extractP384Point(leaf.spkiDer);
-    base.signatureValid = p384.verify(token.signature, sha512(signedBytes), point, {
-      format: 'der',
-      prehash: false,
-      lowS: false,
-    });
+    point = extractP384Point(leaf.spkiDer);
   } catch {
-    base.signatureValid = false;
+    point = null;
   }
+  if (point) {
+    const signedBytes = Uint8Array.from(rawTlv(buf, token.signedAttrs));
+    signedBytes[0] = 0x31;
+    try {
+      base.signatureValid = p384.verify(token.signature, sha512(signedBytes), point, {
+        format: 'der',
+        prehash: false,
+        lowS: false,
+      });
+    } catch {
+      base.signatureValid = false;
+    }
+  }
+
+  // The token's own faults first, then the chain's: a chain reason is reported only
+  // for a token whose signature verifies and whose genTime is within validity.
+  if (!base.withinValidity) return fail(base, 'genTime_outside_validity');
+  if (!point) return fail(base, 'unexpected_algorithm');
   if (!base.signatureValid) return fail(base, 'signature_invalid');
+  if (!chain.ok) return fail(base, chain.reason ?? 'untrusted_root');
 
   return { ...base, verified: true };
 }
