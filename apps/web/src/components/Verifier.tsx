@@ -139,7 +139,12 @@ export function Verifier({
       // from the declared registry origin + the directory + the SAME key-trust
       // result, kept orthogonal to the cryptographic verdict above.
       setRecognition(
-        resolveHostRecognition(resolvedInput.commitment, result.keyTrust, resolvedInput.directory),
+        resolveHostRecognition(
+          resolvedInput.commitment,
+          result.keyTrust,
+          resolvedInput.directory,
+          resolvedInput.registryProvenance,
+        ),
       );
       setPreview(buildPreview(resolvedInput.pkg, resolvedInput.commitment));
 
@@ -202,7 +207,11 @@ export function Verifier({
     if (!resolved || !result) return;
     setRecheck({ phase: "loading" });
     try {
-      const data = await recheckKeyTrustLive(resolved.commitment, result);
+      // The same verify-core input the verdict was computed from (see `run`).
+      const vinput = buildVerifyInput(resolved.commitment, resolved.pkg, {
+        offline: resolved.fullyOffline,
+      });
+      const data = await recheckKeyTrustLive(resolved.commitment, result, vinput);
       setRecheck({ phase: "done", data });
     } catch (e) {
       setRecheck({ phase: "error", error: e instanceof Error ? e.message : String(e) });

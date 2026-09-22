@@ -41,7 +41,7 @@ import {
   // so this is the chain's only runtime relative import. (The verify-core import
   // below is type-only and strips away entirely.)
 } from './trust-signal.ts';
-import type { KeyTrustResult, FetchLike } from '@typedstandards/verify-core';
+import type { KeyTrustResult, FetchLike, TrustRegistryProvenance } from '@typedstandards/verify-core';
 
 // --- Directory shape ------------------------------------------------------
 
@@ -473,11 +473,17 @@ function descriptor(tier: TrustTier, label: string, detail: string): TrustSignal
  * `keyTrust` is read from the SAME verify run whose registry was fetched from the
  * declared `trustRegistryUrl`, so (a) "origin is listed" and (b) "key is in that
  * origin's registry" reference one and the same publisher.
+ *
+ * `registryProvenance` is the provenance that verify run was given. A
+ * self-certified signer (hub ADR-0030) whose declared registry was fetched and
+ * does not list its key reads `self_certified`, not `unknown_key`; with a
+ * `declared-url` provenance that is the same disavowal.
  */
 export function resolveHostRecognition(
   commitment: { trustRegistryUrl?: string; trustRegistryUrlLegacy?: string },
   keyTrust: KeyTrustResult | null | undefined,
   directory: HostDirectory | 'unavailable' | undefined,
+  registryProvenance?: TrustRegistryProvenance,
 ): HostRecognition {
   const origin = originOf(commitment.trustRegistryUrl ?? commitment.trustRegistryUrlLegacy);
 
@@ -547,7 +553,12 @@ export function resolveHostRecognition(
   // treat as an unknown publisher. Deliberately refer ONLY to the raw declared
   // origin, never the curated display-name: the green badge is the one earned place
   // for the brand, so a disavowed signer must not borrow "Civic AI Tools".
-  if (keyTrust?.status === 'unknown_key') {
+  // A declared registry that does not list a self-certified signer's key disavows
+  // it the same way.
+  if (
+    keyTrust?.status === 'unknown_key' ||
+    (keyTrust?.status === 'self_certified' && registryProvenance === 'declared-url')
+  ) {
     return {
       status: 'unknown_publisher',
       origin,

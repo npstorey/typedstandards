@@ -52,7 +52,11 @@ import {
   resolveCarriedLifecycle,
   runVerify,
   rollupVerdict,
+  buildCheckRows,
+  registryMetaOf,
+  type ResolveStep,
 } from './verify-flow.ts';
+import { KEY_TRUST_SIGNALS } from './trust-signal.ts';
 import {
   recomputePackageHash,
   computeEnvelopeHash,
@@ -436,4 +440,119 @@ test('Q15 self-certified: the committed content file, the hashes and the identif
     assert.equal(absent in bundle, false, `no ${absent}`);
   }
   assert.equal('contentProfile' in pkg.metadata, false, 'no metadata.contentProfile');
+});
+
+// --- Registry provenance for the self-certified fixture (Wave N14 P9) ----------
+//
+// Hub ADR-0030 §4 rule 3: for a key-derived signer, only a registry from the
+// declared registry URL can raise the key status. A trust registry counts as
+// declared only when it is fetched from an https: URL; one read from any other URL
+// counts as carried in the bundle, so it can lower the status and never raise it.
+// Each case adds a registry URL to the committed fixture's view (outside the signed
+// package) and serves a registry that lists the fixture's own (kid, publicKey) as
+// active.
+
+const SC_HTTPS_REGISTRY_URL = 'https://registry-host.test/trust-registry.json';
+const SC_HTTP_REGISTRY_URL = 'http://registry-host.test/trust-registry.json';
+
+function registryListingFixtureKey(): Record<string, unknown> {
+  const bundle = JSON.parse(selfCertifiedRaw()) as { signature: { kid: string; publicKey: string } };
+  return {
+    generatedAt: '2026-09-21T00:00:00.000Z',
+    keys: [
+      {
+        kid: bundle.signature.kid,
+        publicKey: bundle.signature.publicKey,
+        status: 'active',
+        activatedAt: '2026-01-01T00:00:00.000Z',
+        deprecatedAt: null,
+        revokedAt: null,
+      },
+    ],
+  };
+}
+
+const dataUrlOf = (doc: unknown): string => `data:application/json,${encodeURIComponent(JSON.stringify(doc))}`;
+
+/** Run the site's flow over the fixture with `field` set to `url` on the view. The
+ *  fetch stub reads a `data:` URL with the platform fetch, serves the registry at
+ *  the two test registry URLs, and throws on anything else. */
+async function runWithRegistryUrl(field: 'trustRegistryUrl' | 'trustRegistryUrlLegacy', url: string) {
+  const bundle = JSON.parse(selfCertifiedRaw()) as Record<string, unknown>;
+  bundle[field] = url;
+  const registry = registryListingFixtureKey();
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = ((input: unknown, init?: RequestInit) => {
+    const u = String(input);
+    if (u.startsWith('data:')) return realFetch(u, init);
+    if (u === SC_HTTPS_REGISTRY_URL || u === SC_HTTP_REGISTRY_URL) {
+      return Promise.resolve(
+        new Response(JSON.stringify(registry), { status: 200, headers: { 'content-type': 'application/json' } }),
+      );
+    }
+    throw new Error(`NETWORK BLOCKED: ${u}`);
+  }) as typeof globalThis.fetch;
+  try {
+    const steps: ResolveStep[] = [];
+    const resolved = await resolveInput('bundle', JSON.stringify(bundle), undefined, (s) => steps.push(s));
+    const vinput = buildVerifyInput(resolved.commitment, resolved.pkg, { offline: resolved.fullyOffline });
+    const result = await runVerify(
+      vinput,
+      resolved.registry,
+      resolveCarriedLifecycle(resolved.commitment),
+      resolved.registryProvenance,
+    );
+    const rows = buildCheckRows(result, vinput, resolved.commitment, registryMetaOf(resolved));
+    return {
+      resolved,
+      result,
+      rows,
+      verdict: rollupVerdict(result),
+      registryStep: steps.find((s) => s.key === 'registry'),
+      keyTrustRow: rows.find((r) => r.num === '5'),
+    };
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+}
+
+for (const c of [
+  { name: 'a data: trustRegistryUrl', field: 'trustRegistryUrl' as const, url: () => dataUrlOf(registryListingFixtureKey()) },
+  { name: 'an http: trustRegistryUrl', field: 'trustRegistryUrl' as const, url: () => SC_HTTP_REGISTRY_URL },
+  { name: 'a data: trustRegistryUrlLegacy', field: 'trustRegistryUrlLegacy' as const, url: () => dataUrlOf(registryListingFixtureKey()) },
+]) {
+  test(`Q15 self-certified: a registry read from ${c.name} counts as carried in the bundle — self_certified, never Verified`, async () => {
+    const run = await runWithRegistryUrl(c.field, c.url());
+    assert.ok(run.resolved.registry, 'the registry was read');
+    assert.equal(run.resolved.registryProvenance, 'bundle', 'not a declared registry');
+    assert.equal(run.result.keyTrust?.status, 'self_certified');
+    assert.equal(run.result.keyTrust?.verified, false);
+    assert.equal(run.verdict.tier, 'normal');
+    assert.notEqual(run.verdict.headline, 'Verified');
+    assert.equal(run.keyTrustRow?.signal.label, KEY_TRUST_SIGNALS.self_certified.label);
+    assert.notEqual(run.keyTrustRow?.signal.label, KEY_TRUST_SIGNALS.active.label);
+    assert.equal(
+      run.keyTrustRow?.math.find((m) => m.label === 'Registry source')?.value,
+      'read from a registry URL that is not https: (can lower this signer’s key status, never raise it)',
+    );
+    assert.equal(run.keyTrustRow?.depthNote, undefined, 'no "live registry" note');
+    assert.notEqual(run.registryStep?.label, 'Fetched publisher trust registry');
+    assert.equal(
+      run.registryStep?.label,
+      'Read trust registry from a URL that is not https: — it can lower key trust, never raise it',
+    );
+  });
+}
+
+test('Q15 self-certified: a registry fetched from an https: trustRegistryUrl that lists the key active yields active (ADR-0030 §4 rule 3)', async () => {
+  const run = await runWithRegistryUrl('trustRegistryUrl', SC_HTTPS_REGISTRY_URL);
+  assert.equal(run.resolved.registryProvenance, 'declared-url');
+  assert.equal(run.result.keyTrust?.status, 'active');
+  assert.equal(run.result.keyTrust?.verified, true);
+  assert.equal(run.keyTrustRow?.signal.label, KEY_TRUST_SIGNALS.active.label);
+  assert.equal(
+    run.keyTrustRow?.math.find((m) => m.label === 'Registry source')?.value,
+    'fetched from the registry URL the record declares',
+  );
+  assert.equal(run.registryStep?.label, 'Fetched publisher trust registry');
 });
