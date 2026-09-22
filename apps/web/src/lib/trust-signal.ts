@@ -34,6 +34,7 @@ import type {
   CaptureMethod,
   ContentProfileStatus,
   Rfc3161FailReason,
+  SigningKeyIdConsistencyStatus,
 } from '@typedstandards/verify-core';
 
 // --- Tiers ---------------------------------------------------------------
@@ -378,6 +379,42 @@ export function resolveKeyTrust(
 ): TrustSignalDescriptor {
   return keyTrust ? KEY_TRUST_SIGNALS[keyTrust.status] : NO_SIGNING_KEY_SIGNAL;
 }
+
+// --- #6 Envelope kid = metadata.signingKeyId (spec §9.2 #6, §8.3.1) ------
+//
+// verify-core reports the check since sprint #98 P1 (`signingKeyIdConsistency`).
+// The envelope is not covered by the signature and `metadata.signingKeyId` is, so a
+// difference is the one failing status: §8.3.1 requires the two to be equal and the
+// specification reads a difference as envelope drift. It is alarm, and it is in the
+// verdict's alarm set (`rollupVerdict`), as the #14 identity mismatch is. A `kid` the
+// package does not bind is unconfirmed (attention); no `kid` at all leaves nothing to
+// compare (calm: earlier-format packages, and optional for a key-derived signer).
+
+export const SIGNING_KEY_ID_SIGNALS: Record<SigningKeyIdConsistencyStatus, TrustSignalDescriptor> = {
+  ok: {
+    tier: 'verified',
+    label: 'Envelope key id matches the signed package',
+    detail: 'The signature envelope’s kid equals the metadata.signingKeyId inside the signed package.',
+  },
+  signingKeyId_mismatch: {
+    tier: 'alarm',
+    label: 'Envelope key id does not match the signed package',
+    detail:
+      'The signature envelope’s kid differs from the metadata.signingKeyId the package signs. The envelope is not covered by the signature, so it may have been changed after signing — do not trust.',
+  },
+  signingKeyId_absent: {
+    tier: 'attention',
+    label: 'Envelope key id not bound by the package',
+    detail:
+      'The signature envelope carries a kid, but the signed package states no metadata.signingKeyId, so nothing signed confirms it. The standard requires the field; its absence is unconfirmed, not evidence of a change.',
+  },
+  kid_absent: {
+    tier: 'normal',
+    label: 'No envelope key id to compare',
+    detail:
+      'The signature envelope carries no kid, so there is nothing to compare. Earlier-format packages carry none, and it is optional for a signer whose identifier is derived from its key.',
+  },
+};
 
 // --- #7 RFC 3161 timestamp (DEEP: chain-verified to a pinned TSA root) ----
 // As of verify-core 0.6.0 (#119 P2b) the token is cryptographically verified
@@ -928,9 +965,9 @@ export const NOTEBOOK_PROVENANCE_SIGNALS: Record<NotebookProvenance, TrustSignal
 
 // --- Checks not emitted as discrete status fields today ------------------
 //
-// Spec checks #6 (metadata.signingKeyId consistency) and #13 (nodeId
-// cross-check) are NOT surfaced by today's verify route as discrete status
-// codes — it returns `nodeId` only as a recomputed hash string. Their tiers are
-// RESERVED in the design note (a mismatch on either → Alarm) but intentionally
-// have no runtime map here, and the coverage test asserts only the codes the
-// route actually emits. When #6/#13 gain discrete statuses, add their maps here.
+// Spec check #13 (nodeId cross-check) is NOT surfaced by verify-core as a discrete
+// status code — it returns `nodeId` only as a recomputed hash string. Its tier is
+// RESERVED in the design note (a mismatch → Alarm) but intentionally has no runtime
+// map here. When #13 gains a discrete status, add its map here. Check #6 was reserved
+// beside it until verify-core reported it (sprint #98 P1); its map is
+// `SIGNING_KEY_ID_SIGNALS` above.

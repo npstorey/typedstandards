@@ -64,6 +64,7 @@ import {
   SIGNER_IDENTITY_SIGNALS,
   CAPTURE_METHOD_VOCAB_SIGNALS,
   CONTENT_PROFILE_SIGNALS,
+  SIGNING_KEY_ID_SIGNALS,
   TIMESTAMP_FAILURE_NOTES,
   BLOB_REF_REASON_SIGNALS,
   KEY_TRUST_BUNDLE_REGISTRY_NOT_USED,
@@ -931,6 +932,14 @@ function signerIdentifierOf(pkg: Record<string, unknown> | null | undefined): st
   return typeof id === 'string' ? id : undefined;
 }
 
+/** The package's `metadata.signingKeyId`, when it is a non-empty string. */
+function signingKeyIdOf(pkg: Record<string, unknown> | null | undefined): string | undefined {
+  const metadata = pkg?.['metadata'];
+  if (!metadata || typeof metadata !== 'object') return undefined;
+  const id = (metadata as { signingKeyId?: unknown }).signingKeyId;
+  return typeof id === 'string' && id !== '' ? id : undefined;
+}
+
 /** Whether the package's signer identifier is key-derived (hub ADR-0030 §3:
  *  it begins `did:key:`). The site's ADR-0030 §10 display rules key on this,
  *  never on `bindingTier`. */
@@ -1359,6 +1368,11 @@ export function checkSignalsOf(
         : resolveKeyTrust(keyTrust),
   );
 
+  // #6 (sprint #98): absent when verify-core did not run it (no package, or no
+  // parsed signature envelope).
+  if (result.signingKeyIdConsistency) {
+    add('6', 'Signing key id', SIGNING_KEY_ID_SIGNALS[result.signingKeyIdConsistency.status]);
+  }
   // #7: the row reads the same whatever the reason (#94, D1); `rollupVerdict` reads
   // the reason for the headline.
   add('7', 'Timestamp', resolveTimestamp(result.hasTimestamp, result.rfc3161?.verified ?? null));
@@ -1526,6 +1540,22 @@ export function buildCheckRows(
     rows.push(checkRow('5', [{ label: 'Status', value: 'no signing key to check' }]));
   }
 
+  // #6 — envelope kid against metadata.signingKeyId (sprint #98). On a mismatch
+  // verify-core carries both values; otherwise they are the envelope's kid and the
+  // package's own field.
+  if (result.signingKeyIdConsistency) {
+    const c = result.signingKeyIdConsistency;
+    const kid = c.status === 'kid_absent' ? undefined : (c.kid ?? result.kid);
+    const signingKeyId =
+      c.status === 'signingKeyId_mismatch' ? (c.signingKeyId ?? 'not a string') : signingKeyIdOf(input.package);
+    rows.push(
+      checkRow('6', [
+        { label: 'Envelope kid', value: kid ?? 'absent', mono: kid !== undefined },
+        { label: 'metadata.signingKeyId', value: signingKeyId ?? 'absent', mono: signingKeyId !== undefined },
+      ]),
+    );
+  }
+
   // #7 — RFC 3161 timestamp (DEEP: TSA signature + cert chain to the pinned root,
   // verified offline by verify-core — #119 P2b). The row reflects that verdict, not
   // mere presence. A token that did not verify also shows its reason and what it
@@ -1691,6 +1721,7 @@ export interface Verdict {
  *   - #9: a referenced file fetched and not matching, or a malformed reference,
  *     fails; one that could not be fetched caveats, as #4 reads the same fact
  *     (`blobRefsOnlyUnfetched`, #89 D2).
+ *   - #6: an envelope kid that differs from `metadata.signingKeyId` fails (#88).
  */
 export function rollupVerdict(result: VerifyResult, registry: RegistryMeta = UNSTATED_REGISTRY): Verdict {
   const integrity = result.envelopeIntegrity;
@@ -1712,6 +1743,8 @@ export function rollupVerdict(result: VerifyResult, registry: RegistryMeta = UNS
     (result.blobRefsVerified === false && !blobRefsOnlyUnfetched(result.blobRefs ?? [])) ||
     // A timestamp token that does not verify for this package (#94).
     classifyTimestamp(result.hasTimestamp, result.rfc3161) === 'fails' ||
+    // The envelope kid is not the one the package signs (#88).
+    result.signingKeyIdConsistency?.status === 'signingKeyId_mismatch' ||
     result.signerIdentity?.status === 'signer_identity_mismatch' ||
     // Hub ADR-0030 §3: the identifier does not name the key that signed — fatal.
     result.signerIdentity?.status === 'key_derived_mismatch' ||
