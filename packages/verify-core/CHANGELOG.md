@@ -52,16 +52,28 @@ gains a field, so a consumer that builds a `VerifyResult` literal (a test double
     the chain reason. A token with an unpinned chain and a signature that does not verify used to
     read `untrusted_root` (or another chain reason) and now reads `signature_invalid`. A signing-cert
     key that is not P-384 used to read the chain reason, or `signature_invalid` under a pinned chain,
-    and now reads `unexpected_algorithm`. `untrusted_root`, `chain_incomplete` and
-    `chain_signature_invalid` are now reported only for a token whose TSA signature verifies and
-    whose `genTime` is within the signing cert's validity;
+    and now reads `unexpected_algorithm`. `untrusted_root`, `chain_incomplete`,
+    `chain_signature_invalid` and `chain_outside_validity` are now reported only for a token whose
+    TSA signature verifies and whose `genTime` is within the signing cert's validity;
+  - **new reason `chain_outside_validity`:** an intermediate or root certificate not valid at
+    `genTime`, a chain fault. `genTime_outside_validity` now means only the signing cert. A token
+    whose signing cert is valid at `genTime` and whose intermediate or root is not used to read
+    `genTime_outside_validity` and now reads `chain_outside_validity`;
+  - **the message imprint is compared before the SignerInfo algorithms:** a token that does not bind
+    this package's hash reads `imprint_mismatch` whatever algorithms it uses. One that did so with a
+    digest or signature algorithm outside the checked set used to read `unexpected_algorithm`, and
+    `imprintMatches` was `null` for any `unexpected_algorithm` result from that check; it is now
+    `true` there;
+  - each reason now names one kind of fault, so a consumer can classify a token by `reason` alone;
   - `verified` is unchanged: `true` only for a fully verified token chained to a pinned anchor. No
     request is added.
 - **`KNOWN_TYPE_URIS` is exported.** The type URIs check #12 resolves `ok` (`content/analysis/v1` and
   the sixteen attestation sub-types), frozen, so a check outside this package can compare them with the
   specification's list.
-- **`RFC3161_FAIL_REASONS` is exported.** The twelve reasons `verifyRfc3161Timestamp` can return, as a
-  frozen array; `Rfc3161FailReason` is now derived from it, with the same twelve members.
+- **`RFC3161_FAIL_REASONS` is exported.** The thirteen reasons `verifyRfc3161Timestamp` can return,
+  as a frozen array; `Rfc3161FailReason` is now derived from it. It gains one member,
+  `chain_outside_validity`, so a consumer with an exhaustive `switch` or `Record` over it needs the
+  new case.
 
 ## 0.10.0 — 2026-09-22
 
