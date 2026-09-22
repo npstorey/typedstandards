@@ -1,10 +1,59 @@
 # Changelog — @typedstandards/verify-core
 
-Factual record of what changed per published version. Check numbers (#1–#15)
+Factual record of what changed per published version. Check numbers (#1–#16)
 refer to the Typed Standards specification §9.2 verification sequence. Issue
 references are to `npstorey/civic-ai-tools-website` (#119 is the offline-crypto
 hardening arc; #116 is the standalone-verifier arc this package was extracted
 in).
+
+## 0.10.0 — 2026-09-21
+
+Specification v0.1.9 (hub ADR-0029 and ADR-0030, anchored at `typedstandards#77`): a Producer Profile
+for deterministic tool output, a raw-bytes content rule, a content-profile check, and a self-certifying
+signer. **A minor bump** — new exports, and every type-level union below gains members, so a consumer
+with an exhaustive `switch` or `Record` over one of them needs the new cases.
+
+- **The `scripted-recomputation` Producer Profile (ADR-0029).** `PROFILE_CAPTURE_VOCAB` gains
+  `scripted-recomputation: ['script-run', 'tool-emitted']`, a second stand-in entry under hub Q32, and
+  `CaptureMethod` gains both values. Check #15 now resolves a `scripted-recomputation/<subtype>`
+  package's capture method instead of reporting `producerProfile_bundle_unresolved`. The two signed
+  ADR-0028 eval-run packages read `ok`.
+- **`raw-bytes/v1` (`RAW_BYTES_CANONICALIZATION`).** A third content-canonicalization rule, in
+  `KNOWN_CANONICALIZATION_RULES`: `contentHash` fingerprints the exact bytes of `output`.
+  - With inline `output`, check #4 hashes its UTF-8 bytes.
+  - With a BlobRef `output`, check #4 hashes the file's bytes obtained through the injected fetcher
+    (`verifyContentHashWithFetch`; `verifyRecord` runs it):
+    - `content_hash_mismatch` when they differ, or when `contentHash.sha256` differs from the hex of
+      `output.ref`;
+    - the new status `content_bytes_unavailable` when the bytes cannot be obtained. It is never `ok`
+      without hashing.
+  - `verifyContentHash` stays synchronous and I/O-free, with an optional `outputBytes` argument.
+- **Check #16, the content-profile label (`checkContentProfile`, `CONTENT_PROFILE_STATUSES`,
+  `KNOWN_CONTENT_PROFILES`).** Reads `metadata.contentProfile` and reports one of:
+  - `ok`;
+  - `contentProfile_absent` (read as `"default"`);
+  - `contentProfile_unknown`;
+  - `contentProfile_inconsistent` (compared with `producerProfile` only when both are present).
+
+  `VerifyResult` gains `contentProfile`.
+- **The self-certifying signer (ADR-0030).**
+  - **The identifier.** `deriveKeyDerivedIdentifier` derives `did:key:z…` from an Ed25519 SPKI
+    `publicKey`. `isKeyDerivedIdentifier` and `KEY_DERIVED_IDENTIFIER_PREFIX` recognize one.
+  - **Key trust.** `KEY_TRUST_STATUSES` gains `self_certified` (`verified: false`) for a
+    `pseudonymous` signer whose identifier matches its signing key.
+  - **Check #14.** It gains `key_derived_match` and `key_derived_mismatch` (fatal; the result carries
+    `claimed` and `derived`), and never reports `ok` under a key-derived identifier.
+    `checkSignerIdentity` takes an optional `publicKey`.
+  - **Registry provenance.** `VerifyDeps.registryProvenance` (`TRUST_REGISTRY_PROVENANCES`:
+    `'declared-url' | 'bundle'`; absent is treated as `'bundle'`) states where the caller's registry
+    came from.
+    - For a key-derived identifier, only a `'declared-url'` registry can raise the status.
+    - A bundle-carried registry contributes only `revoked` and `deprecated_invalid`.
+    - This holds at every tier, and under a mismatch too.
+  - **Base-58.** The encoder is written in place; there is no new runtime dependency.
+- **Signers whose identifier is not key-derived are unchanged.** Already-signed packages verify
+  exactly as before, apart from checks #15 and #16, which now resolve a `scripted-recomputation`
+  profile and report a content profile.
 
 ## 0.9.0 — 2026-08-19
 
