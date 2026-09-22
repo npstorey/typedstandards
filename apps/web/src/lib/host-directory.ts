@@ -21,14 +21,19 @@
 // is awarded ONLY when BOTH hold:
 //   (a) the declared `trustRegistryUrl` origin is listed in the directory, AND
 //   (b) keyTrust confirms the signature against a key IN that registry
-//       (keyTrust.verified — i.e. status `active` or `deprecated_valid`).
+//       (keyTrust.verified — i.e. status `active` or `deprecated_valid`), where the
+//       registry was fetched from that declared https: URL (registry provenance
+//       `declared-url`).
 // A lookalike that declares a recognized origin but signs with its own key fails
 // (b): if it carries a kid, the registry it points to is fetched and the kid is
 // absent → `unknown_key` → "unknown publisher"; if it omits the kid it lands at
 // `legacy_embedded` → the amber "host recognized, key not registry-confirmed" —
-// which still withholds the green badge. Either way the publisher's good name is
-// never conferred without (a)+(b). The only attack surfaces are key-compromise or
-// directory-compromise (Q47).
+// which still withholds the green badge. A registry the record supplies itself —
+// carried in it, or read from a URL that is not https: — never satisfies (b),
+// whatever it lists (#78). The directory is only ever the typedstandards.org one:
+// a directory carried in the record is never read. Either way the publisher's good
+// name is never conferred without (a)+(b). The only attack surfaces are
+// key-compromise or directory-compromise (Q47).
 
 import {
   type TrustTier,
@@ -470,12 +475,14 @@ function descriptor(tier: TrustTier, label: string, detail: string): TrustSignal
  * fetched directory, and the cryptographic key-trust result. This is the only
  * place the (a)+(b) impersonation rule lives.
  *
- * `keyTrust` is read from the SAME verify run whose registry was fetched from the
- * declared `trustRegistryUrl`, so (a) "origin is listed" and (b) "key is in that
- * origin's registry" reference one and the same publisher.
+ * `keyTrust` is read from the SAME verify run whose registry `registryProvenance`
+ * describes. (b) "key is in that origin's registry" holds only when that registry
+ * was fetched from the declared https: URL (`declared-url`), so (a) and (b)
+ * reference one and the same publisher. A verified key from any other registry —
+ * `bundle`, or no provenance stated — reads "host recognized, key not
+ * registry-confirmed" at a listed origin (#78).
  *
- * `registryProvenance` is the provenance that verify run was given. A
- * self-certified signer (hub ADR-0030) whose declared registry was fetched and
+ * A self-certified signer (hub ADR-0030) whose declared registry was fetched and
  * does not list its key reads `self_certified`, not `unknown_key`; with a
  * `declared-url` provenance that is the same disavowal.
  */
@@ -532,8 +539,9 @@ export function resolveHostRecognition(
     };
   }
 
-  // (a) holds. Now (b): is the signing key confirmed against THAT registry?
-  if (keyTrust?.verified === true) {
+  // (a) holds. Now (b): is the signing key confirmed against THAT registry, fetched
+  // from the declared https: URL?
+  if (keyTrust?.verified === true && registryProvenance === 'declared-url') {
     return {
       status: 'known_publisher',
       origin,
@@ -573,7 +581,8 @@ export function resolveHostRecognition(
   }
 
   // (a) holds but (b) cannot be established: a legacy embedded key with no kid to
-  // look up, an unreachable registry, or a rotated-out key. The host origin is
+  // look up, an unreachable registry, a rotated-out key, or a key confirmed only by
+  // a registry the record supplied (#78). The host origin is
   // recognized but the key is not registry-confirmed, so the green badge is
   // withheld — the same calm "verified, with caveats" reading as the crypto side.
   // The origin IS listed, but we deliberately do NOT expose the curated entry

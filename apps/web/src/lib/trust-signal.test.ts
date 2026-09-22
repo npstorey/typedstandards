@@ -155,3 +155,13 @@ test('continuity: no signal anywhere says "same publisher" or "same person"', ()
   assert.ok(texts.length > 50, 'the scan reached the signal maps');
   for (const t of texts) assert.doesNotMatch(t, /same (publisher|person)/i, t);
 });
+
+test('#78: the supplied-registry readings never take the tier or label a declared registry earns', () => {
+  assert.equal(signals.KEY_TRUST_SUPPLIED_REGISTRY.tier, 'attention');
+  assert.notEqual(signals.KEY_TRUST_SUPPLIED_REGISTRY.label, KEY_TRUST_SIGNALS.active.label);
+  assert.doesNotMatch(signals.KEY_TRUST_SUPPLIED_REGISTRY.label, /registered/i);
+  assert.match(detailOf(signals.KEY_TRUST_SUPPLIED_REGISTRY), /not checked against the publisher’s domain/);
+  assert.equal(signals.SIGNER_IDENTITY_SUPPLIED_REGISTRY.tier, 'normal');
+  assert.notEqual(signals.SIGNER_IDENTITY_SUPPLIED_REGISTRY.label, SIGNER_IDENTITY_SIGNALS.ok.label);
+  assert.match(detailOf(signals.SIGNER_IDENTITY_SUPPLIED_REGISTRY), /not checked against the publisher’s domain/);
+});

@@ -9,11 +9,9 @@ import {
   buildVerifyInput,
   runVerify,
   resolveCarriedLifecycle,
-  buildCheckRows,
-  rollupVerdict,
+  presentVerification,
   buildPreview,
   deriveShareTarget,
-  resolveHostRecognition,
   registryMetaOf,
   canRecheckKeyTrust,
   recheckKeyTrustLive,
@@ -127,25 +125,15 @@ export function Verifier({
       if (ac.signal.aborted) return;
       setResult(result);
 
-      const builtRows = buildCheckRows(
-        result,
-        vinput,
-        resolvedInput.commitment,
-        registryMetaOf(resolvedInput),
-      );
+      // The rows, the verdict and the second, independent dimension (Phase D): host
+      // recognition, resolved from the declared registry origin + the directory +
+      // the SAME key-trust result and registry provenance, kept orthogonal to the
+      // cryptographic verdict.
+      const presentation = presentVerification(resolvedInput, vinput, result);
+      const builtRows = presentation.rows;
       setRows(builtRows);
-      setVerdict(rollupVerdict(result));
-      // The second, independent dimension (Phase D): host recognition. Resolved
-      // from the declared registry origin + the directory + the SAME key-trust
-      // result, kept orthogonal to the cryptographic verdict above.
-      setRecognition(
-        resolveHostRecognition(
-          resolvedInput.commitment,
-          result.keyTrust,
-          resolvedInput.directory,
-          resolvedInput.registryProvenance,
-        ),
-      );
+      setVerdict(presentation.verdict);
+      setRecognition(presentation.recognition);
       setPreview(buildPreview(resolvedInput.pkg, resolvedInput.commitment));
 
       setPhase("revealing");
@@ -337,7 +325,12 @@ export function Verifier({
                 resolved &&
                 result &&
                 canRecheckKeyTrust(registryMetaOf(resolved), result) && (
-                  <KeyTrustRecheckPanel state={recheck} onRecheck={onRecheck} />
+                  <KeyTrustRecheckPanel
+                    state={recheck}
+                    onRecheck={onRecheck}
+                    registryHost={hostOf(registryMetaOf(resolved).url)}
+                    bundleStatus={result.keyTrust?.status}
+                  />
                 )}
 
               {phase === "done" && resolved && <IndependenceNote resolved={resolved} />}
@@ -480,16 +473,23 @@ function asOfDate(iso?: string): string {
 function KeyTrustRecheckPanel({
   state,
   onRecheck,
+  registryHost,
+  bundleStatus,
 }: {
   state: { phase: "idle" | "loading" | "done" | "error"; data?: KeyTrustRecheck; error?: string };
   onRecheck: () => void;
+  /** The host of the declared https: registry URL the re-check fetches. */
+  registryHost: string;
+  /** The key-trust status the registry carried in the bundle gave. */
+  bundleStatus?: string;
 }) {
   return (
     <div className="rounded-lg border border-border bg-surface p-3 text-xs leading-relaxed">
       <p className="text-muted">
-        <strong className="text-foreground">Key trust used a registry snapshot.</strong> A
-        key revoked after the snapshot&apos;s date can&apos;t be seen offline. Re-check against
-        the live registry to close that gap.
+        <strong className="text-foreground">Key trust used the registry carried in this bundle.</strong>{" "}
+        It was not checked against the publisher&apos;s domain, and a key revoked after the
+        snapshot&apos;s date can&apos;t be seen offline. Re-check against the live registry at{" "}
+        <span className="font-mono">{registryHost}</span> to close both gaps.
       </p>
       {state.phase === "idle" && (
         <button
@@ -521,12 +521,13 @@ function KeyTrustRecheckPanel({
           {state.data.generatedAt ? ` (as of ${asOfDate(state.data.generatedAt)})` : ""}:{" "}
           {state.data.changed ? (
             <>
-              key trust is now <strong>{state.data.status}</strong> — this changed after the
-              snapshot you verified against.
+              key trust is <strong>{state.data.status}</strong>; the registry carried in the
+              bundle said <strong>{bundleStatus ?? "—"}</strong>.
             </>
           ) : (
             <>
-              key trust unchanged (still <strong>{state.data.status}</strong>).
+              key trust is <strong>{state.data.status}</strong>, the same as the registry
+              carried in the bundle.
             </>
           )}
         </p>
@@ -536,15 +537,19 @@ function KeyTrustRecheckPanel({
 }
 
 function IndependenceNote({ resolved }: { resolved: ResolvedInput }) {
-  const hasDirectory = resolved.directory !== "unavailable";
+  // A registry the record supplied — carried in it, or read from a URL that is not
+  // https: — was not checked against the publisher's domain (#78).
+  const suppliedRegistry =
+    resolved.registryProvenance === "bundle"
+      ? " The trust registry was supplied with the record, so the signing key was not checked against the publisher’s domain."
+      : "";
   if (resolved.fullyOffline) {
     return (
       <p className="text-xs leading-relaxed text-muted">
         <strong className="text-foreground">Fully offline.</strong> Every proof was
-        read from your bundle and verified in your browser — nothing was fetched.{" "}
-        {hasDirectory
-          ? "Publisher recognition used the host-directory snapshot bundled with it."
-          : "Your bundle carried no host-directory snapshot, so publisher recognition was skipped."}
+        read from your bundle and verified in your browser — nothing was fetched.
+        {suppliedRegistry} Publisher recognition was skipped: it reads only the
+        typedstandards.org directory, which an offline check does not fetch.
       </p>
     );
   }
@@ -558,8 +563,8 @@ function IndependenceNote({ resolved }: { resolved: ResolvedInput }) {
       checks ran client-side here — but the package and proofs were fetched from{" "}
       <span className="font-mono">{host}</span>. Publisher recognition was a
       separate lookup in typedstandards.org&apos;s curated host directory,
-      independent of that host. To verify with zero trust in the host, download and
-      verify an offline bundle.
+      independent of that host.{suppliedRegistry} To verify with zero trust in the
+      host, download and verify an offline bundle.
     </p>
   );
 }
