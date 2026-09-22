@@ -10,6 +10,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { generateKeyPairSync, sign as nodeSign } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import {
   recomputePackageHash,
   deriveKeyDerivedIdentifier,
@@ -40,6 +41,7 @@ import {
   resolveHostRecognition,
   HOST_DIRECTORY,
   type CheckRow,
+  type KeyTrustRecheck,
   type ResolveStep,
   buildVerifyInput,
   buildPreview,
@@ -75,7 +77,8 @@ function mkResult(over: Partial<VerifyResult> = {}): VerifyResult {
     rekorInclusion: null,
     hasRekor: true,
     hasTimestamp: true,
-    rfc3161: null,
+    // verify-core sets `rfc3161` whenever a token is present; a verified one is green.
+    rfc3161: { verified: true, chainVerified: true },
     keyTrust: { status: 'active' },
     blobRefsVerified: null,
     blobRefs: [],
@@ -89,6 +92,11 @@ function mkResult(over: Partial<VerifyResult> = {}): VerifyResult {
   return { ...base, ...over } as unknown as VerifyResult;
 }
 
+/** The #5 registry meta for a registry fetched from the declared https: URL, and for
+ *  one carried in the bundle — what `rollupVerdict` reads when none is passed (#93). */
+const DECLARED_META = { kind: 'fetched', available: true, provenance: 'declared-url' } as const;
+const SUPPLIED_META = { kind: 'inline', available: true, provenance: 'bundle' } as const;
+
 test('rollupVerdict: content-private is a CALM "Commitment verified — content private" (#21)', () => {
   const v = rollupVerdict(
     mkResult({
@@ -96,6 +104,7 @@ test('rollupVerdict: content-private is a CALM "Commitment verified — content 
       envelopeIntegrity: { status: 'unavailable', reason: 'private' }, // …but distinctly unavailable
       recomputedHash: null,
     }),
+    DECLARED_META,
   );
   assert.equal(v.tier, 'verified', 'calm/green — NOT alarm');
   assert.notEqual(v.headline, 'Verification failed');
@@ -140,7 +149,7 @@ test('rollupVerdict: GUARDRAIL — a fetched, hash-mismatching package STILL ala
 });
 
 test('rollupVerdict: a fully-green public package still verifies cleanly', () => {
-  const v = rollupVerdict(mkResult());
+  const v = rollupVerdict(mkResult(), DECLARED_META);
   assert.equal(v.tier, 'verified');
   assert.equal(v.headline, 'Verified');
 });
@@ -1054,7 +1063,8 @@ function mintSigned(o: MintOptions): Minted {
   const signer = { bindingTier: o.bindingTier, identifier, displayName: SELF_NAME };
   const pkg: Record<string, unknown> = {
     protocolVersion: '0.1.0',
-    type: 'analysis/datHere/v1',
+    // A ratified type (spec §8.12.1), so #12 is green and a control reads "Verified" (#86).
+    type: 'content/analysis/v1',
     signer,
     metadata: { signingKeyId: kid },
     subject: { title: 'Synthetic self-certifying fixture' },
@@ -1138,7 +1148,7 @@ async function runFlow(m: Minted, mode: 'bundle' | 'hosted'): Promise<FlowRun> {
       steps,
       provenance: resolved.registryProvenance,
       preview: buildPreview(resolved.pkg, resolved.commitment),
-      verdict: rollupVerdict(result),
+      verdict: rollupVerdict(result, registryMetaOf(resolved)),
     };
   } finally {
     globalThis.fetch = real;
@@ -1486,6 +1496,7 @@ test('#16 content profile: the verdict treats it by tier — inconsistent never 
   assert.notEqual(inconsistent.tier, 'alarm');
   const absent = rollupVerdict(
     mkResult({ contentProfile: { status: 'contentProfile_absent' } as VerifyResult['contentProfile'] }),
+    DECLARED_META,
   );
   assert.equal(absent.tier, 'verified');
 });
@@ -1637,7 +1648,7 @@ test('recheck: a key-derived signer is never re-checked to active from a registr
       `${which}: no recheck offered`,
     );
     // And the recheck itself treats it as carried in the bundle.
-    const restore = stubFetch({ [HTTP_REGISTRY_URL]: m.registry });
+    const restore = stubFetch({ [HTTP_REGISTRY_URL]: m.registry , ...DIRECTORY_ROUTE });
     try {
       const live = await recheckKeyTrustLive(run.resolved.commitment as Commitment, run.result, run.vinput);
       assert.equal(live.status, 'self_certified', which);
@@ -1662,7 +1673,7 @@ test('recheck: a key-derived signer re-checked against its https: registry appli
     'offered for an https: URL',
   );
   // The live https: registry does not list the key: self_certified, not unknown_key.
-  let restore = stubFetch({ [SC_REGISTRY_URL]: EMPTY_REGISTRY });
+  let restore = stubFetch({ [SC_REGISTRY_URL]: EMPTY_REGISTRY , ...DIRECTORY_ROUTE });
   try {
     const live = await recheckKeyTrustLive(run.resolved.commitment as Commitment, run.result, run.vinput);
     assert.equal(live.status, 'self_certified');
@@ -1671,7 +1682,7 @@ test('recheck: a key-derived signer re-checked against its https: registry appli
     restore();
   }
   // The live https: registry lists the key active: active (ADR-0030 §4 rule 3).
-  restore = stubFetch({ [SC_REGISTRY_URL]: m.registry });
+  restore = stubFetch({ [SC_REGISTRY_URL]: m.registry , ...DIRECTORY_ROUTE });
   try {
     const live = await recheckKeyTrustLive(run.resolved.commitment as Commitment, run.result, run.vinput);
     assert.equal(live.status, 'active');
@@ -1704,7 +1715,7 @@ test('recheck: a signer that is not key-derived is re-checked only against an ht
   const m = mintSigned({ identifier: 'urn', bindingTier: 'platform', inlineRegistry: true, declareUrl: true });
   const run = await runWith(m.commitment, {});
   assert.equal(canRecheckKeyTrust(registryMetaOf(run.resolved), run.result), true, 'https: offered');
-  let restore = stubFetch({ [SC_REGISTRY_URL]: EMPTY_REGISTRY });
+  let restore = stubFetch({ [SC_REGISTRY_URL]: EMPTY_REGISTRY , ...DIRECTORY_ROUTE });
   try {
     const live = await recheckKeyTrustLive(run.resolved.commitment as Commitment, run.result, run.vinput);
     assert.equal(live.status, 'unknown_key');
@@ -1713,7 +1724,7 @@ test('recheck: a signer that is not key-derived is re-checked only against an ht
   } finally {
     restore();
   }
-  restore = stubFetch({ [SC_REGISTRY_URL]: m.registry });
+  restore = stubFetch({ [SC_REGISTRY_URL]: m.registry , ...DIRECTORY_ROUTE });
   try {
     const live = await recheckKeyTrustLive(run.resolved.commitment as Commitment, run.result, run.vinput);
     assert.equal(live.status, 'active');
@@ -1991,4 +2002,357 @@ test('a carried publisher directory is reported as its own skipped step, beside 
   assert.equal(carried?.label, 'Publisher directory in the bundle — not used');
   assert.equal(carried?.state, 'skipped');
   assert.equal(run.steps.find((s) => s.key === 'directory')?.label, 'Loaded the typedstandards.org publisher directory');
+});
+
+// --- Follow-ons from #78 (#93), and attention-tier checks in the headline (#86) ---
+
+
+/** Install a fetch stub that records every URL and serves `routes`; anything else 404s. */
+function recordFetch(routes: Record<string, unknown>): { calls: string[]; restore: () => void } {
+  const calls: string[] = [];
+  const restore = stubFetch(routes);
+  const stubbed = globalThis.fetch;
+  globalThis.fetch = ((input: unknown, init?: RequestInit) => {
+    calls.push(String(input));
+    return stubbed(input as string, init);
+  }) as typeof globalThis.fetch;
+  return { calls, restore };
+}
+
+test('#93 item 1: online, a record carrying its own registry whose key the declared https: registry does not list reads "Unknown publisher"', async () => {
+  const m = mintSigned({ identifier: 'urn', bindingTier: 'platform', inlineRegistry: true, declareUrl: false });
+  const commitment = { ...m.commitment, trustRegistryUrl: LISTED_REGISTRY_URL };
+  const routes = { [LISTED_REGISTRY_URL]: EMPTY_REGISTRY, ...DIRECTORY_ROUTE };
+  for (const mode of ['url', 'hash'] as const) {
+    const { restore } = recordFetch({ ...routes, [SC_COMMITMENT_URL]: commitment });
+    try {
+      const resolved =
+        mode === 'url'
+          ? await resolveInput('url', SC_COMMITMENT_URL)
+          : await resolveInput('hash', 'sc-fixture', undefined, undefined, { host: new URL(SC_COMMITMENT_URL).origin });
+      const vinput = buildVerifyInput(resolved.commitment, resolved.pkg);
+      const result = await runVerify(vinput, resolved.registry, undefined, resolved.registryProvenance);
+      const shown = presentVerification(resolved, vinput, result);
+      assert.equal(resolved.registryProvenance, 'declared-url', `${mode}: the declared registry is read`);
+      assert.equal(result.keyTrust?.status, 'unknown_key', mode);
+      assert.equal(shown.recognition.status, 'unknown_publisher', mode);
+      assert.equal(shown.recognition.signal.label, 'Unknown publisher', mode);
+      assert.match(shown.recognition.signal.detail ?? '', /does not vouch for this signer/, mode);
+      assert.notEqual(shown.verdict.headline, 'Verified', mode);
+    } finally {
+      restore();
+    }
+  }
+});
+
+test('#93 item 1: a genuine ?inline=1 bundle verified by URL reads as its declared registry says', async () => {
+  const m = mintSigned({ identifier: 'urn', bindingTier: 'platform', inlineRegistry: true, declareUrl: false });
+  // The producer's ?inline=1 view carries the same registry it declares.
+  const commitment = { ...m.commitment, trustRegistryUrl: LISTED_REGISTRY_URL };
+  const run = await runWith(commitment, { [LISTED_REGISTRY_URL]: m.registry, ...DIRECTORY_ROUTE }, 'url');
+  assert.equal(run.resolved.registryProvenance, 'declared-url');
+  assert.equal(run.registryStep?.label, 'Fetched publisher trust registry');
+  const shown = presentVerification(run.resolved, run.vinput, run.result);
+  assert.equal(rowOf(shown.rows, '5').signal.label, KEY_TRUST_SIGNALS.active.label);
+  assert.equal(shown.verdict.headline, 'Verified');
+  assert.equal(shown.recognition.status, 'known_publisher');
+  assert.equal(canRecheckKeyTrust(registryMetaOf(run.resolved), run.result), false, 'nothing left to re-check');
+});
+
+test('#93 item 1: online, a declared registry that cannot be fetched falls back to the one the record carries, which only lowers', async () => {
+  const m = mintSigned({ identifier: 'urn', bindingTier: 'platform', inlineRegistry: true, declareUrl: false });
+  const commitment = { ...m.commitment, trustRegistryUrl: LISTED_REGISTRY_URL };
+  const run = await runWith(commitment, DIRECTORY_ROUTE, 'url');
+  assert.equal(run.resolved.registryProvenance, 'bundle');
+  assert.equal(
+    run.registryStep?.label,
+    'The declared trust registry could not be fetched — read the one in the record, which can lower key trust, never raise it',
+  );
+  const shown = presentVerification(run.resolved, run.vinput, run.result);
+  assert.notEqual(shown.verdict.headline, 'Verified');
+  assert.equal(shown.recognition.status, 'host_recognized_key_unconfirmed');
+});
+
+test('#93 item 1: bundle mode makes no network call, even when the record declares an https: registry', async () => {
+  const m = mintSigned({ identifier: 'urn', bindingTier: 'platform', inlineRegistry: true, declareUrl: false });
+  const commitment = { ...m.commitment, trustRegistryUrl: LISTED_REGISTRY_URL };
+  const { calls, restore } = recordFetch({ [LISTED_REGISTRY_URL]: EMPTY_REGISTRY, ...DIRECTORY_ROUTE });
+  try {
+    const resolved = await resolveInput('bundle', JSON.stringify(commitment));
+    const vinput = buildVerifyInput(resolved.commitment, resolved.pkg, { offline: resolved.fullyOffline });
+    await runVerify(vinput, resolved.registry, undefined, resolved.registryProvenance);
+    assert.equal(resolved.registryProvenance, 'bundle');
+    assert.equal(resolved.fullyOffline, true);
+    assert.deepEqual(calls, [], 'no request in bundle mode');
+  } finally {
+    restore();
+  }
+});
+
+test('#93 item 2: rollupVerdict with no registry reads it as carried in the bundle', () => {
+  const active = mkResult({ hasTimestamp: false });
+  assert.equal(rollupVerdict(active, DECLARED_META).headline, 'Verified', 'control: the declared registry');
+  const omitted = rollupVerdict(active);
+  assert.notEqual(omitted.tier, 'verified');
+  assert.notEqual(omitted.headline, 'Verified');
+  assert.deepEqual(omitted, rollupVerdict(active, SUPPLIED_META));
+  const privateContent = mkResult({ hasTimestamp: false, envelopeIntegrity: { status: 'unavailable', reason: 'private' }, recomputedHash: null });
+  assert.notEqual(rollupVerdict(privateContent).tier, 'verified', 'content private too');
+});
+
+/** A result whose only non-green check is the one `over` sets. mkResult's timestamp
+ *  is present but unverified (an alarm-tier #7 row), so it is set absent here. */
+const onlyOne = (over: Partial<VerifyResult> = {}): VerifyResult =>
+  mkResult({ hasTimestamp: false, contentProfile: { status: 'ok' } as VerifyResult['contentProfile'], ...over });
+
+/** Every attention-tier status in trust-signal.ts, each as the only non-green
+ *  result, with the check whose row it amber-tiers. */
+const ATTENTION_CASES: { status: string; check: string; over: Partial<VerifyResult>; meta?: typeof SUPPLIED_META }[] = [
+  { status: '#1 unavailable (unfetchable)', check: '1', over: { envelopeIntegrity: { status: 'unavailable', reason: 'unfetchable' }, recomputedHash: null } },
+  { status: '#3 unknown_canonicalization_rule', check: '3', over: { contentCanonicalization: { status: 'unknown_canonicalization_rule', rule: 'x' } as VerifyResult['contentCanonicalization'] } },
+  { status: '#4 unresolved_rule', check: '4', over: { contentHash: { status: 'unresolved_rule' } as VerifyResult['contentHash'] } },
+  { status: '#4 contentHash_no_supported_algorithm', check: '4', over: { contentHash: { status: 'contentHash_no_supported_algorithm' } as VerifyResult['contentHash'] } },
+  { status: '#4 content_bytes_unavailable', check: '4', over: { contentHash: { status: 'content_bytes_unavailable' } as VerifyResult['contentHash'] } },
+  { status: '#5 unknown_key', check: '5', over: { keyTrust: { status: 'unknown_key', verified: false } as VerifyResult['keyTrust'] } },
+  { status: '#5 registry_unavailable', check: '5', over: { keyTrust: { status: 'registry_unavailable', verified: false } as VerifyResult['keyTrust'] } },
+  { status: '#5 KEY_TRUST_SUPPLIED_REGISTRY', check: '5', over: {}, meta: SUPPLIED_META },
+  { status: '#8 unconfirmed', check: '8', over: { rekorVerified: false } },
+  { status: '#12 unknown_type', check: '12', over: { typeResolution: { status: 'unknown_type', type: 'x/y/v1' } as VerifyResult['typeResolution'] } },
+  { status: '#15 captureMethod_unknown', check: '15', over: { captureMethodVocab: { status: 'captureMethod_unknown', profileType: 'x' } as VerifyResult['captureMethodVocab'] } },
+  { status: '#16 contentProfile_unknown', check: '16', over: { contentProfile: { status: 'contentProfile_unknown' } as VerifyResult['contentProfile'] } },
+  { status: '#16 contentProfile_inconsistent', check: '16', over: { contentProfile: { status: 'contentProfile_inconsistent' } as VerifyResult['contentProfile'] } },
+];
+const ROW_INPUT = buildVerifyInput({ packageHash: 'ab'.repeat(32) }, {});
+const ROW_COMMITMENT = { packageHash: 'ab'.repeat(32) };
+
+test('#86: control — with every check green the headline is the unqualified "Verified"', () => {
+  const rows = buildCheckRows(onlyOne(), ROW_INPUT, ROW_COMMITMENT, DECLARED_META);
+  assert.deepEqual(rows.filter((r) => r.signal.tier === 'attention' || r.signal.tier === 'alarm').map((r) => r.num), []);
+  assert.equal(rollupVerdict(onlyOne(), DECLARED_META).headline, 'Verified');
+});
+
+test('#86: a package whose only non-green result is an attention-tier check does not get the unqualified headline', () => {
+  for (const c of ATTENTION_CASES) {
+    const result = onlyOne(c.over);
+    const meta = c.meta ?? DECLARED_META;
+    const rows = buildCheckRows(result, ROW_INPUT, ROW_COMMITMENT, meta);
+    const amber = rows.filter((r) => r.signal.tier !== 'verified' && r.signal.tier !== 'normal');
+    assert.deepEqual(amber.map((r) => `${r.num}:${r.signal.tier}`), [`${c.check}:attention`], `${c.status}: the only non-green row`);
+    const v = rollupVerdict(result, meta);
+    assert.equal(v.tier, 'attention', c.status);
+    assert.notEqual(v.headline, 'Verified', c.status);
+    assert.notEqual(v.headline, 'Commitment verified — content private', c.status);
+    assert.ok(v.detail.includes(`#${amber[0].num} ${amber[0].name}`), `${c.status}: the headline names the amber check (${v.detail})`);
+  }
+});
+
+test('#86: the self-certified and content-private branches follow the same guard', () => {
+  const selfCertified = {
+    keyTrust: { status: 'self_certified', verified: false } as VerifyResult['keyTrust'],
+    signerIdentity: { status: 'key_derived_match' } as VerifyResult['signerIdentity'],
+  };
+  const privateContent = { envelopeIntegrity: { status: 'unavailable', reason: 'private' } as EnvelopeIntegrityResult, recomputedHash: null };
+  // Controls: green apart from the branch's own reading.
+  assert.equal(rollupVerdict(onlyOne(selfCertified), DECLARED_META).headline, 'Signature valid — self-certified signer');
+  assert.equal(rollupVerdict(onlyOne(privateContent), DECLARED_META).headline, 'Commitment verified — content private');
+  for (const c of ATTENTION_CASES) {
+    if (c.check === '1' || c.check === '5') continue; // each replaces the branch's own reading
+    const sc = rollupVerdict(onlyOne({ ...selfCertified, ...c.over }), DECLARED_META);
+    assert.equal(sc.tier, 'attention', `self-certified, ${c.status}`);
+    assert.doesNotMatch(sc.headline, /^Verified/, `self-certified, ${c.status}`);
+    assert.match(sc.headline, /self-certified signer/, `self-certified, ${c.status}`);
+    assert.match(sc.detail, new RegExp(`#${c.check} `), `self-certified, ${c.status}`);
+    if (c.check === '3' || c.check === '4') continue; // no content, so no content checks
+    const pc = rollupVerdict(onlyOne({ ...privateContent, ...c.over }), DECLARED_META);
+    assert.equal(pc.tier, 'attention', `content private, ${c.status}`);
+    assert.equal(pc.headline, 'Commitment verified, with caveats — content private', `content private, ${c.status}`);
+    assert.match(pc.detail, new RegExp(`#${c.check} `), `content private, ${c.status}`);
+  }
+});
+
+test('#93 item 4: bundle-mode recognition says the directory was not fetched, not that it could not be loaded', async () => {
+  const m = mintSigned({ identifier: 'urn', bindingTier: 'platform', inlineRegistry: true, declareUrl: false });
+  const commitment = { ...m.commitment, trustRegistryUrl: LISTED_REGISTRY_URL };
+  const offline = pageOf(await runWith(commitment, {}));
+  assert.equal(offline.recognition.status, 'directory_unavailable');
+  assert.doesNotMatch(offline.recognition.signal.detail ?? '', /could not be loaded/);
+  assert.match(offline.recognition.signal.detail ?? '', /offline/);
+  // Online, a directory that fails to load still says so.
+  const online = pageOf(await runWith(commitment, {}, 'url'));
+  assert.equal(online.recognition.status, 'directory_unavailable');
+  assert.match(online.recognition.signal.detail ?? '', /could not be loaded/);
+});
+
+test('#93 item 4: the independence note states the offline bundle’s key-trust limit', async () => {
+  const m = mintSigned({ identifier: 'urn', bindingTier: 'platform', inlineRegistry: false, declareUrl: false });
+  const run = await runWith({ ...m.commitment, trustRegistryUrl: LISTED_REGISTRY_URL }, { [LISTED_REGISTRY_URL]: m.registry, ...DIRECTORY_ROUTE }, 'url');
+  const note = noteText(presentVerification(run.resolved, run.vinput, run.result).independence);
+  assert.ok(
+    note.includes('To verify the package and proofs without trusting the host, download and verify an offline bundle. Its signing key stays unconfirmed until you re-check it against the publisher’s live registry.'),
+    note,
+  );
+  assert.doesNotMatch(note, /zero trust/);
+  const source = readFileSync(new URL('../components/Verifier.tsx', import.meta.url), 'utf8');
+  assert.ok(!source.includes('zero trust in the host'), 'the old advice is gone');
+});
+
+/** The independence note as one string. */
+function noteText(note: { lead: string; parts: { text: string }[] }): string {
+  return `${note.lead} ${note.parts.map((p) => p.text).join('')}`;
+}
+
+// --- #93 item 3 (ruling C): a live re-check re-reads #5, the headline and recognition ---
+
+const LISTED_HOST = new URL(LISTED_REGISTRY_URL).host;
+const fmtCheckedAt = (iso: string) => new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+const recheckedLine = (live: KeyTrustRecheck, asOf: string) =>
+  `Re-checked live against ${LISTED_HOST} at ${fmtCheckedAt(live.checkedAt)}, registry as of ${asOf}.`;
+
+/** A genuine ?inline=1 bundle: it carries the registry it declares at an https: URL
+ *  on a listed origin, and is verified in bundle mode. */
+async function genuineBundle() {
+  const m = mintSigned({ identifier: 'urn', bindingTier: 'platform', inlineRegistry: true, declareUrl: false });
+  const commitment = { ...m.commitment, trustRegistryUrl: LISTED_REGISTRY_URL };
+  return { m, commitment, run: await runWith(commitment, {}) };
+}
+
+/** Re-check `run` live with `routes` served. */
+async function recheckWith(run: Awaited<ReturnType<typeof runWith>>, routes: Record<string, unknown>): Promise<KeyTrustRecheck> {
+  const restore = stubFetch(routes);
+  try {
+    return await recheckKeyTrustLive(run.resolved.commitment as Commitment, run.result, run.vinput);
+  } finally {
+    restore();
+  }
+}
+
+test('#93 item 3: a confirmed re-check of a genuine bundle reads #5, the headline and recognition as URL mode would, each saying when', async () => {
+  const { m, commitment, run } = await genuineBundle();
+  const before = presentVerification(run.resolved, run.vinput, run.result);
+  assert.equal(before.verdict.headline, 'Verified, with caveats', 'control: the bundle’s reading');
+  assert.equal(before.recognition.status, 'directory_unavailable', 'control');
+  assert.equal(before.independence.lead, 'Fully offline.', 'control');
+
+  const live = await recheckWith(run, { [LISTED_REGISTRY_URL]: m.registry, ...DIRECTORY_ROUTE });
+  const shown = presentVerification(run.resolved, run.vinput, run.result, live);
+  const when = recheckedLine(live, '2026-09-21');
+  const kt = rowOf(shown.rows, '5');
+  assert.equal(kt.signal.label, KEY_TRUST_SIGNALS.active.label);
+  assert.equal(kt.depthNote, when);
+  assert.equal(kt.math.find((x) => x.label === 'Registry source')?.value, 'fetched from the registry URL the record declares');
+  assert.equal(rowOf(shown.rows, '14').signal.label, SIGNER_IDENTITY_SIGNALS.ok.label);
+  assert.equal(shown.verdict.headline, 'Verified');
+  assert.equal(shown.verdict.provenance, when);
+  assert.equal(shown.recognition.status, 'known_publisher');
+  assert.equal(shown.recognition.provenance, when);
+  // Every other row is the bundle's.
+  assert.deepEqual(
+    shown.rows.filter((r) => r.num !== '5' && r.num !== '14'),
+    before.rows.filter((r) => r.num !== '5' && r.num !== '14'),
+  );
+  // URL mode reads the same record the same way.
+  const hosted: Record<string, unknown> = { ...commitment };
+  delete hosted['trustRegistry'];
+  const byUrl = pageOf(await runWith(hosted, { [LISTED_REGISTRY_URL]: m.registry, ...DIRECTORY_ROUTE }, 'url'));
+  assert.equal(shown.verdict.headline, byUrl.verdict.headline);
+  assert.equal(shown.verdict.tier, byUrl.verdict.tier);
+  assert.equal(shown.recognition.status, byUrl.recognition.status);
+  assert.equal(kt.signal.label, byUrl.keyTrust.signal.label);
+  // The session is no longer described as fully offline.
+  assert.notEqual(shown.independence.lead, 'Fully offline.');
+  assert.doesNotMatch(noteText(shown.independence), /nothing was fetched/);
+  assert.ok(noteText(shown.independence).includes(`re-checked live against ${LISTED_HOST}`), noteText(shown.independence));
+});
+
+test('#93 item 3: a re-check that finds the key unlisted or revoked lowers #5, the headline and recognition', async () => {
+  const { m, run } = await genuineBundle();
+  const unlisted = await recheckWith(run, { [LISTED_REGISTRY_URL]: EMPTY_REGISTRY, ...DIRECTORY_ROUTE });
+  const u = presentVerification(run.resolved, run.vinput, run.result, unlisted);
+  assert.equal(rowOf(u.rows, '5').signal.label, KEY_TRUST_SIGNALS.unknown_key.label);
+  assert.equal(u.verdict.tier, 'attention');
+  assert.notEqual(u.verdict.headline, 'Verified');
+  assert.equal(u.recognition.status, 'unknown_publisher');
+  assert.equal(u.verdict.provenance, recheckedLine(unlisted, '2026-09-21'));
+
+  const revokedRegistry = {
+    ...m.registry,
+    keys: [{ ...(m.registry.keys as Record<string, unknown>[])[0], status: 'revoked', revokedAt: '2026-02-01T00:00:00.000Z' }],
+  };
+  const revoked = await recheckWith(run, { [LISTED_REGISTRY_URL]: revokedRegistry, ...DIRECTORY_ROUTE });
+  const r = presentVerification(run.resolved, run.vinput, run.result, revoked);
+  assert.equal(rowOf(r.rows, '5').signal.label, KEY_TRUST_SIGNALS.revoked.label);
+  assert.equal(r.verdict.tier, 'alarm');
+  assert.equal(r.verdict.headline, 'Verification failed');
+  assert.notEqual(r.recognition.status, 'known_publisher');
+  assert.equal(r.recognition.provenance, recheckedLine(revoked, '2026-09-21'));
+});
+
+test('#93 item 3: a re-check that cannot run changes no reading — a blocked fetch never downgrades a good record', async () => {
+  const { m, run } = await genuineBundle();
+  const cases: { label: string; install: () => () => void }[] = [
+    {
+      label: 'network blocked',
+      install: () => {
+        const real = globalThis.fetch;
+        globalThis.fetch = (() => Promise.reject(new TypeError('network blocked'))) as typeof globalThis.fetch;
+        return () => {
+          globalThis.fetch = real;
+        };
+      },
+    },
+    { label: 'registry not found', install: () => stubFetch(DIRECTORY_ROUTE) },
+    { label: 'registry not valid', install: () => stubFetch({ [LISTED_REGISTRY_URL]: { keys: 'not a list' }, ...DIRECTORY_ROUTE }) },
+    { label: 'directory not loaded', install: () => stubFetch({ [LISTED_REGISTRY_URL]: m.registry }) },
+  ];
+  for (const c of cases) {
+    const restore = c.install();
+    try {
+      // It rejects, so the page has no live reading to show and keeps the bundle's.
+      await assert.rejects(recheckKeyTrustLive(run.resolved.commitment as Commitment, run.result, run.vinput), VerifyFlowError, c.label);
+    } finally {
+      restore();
+    }
+  }
+  const source = readFileSync(new URL('../components/Verifier.tsx', import.meta.url), 'utf8').replace(/\s+/g, ' ');
+  assert.ok(source.includes('The re-check could not run, so nothing on this page changed.'), 'the page says the re-check could not run');
+});
+
+test('#93 item 3: the re-check panel shows no verdict of its own', () => {
+  const source = readFileSync(new URL('../components/Verifier.tsx', import.meta.url), 'utf8');
+  const start = source.indexOf('function KeyTrustRecheckPanel');
+  assert.ok(start !== -1, 'the panel exists');
+  const panel = source.slice(start, source.indexOf('\nfunction ', start + 1));
+  assert.ok(!panel.includes('var(--trust-verified)'), 'no green');
+  assert.ok(!panel.includes('"✓ "'), 'no check mark');
+  assert.ok(!panel.includes('var(--trust-alarm)'), 'no red');
+});
+
+test('#86, widened: an alarm-tier row outside the alarm set — a timestamp that did not verify — withholds the unqualified headline and is named', () => {
+  const failedTs = { hasTimestamp: true, rfc3161: { verified: false, chainVerified: false } as VerifyResult['rfc3161'] };
+  const rows = buildCheckRows(onlyOne(failedTs), ROW_INPUT, ROW_COMMITMENT, DECLARED_META);
+  assert.deepEqual(
+    rows.filter((r) => r.signal.tier !== 'verified' && r.signal.tier !== 'normal').map((r) => `${r.num}:${r.signal.tier}`),
+    ['7:alarm'],
+    'the only non-green row',
+  );
+  const v = rollupVerdict(onlyOne(failedTs), DECLARED_META);
+  assert.equal(v.headline, 'Verified, with caveats', 'the alarm set, not this guard, decides "Verification failed"');
+  assert.equal(v.tier, 'attention');
+  assert.ok(v.detail.includes('#7 Timestamp'), v.detail);
+  const sc = rollupVerdict(
+    onlyOne({
+      ...failedTs,
+      keyTrust: { status: 'self_certified', verified: false } as VerifyResult['keyTrust'],
+      signerIdentity: { status: 'key_derived_match' } as VerifyResult['signerIdentity'],
+    }),
+    DECLARED_META,
+  );
+  assert.equal(sc.headline, 'Signature valid, with caveats — self-certified signer');
+  assert.ok(sc.detail.includes('#7 Timestamp'), sc.detail);
+  const pc = rollupVerdict(
+    onlyOne({ ...failedTs, envelopeIntegrity: { status: 'unavailable', reason: 'private' } as EnvelopeIntegrityResult, recomputedHash: null }),
+    DECLARED_META,
+  );
+  assert.equal(pc.headline, 'Commitment verified, with caveats — content private');
+  assert.ok(pc.detail.includes('#7 Timestamp'), pc.detail);
 });

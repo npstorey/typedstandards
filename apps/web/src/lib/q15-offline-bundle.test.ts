@@ -56,6 +56,7 @@ import {
   registryMetaOf,
   canRecheckKeyTrust,
   recheckKeyTrustLive,
+  presentVerification,
   resolveHostRecognition,
   HOST_DIRECTORY,
   type CheckRow,
@@ -688,12 +689,21 @@ test('Q15 captured bundles online: the re-check fetches the declared https: regi
     };
     try {
       // The live registry lists the key: confirmed, from the declared https: URL.
-      serve({ [bundle.trustRegistryUrl]: bundle.trustRegistry });
+      serve({ [bundle.trustRegistryUrl]: bundle.trustRegistry, [HOST_DIRECTORY_PATH]: HOST_DIRECTORY });
       const live = await recheckKeyTrustLive(page.resolved.commitment, page.result, page.vinput);
-      assert.deepEqual(requested, [bundle.trustRegistryUrl], `${short}: the declared https: URL, nothing else`);
+      assert.deepEqual(
+        requested,
+        [bundle.trustRegistryUrl, HOST_DIRECTORY_PATH],
+        `${short}: the declared https: URL and the typedstandards.org directory, nothing else`,
+      );
       assert.equal(live.status, 'active', short);
       assert.equal(live.verified, true, short);
       assert.equal(live.changed, false, short);
+      // The confirmed re-check reads as URL mode does (#93 item 3).
+      const rechecked = presentVerification(page.resolved, page.vinput, page.result, live);
+      assert.equal(rowIn(rechecked.rows, '5').signal.label, KEY_TRUST_SIGNALS.active.label, short);
+      assert.equal(rechecked.verdict.headline, 'Verified', short);
+      assert.equal(rechecked.recognition.status, 'known_publisher', short);
 
       // Verified by URL: the commitment without the inline registry, the registry
       // fetched from its declared https: URL, the curated directory loaded.
