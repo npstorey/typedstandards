@@ -139,7 +139,12 @@ export function Verifier({
       // from the declared registry origin + the directory + the SAME key-trust
       // result, kept orthogonal to the cryptographic verdict above.
       setRecognition(
-        resolveHostRecognition(resolvedInput.commitment, result.keyTrust, resolvedInput.directory),
+        resolveHostRecognition(
+          resolvedInput.commitment,
+          result.keyTrust,
+          resolvedInput.directory,
+          resolvedInput.registryProvenance,
+        ),
       );
       setPreview(buildPreview(resolvedInput.pkg, resolvedInput.commitment));
 

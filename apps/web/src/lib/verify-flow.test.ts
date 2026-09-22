@@ -34,6 +34,7 @@ import {
   registryProvenanceOf,
   recheckKeyTrustLive,
   canRecheckKeyTrust,
+  resolveHostRecognition,
   HOST_DIRECTORY,
   type CheckRow,
   type ResolveStep,
@@ -1523,10 +1524,11 @@ test('#15 capture-method labels: script-run and tool-emitted render their plain-
   }
 });
 
-// --- Registry provenance for a key-derived signer (Wave N14 P9) ---------------
+// --- Registry provenance and recognition for a key-derived signer (Wave N14 P9) ---
 //
 // A trust registry counts as declared only when fetched from an https: URL. A
-// bundle registry that is not valid is described as such.
+// declared registry that does not list a self-certified signer's key disavows it in
+// the recognition card. A bundle registry that is not valid is described as such.
 // Every signer whose identifier is not key-derived keeps today's behaviour.
 
 const LISTED_REGISTRY_URL = `${HOST_DIRECTORY.publishers[0].registryOrigin}/.well-known/typed-publisher.json`;
@@ -1582,6 +1584,42 @@ test('registryProvenanceOf: a registry counts as declared only when fetched from
   for (const url of [HTTP_REGISTRY_URL, dataUrlOf({ keys: [] }), 'blob:https://registry-host.test/abc', '/r.json']) {
     assert.equal(registryProvenanceOf(reg, { kind: 'fetched', url }), 'bundle', url.slice(0, 20));
   }
+});
+
+test('recognition: a declared https: registry at a listed origin that does not list a self-certified signer’s key reads "Unknown publisher"', async () => {
+  const m = mintSigned({ identifier: 'key-derived', bindingTier: 'pseudonymous', inlineRegistry: false, declareUrl: false });
+  const commitment = { ...m.commitment, trustRegistryUrl: LISTED_REGISTRY_URL };
+  const run = await runWith(commitment, { [LISTED_REGISTRY_URL]: EMPTY_REGISTRY }, 'url');
+  assert.equal(run.resolved.registryProvenance, 'declared-url');
+  assert.equal(run.result.keyTrust?.status, 'self_certified');
+  // The key-trust row keeps ADR-0030's calm self_certified reading.
+  assert.equal(rowOf(run.rows, '5').signal.label, KEY_TRUST_SIGNALS.self_certified.label);
+  assert.equal(rowOf(run.rows, '5').signal.tier, 'normal');
+  const rec = resolveHostRecognition(
+    run.resolved.commitment,
+    run.result.keyTrust,
+    HOST_DIRECTORY,
+    run.resolved.registryProvenance,
+  );
+  assert.equal(rec.status, 'unknown_publisher');
+  assert.equal(rec.signal.label, 'Unknown publisher');
+  assert.match(rec.signal.detail ?? '', /does not vouch for this signer/);
+  assert.equal(rec.publisher, undefined);
+});
+
+test('recognition: a self-certified signer whose registry came from the bundle keeps "Host recognized — signing key not registry-confirmed"', async () => {
+  const m = mintSigned({ identifier: 'key-derived', bindingTier: 'pseudonymous', inlineRegistry: true, declareUrl: false });
+  const commitment = { ...m.commitment, trustRegistryUrl: LISTED_REGISTRY_URL };
+  const run = await runWith(commitment, {});
+  assert.equal(run.resolved.registryProvenance, 'bundle');
+  assert.equal(run.result.keyTrust?.status, 'self_certified');
+  const rec = resolveHostRecognition(
+    run.resolved.commitment,
+    run.result.keyTrust,
+    HOST_DIRECTORY,
+    run.resolved.registryProvenance,
+  );
+  assert.equal(rec.status, 'host_recognized_key_unconfirmed');
 });
 
 test('recheck: a key-derived signer is never re-checked to active from a registry URL that is not https:', async () => {

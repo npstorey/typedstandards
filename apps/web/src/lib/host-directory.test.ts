@@ -73,6 +73,47 @@ test('unknown_key + listed origin → unknown_publisher (disavowed), NOT green, 
   assert.equal(r.publisher, undefined);
 });
 
+test('self_certified + listed origin + a declared registry → unknown_publisher: a declared registry that does not list a self-certified signer’s key disavows it', () => {
+  const r = resolveHostRecognition(listed, kt('self_certified', false), HOST_DIRECTORY, 'declared-url');
+  assert.equal(r.status, 'unknown_publisher');
+  assert.equal(r.signal.label, 'Unknown publisher');
+  assert.equal(r.signal.tier, 'normal');
+  assert.equal(r.publisher, undefined);
+  assert.equal(mentionsBrand(r), false);
+});
+
+test('self_certified + listed origin + a registry not from the declared URL → host_recognized_key_unconfirmed', () => {
+  for (const provenance of ['bundle', undefined] as const) {
+    const r = resolveHostRecognition(listed, kt('self_certified', false), HOST_DIRECTORY, provenance);
+    assert.equal(r.status, 'host_recognized_key_unconfirmed', String(provenance));
+    assert.equal(r.publisher, undefined);
+  }
+});
+
+test('the registry provenance changes no reading for any status other than self_certified', () => {
+  const statuses: [KeyTrustStatus, boolean][] = [
+    ['active', true],
+    ['deprecated_valid', true],
+    ['legacy_embedded', false],
+    ['unknown_key', false],
+    ['revoked', false],
+    ['deprecated_invalid', false],
+    ['registry_unavailable', false],
+  ];
+  for (const commitment of [listed, unlisted, {}]) {
+    for (const [status, verified] of statuses) {
+      const today = resolveHostRecognition(commitment, kt(status, verified), HOST_DIRECTORY);
+      for (const provenance of ['bundle', 'declared-url'] as const) {
+        assert.deepEqual(
+          resolveHostRecognition(commitment, kt(status, verified), HOST_DIRECTORY, provenance),
+          today,
+          `${status} / ${provenance}`,
+        );
+      }
+    }
+  }
+});
+
 test('active + UNLISTED origin → unknown_publisher (entry-check precedes keyTrust)', () => {
   // The ordering lock: verified:true must NOT yield green when the origin is not
   // listed. A package validly signed against its OWN registry is still unknown.
