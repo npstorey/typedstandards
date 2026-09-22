@@ -6,7 +6,7 @@ references are to `npstorey/civic-ai-tools-website` (#119 is the offline-crypto
 hardening arc; #116 is the standalone-verifier arc this package was extracted
 in).
 
-## 0.10.0 — 2026-09-21
+## 0.10.0 — 2026-09-22
 
 Specification v0.1.9 (hub ADR-0029 and ADR-0030, anchored at `typedstandards#77`): a Producer Profile
 for deterministic tool output, a raw-bytes content rule, a content-profile check, and a self-certifying

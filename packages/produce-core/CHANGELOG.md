@@ -3,7 +3,7 @@
 Factual record of what changed per published version. Check numbers (#1–#16)
 refer to the Typed Standards specification §9.2 verification sequence.
 
-## 0.5.0 — 2026-09-21
+## 0.5.0 — 2026-09-22
 
 Specification v0.1.9 (hub ADR-0030, anchored at `typedstandards#77`): producing for a self-certifying
 signer. **A minor bump** — a new export and one relaxed input rule; no envelope hash moves.
