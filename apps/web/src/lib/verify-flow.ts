@@ -55,7 +55,8 @@ import {
   resolveTimestamp,
   classifyTimestamp,
   resolveRekor,
-  resolveBlobRefs,
+  resolveBlobRefResults,
+  blobRefsOnlyUnfetched,
   resolveCaptureMethodLabel,
   CONTENT_CANONICALIZATION_SIGNALS,
   CONTENT_HASH_SIGNALS,
@@ -64,6 +65,7 @@ import {
   CAPTURE_METHOD_VOCAB_SIGNALS,
   CONTENT_PROFILE_SIGNALS,
   TIMESTAMP_FAILURE_NOTES,
+  BLOB_REF_REASON_SIGNALS,
   KEY_TRUST_BUNDLE_REGISTRY_NOT_USED,
   KEY_TRUST_SUPPLIED_REGISTRY,
   SIGNER_IDENTITY_SUPPLIED_REGISTRY,
@@ -1335,7 +1337,11 @@ export function checkSignalsOf(
   if (result.hasRekor || result.rekorInclusion) {
     add('8', 'Transparency log', resolveRekor(result.hasRekor, rekorInclusionVerifiedOffline(result), result.rekorVerified));
   }
-  if (result.blobRefsVerified !== null) add('9', 'Referenced content', resolveBlobRefs(result.blobRefsVerified));
+  // #9 reads each reference's reason (#89): a file that could not be fetched is
+  // attention, a mismatch or a malformed reference alarm.
+  if (result.blobRefsVerified !== null) {
+    add('9', 'Referenced content', resolveBlobRefResults(result.blobRefsVerified, result.blobRefs ?? []));
+  }
   add('10', 'Lifecycle', LIFECYCLE_STATE_SIGNALS[result.lifecycle.status]);
   if (result.typeResolution) add('12', 'Node type', TYPE_RESOLUTION_SIGNALS[result.typeResolution.status]);
   // #14: a match against a registry the record supplied establishes nothing (#78); a
@@ -1544,6 +1550,10 @@ export function buildCheckRows(
       checkRow('9', [
         { label: 'References', value: String(result.blobRefs.length) },
         { label: 'All verified', value: result.blobRefsVerified ? 'yes' : 'no' },
+        // Each reference that failed, and why (#89).
+        ...result.blobRefs
+          .filter((r) => !r.ok)
+          .map((r) => ({ label: r.field, value: r.reason ? BLOB_REF_REASON_SIGNALS[r.reason].label : 'failed' })),
       ]),
     );
   }
@@ -1650,6 +1660,9 @@ export interface Verdict {
  *   - #7: a timestamp token that does not verify for this package fails it; one whose
  *     only fault is an authority this verifier does not pin, intermediates it lacks
  *     or an algorithm it does not check caveats (`classifyTimestamp`, #94 D1).
+ *   - #9: a referenced file fetched and not matching, or a malformed reference,
+ *     fails; one that could not be fetched caveats, as #4 reads the same fact
+ *     (`blobRefsOnlyUnfetched`, #89 D2).
  */
 export function rollupVerdict(result: VerifyResult, registry: RegistryMeta = UNSTATED_REGISTRY): Verdict {
   const integrity = result.envelopeIntegrity;
@@ -1667,7 +1680,8 @@ export function rollupVerdict(result: VerifyResult, registry: RegistryMeta = UNS
     integrity.status === 'altered' || // bytes present + hash mismatch — real tampering
     result.signatureValid === false ||
     result.contentHash?.status === 'content_hash_mismatch' ||
-    result.blobRefsVerified === false ||
+    // A referenced file that could not be fetched is an availability problem (#89).
+    (result.blobRefsVerified === false && !blobRefsOnlyUnfetched(result.blobRefs ?? [])) ||
     // A timestamp token that does not verify for this package (#94).
     classifyTimestamp(result.hasTimestamp, result.rfc3161) === 'fails' ||
     result.signerIdentity?.status === 'signer_identity_mismatch' ||

@@ -558,12 +558,45 @@ export const resolveBlobRefs = (v: boolean | null): TrustSignalDescriptor =>
   BLOB_REFS_SIGNALS[triKey(v)];
 
 /**
- * #9 BlobRef per-reference failure reasons. Each is a sub-explanation of a
- * failed (Alarm-tier) BlobRef check — surfaced beneath the summary signal when a
- * reference fails. `fetch_failed` is the softest (a transient retrieval failure
- * is possible, paralleling rekor=false); it is tiered Alarm here because a
- * BlobRef is a PRIMARY content carrier whose unavailability breaks the package's
- * content-integrity guarantee, unlike the supplementary Rekor log. See the note.
+ * #9 when every reference that failed could not be fetched (#89, ruling D2): an
+ * availability problem, not alteration. Attention, the tier #4 gives the same fact
+ * (`content_bytes_unavailable`) and #1 gives an unfetchable content location.
+ */
+export const BLOB_REFS_UNAVAILABLE: TrustSignalDescriptor = {
+  tier: 'attention',
+  label: 'Referenced content could not be retrieved',
+  detail:
+    'At least one externally-stored field could not be fetched, so its bytes were not checked against its fingerprint. This is an availability problem, not proof of alteration.',
+};
+
+/** Whether some reference failed and every failed one could not be fetched — the
+ *  reading that caveats rather than fails (#89). A failed reference with no reason
+ *  is read as a mismatch, as a failed check was before. */
+export function blobRefsOnlyUnfetched(
+  refs: readonly { ok: boolean; reason?: BlobRefVerifyReason }[],
+): boolean {
+  const failed = refs.filter((r) => !r.ok);
+  return failed.length > 0 && failed.every((r) => r.reason === 'fetch_failed');
+}
+
+/** Resolve #9 from the check's verdict and its per-reference reasons (#89): a file
+ *  that could not be fetched is attention; one fetched and not matching, or a
+ *  malformed reference, is alarm. */
+export function resolveBlobRefResults(
+  verified: boolean | null,
+  refs: readonly { ok: boolean; reason?: BlobRefVerifyReason }[],
+): TrustSignalDescriptor {
+  return verified === false && blobRefsOnlyUnfetched(refs) ? BLOB_REFS_UNAVAILABLE : resolveBlobRefs(verified);
+}
+
+/**
+ * #9 BlobRef per-reference failure reasons, surfaced beneath the summary signal when
+ * a reference fails. A reference that is malformed, or whose file was fetched and is
+ * the wrong size or hash, is alarm. `fetch_failed` is attention (#89, ruling D2): a
+ * file that cannot be fetched shows an availability problem, not alteration — the
+ * reading #4 gives the same fact. The reference packager accepts a trace or an output
+ * as a reference to content stored out of band, so an alarm here would describe a
+ * storage outage to a reader as alteration.
  */
 export const BLOB_REF_REASON_SIGNALS: Record<BlobRefVerifyReason, TrustSignalDescriptor> = {
   invalid_ref: {
@@ -572,9 +605,10 @@ export const BLOB_REF_REASON_SIGNALS: Record<BlobRefVerifyReason, TrustSignalDes
     detail: 'A referenced field does not carry a valid blob reference.',
   },
   fetch_failed: {
-    tier: 'alarm',
+    tier: 'attention',
     label: 'Referenced content could not be retrieved',
-    detail: 'A referenced blob could not be fetched to confirm its integrity.',
+    detail:
+      'A referenced blob could not be fetched, so its integrity was not checked. This is an availability problem, not proof of alteration.',
   },
   size_mismatch: {
     tier: 'alarm',
