@@ -233,6 +233,53 @@ export interface VerifyResult {
 }
 
 /**
+ * A fetcher that sends at most one request per URL and replays that request's
+ * outcome to every later call for the same URL. `verifyRecord` makes one per
+ * call and hands it to checks #9 and #4, which would otherwise each fetch a
+ * raw-bytes/v1 BlobRef `output` (#90); the scope is one `verifyRecord` call.
+ *
+ * The outcome replays as it happened, so neither check reads anything
+ * differently: a fetcher that threw throws again, a non-ok response is
+ * non-ok again, and a body that could not be read fails again. The body is
+ * read once, on first demand, and every caller receives the same
+ * `ArrayBuffer`; the two checks only read it. The first call's `init` (its
+ * abort signal) governs the one request. The underlying fetcher is resolved
+ * when the request is sent (`globalThis.fetch` when none is injected), as the
+ * checks resolve it.
+ */
+function oneFetchPerUrl(fetcher: FetchLike | undefined): FetchLike {
+  type Response = Awaited<ReturnType<FetchLike>>;
+  interface Held {
+    response: Response;
+    body?: Promise<ArrayBuffer>;
+  }
+  const requests = new Map<string, Promise<Held>>();
+  return async (url, init) => {
+    let request = requests.get(url);
+    if (request === undefined) {
+      const send = fetcher ?? (globalThis.fetch as unknown as FetchLike);
+      request = Promise.resolve()
+        .then(() => send(url, init))
+        .then((response) => ({ response }));
+      requests.set(url, request);
+    }
+    const held = await request;
+    const body = (): Promise<ArrayBuffer> => {
+      if (held.body === undefined) held.body = held.response.arrayBuffer();
+      return held.body;
+    };
+    return {
+      ok: held.response.ok,
+      status: held.response.status,
+      headers: held.response.headers,
+      arrayBuffer: () => body(),
+      text: async () => new TextDecoder().decode(await body()),
+      json: async () => JSON.parse(new TextDecoder().decode(await body())) as unknown,
+    };
+  };
+}
+
+/**
  * Run the §9.2 check suite. The step order mirrors the server route exactly
  * (notably: Rekor before key-trust, because a deprecated-key trust decision is
  * time-bounded by the Rekor `integratedTime`).
@@ -321,11 +368,15 @@ export async function verifyRecord(
     rfc3161 = await verifyRfc3161Timestamp(input.rfc3161Timestamp, packageHash);
   }
 
+  // Checks #9 and #4 share one fetch per BlobRef URL: under raw-bytes/v1 with a
+  // BlobRef `output`, both read the same file (#90).
+  const blobFetch = oneFetchPerUrl(deps.fetch);
+
   // Step 3b — blob references embedded in the package (check #9).
   let blobRefs: BlobRefVerification[] = [];
   let blobRefsVerified: boolean | null = null;
   if (pkg) {
-    blobRefs = await verifyPackageBlobRefs(pkg, { fetch: deps.fetch });
+    blobRefs = await verifyPackageBlobRefs(pkg, { fetch: blobFetch });
     if (blobRefs.length > 0) {
       blobRefsVerified = blobRefs.every((r) => r.ok);
     }
@@ -387,7 +438,7 @@ export async function verifyRecord(
       pkg,
       contentCanonicalization,
       input.legacyExternalHash ?? packageHash,
-      { fetch: deps.fetch },
+      { fetch: blobFetch },
     );
     typeResolution = resolvePackageType(pkg);
     signerIdentity = checkSignerIdentity(pkg, sigKid, deps.registry, sigPublicKey);
