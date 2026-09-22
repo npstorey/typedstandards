@@ -341,6 +341,22 @@ export const KEY_TRUST_BUNDLE_REGISTRY_NOT_USED: TrustSignalDescriptor = {
 };
 
 /**
+ * #5 when the registry that lists the key was supplied with the record — carried
+ * in it, or read from a URL that is not https: — for a signer whose identifier is
+ * not key-derived (#78). Whoever made the record could have written that registry,
+ * so a status it confirms (`active`, `deprecated_valid`) is rendered with this
+ * descriptor, never with the one a registry fetched from the declared https: URL
+ * earns. A status it lowers keeps its own reading. No new status: verify-core's
+ * status is shown beside it unchanged.
+ */
+export const KEY_TRUST_SUPPLIED_REGISTRY: TrustSignalDescriptor = {
+  tier: 'attention',
+  label: 'Signing key listed in a registry the record supplied',
+  detail:
+    'The trust registry that lists this key was supplied with the record — carried in it, or read from a URL that is not https: — so whoever made the record could have written it. It was not checked against the publisher’s domain, so the key is not confirmed as the publisher’s.',
+};
+
+/**
  * Calm reading for a package with NO signing key at all. The verify route emits
  * `keyTrust: null` only for an unsigned package (it co-occurs with
  * `signatureValid: null`), so "no key to check" is an expected, Normal state —
@@ -686,6 +702,20 @@ export const SIGNER_IDENTITY_SIGNALS: Record<SignerIdentityCheckStatus, TrustSig
     detail:
       'The stated signer’s identifier is not the one derived from the key that signed this package — do not trust.',
   },
+};
+
+/**
+ * #14 `ok` when the identity it matched is recorded in a registry supplied with the
+ * record — carried in it, or read from a URL that is not https: (#78). That registry
+ * is the signer's own statement, so the match establishes nothing and reads like a
+ * skipped cross-check. A mismatch against it still alarms: a supplied registry can
+ * lower a reading, never raise one.
+ */
+export const SIGNER_IDENTITY_SUPPLIED_REGISTRY: TrustSignalDescriptor = {
+  tier: 'normal',
+  label: 'Signer identity matches a registry the record supplied',
+  detail:
+    'The stated signer matches the identity recorded for the signing key in a trust registry supplied with the record. That registry was not checked against the publisher’s domain, so the match does not establish who signed.',
 };
 
 // --- #15 captureMethod per-profile vocabulary conformance ----------------

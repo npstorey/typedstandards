@@ -58,6 +58,7 @@ import {
   recheckKeyTrustLive,
   resolveHostRecognition,
   HOST_DIRECTORY,
+  type CheckRow,
   type ResolveStep,
 } from './verify-flow.ts';
 import { HOST_DIRECTORY_PATH } from './host-directory.ts';
@@ -598,13 +599,17 @@ async function capturedPage(short: (typeof CAPTURED)[number]) {
   }
 }
 
-const rowIn = (rows: { num: string }[], num: string) => rows.find((r) => r.num === num);
+const rowIn = (rows: CheckRow[], num: string): CheckRow => {
+  const r = rows.find((x) => x.num === num);
+  assert.ok(r, `row #${num} is rendered`);
+  return r;
+};
 
 test('Q15 captured bundles offline: the signature, content, timestamp and log rows are unchanged', async () => {
   for (const short of CAPTURED) {
     const page = await capturedPage(short);
     const tierLabel = (num: string) => {
-      const r = rowIn(page.rows, num) as { signal: { tier: string; label: string } } | undefined;
+      const r = page.rows.find((x) => x.num === num);
       return r ? `${r.signal.tier} ${r.signal.label}` : 'absent';
     };
     // Measured on main at ed087b1 before the #78 change.
@@ -639,7 +644,7 @@ test('Q15 captured bundles offline: the page says the registry came from the bun
     const page = await capturedPage(short);
     assert.equal(page.resolved.registryProvenance, 'bundle', short);
     assert.equal(page.result.keyTrust?.status, 'active', `${short}: verify-core’s status is unchanged`);
-    const kt = rowIn(page.rows, '5') as { signal: { tier: string; label: string; detail?: string }; math: { label: string; value: string }[]; depthNote?: string };
+    const kt = rowIn(page.rows, '5');
     assert.notEqual(kt.signal.label, KEY_TRUST_SIGNALS.active.label, short);
     assert.equal(kt.signal.tier, 'attention', short);
     assert.equal(
@@ -657,7 +662,7 @@ test('Q15 captured bundles offline: the page says the registry came from the bun
   }
   // da9246 was signed with an embedded key the registry was never consulted for.
   const legacy = await capturedPage('da9246');
-  const kt = rowIn(legacy.rows, '5') as { signal: { label: string } };
+  const kt = rowIn(legacy.rows, '5');
   assert.equal(kt.signal.label, KEY_TRUST_SIGNALS.legacy_embedded.label);
   assert.equal(legacy.verdict.headline, 'Verified, with caveats');
   assert.equal(canRecheckKeyTrust(legacy.meta, legacy.result), false);
@@ -694,7 +699,7 @@ test('Q15 captured bundles online: the re-check fetches the declared https: regi
       // fetched from its declared https: URL, the curated directory loaded.
       const hosted = { ...bundle };
       delete hosted['trustRegistry'];
-      const hostedUrl = 'https://civicaitools.org/api/records/q15-hosted/commitment';
+      const hostedUrl = `${new URL(bundle.trustRegistryUrl).origin}/api/records/q15-hosted/commitment`;
       serve({
         [hostedUrl]: hosted,
         [bundle.trustRegistryUrl]: bundle.trustRegistry,
@@ -705,7 +710,7 @@ test('Q15 captured bundles online: the re-check fetches the declared https: regi
       const result = await runVerify(vinput, resolved.registry, resolveCarriedLifecycle(resolved.commitment), resolved.registryProvenance);
       assert.equal(resolved.registryProvenance, 'declared-url', short);
       const rows = buildCheckRows(result, vinput, resolved.commitment, registryMetaOf(resolved));
-      assert.equal((rowIn(rows, '5') as { signal: { label: string } }).signal.label, KEY_TRUST_SIGNALS.active.label, short);
+      assert.equal(rowIn(rows, '5').signal.label, KEY_TRUST_SIGNALS.active.label, short);
       assert.equal(rollupVerdict(result, registryMetaOf(resolved)).headline, 'Verified', short);
       const rec = resolveHostRecognition(resolved.commitment, result.keyTrust, resolved.directory, resolved.registryProvenance);
       assert.equal(rec.status, 'known_publisher', short);

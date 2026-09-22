@@ -20,13 +20,16 @@ import {
 import {
   KEY_TRUST_SIGNALS,
   KEY_TRUST_BUNDLE_REGISTRY_NOT_USED,
+  KEY_TRUST_SUPPLIED_REGISTRY,
   SIGNER_IDENTITY_SIGNALS,
+  SIGNER_IDENTITY_SUPPLIED_REGISTRY,
   CONTENT_HASH_SIGNALS,
   CONTENT_PROFILE_SIGNALS,
   CAPTURE_METHOD_LABELS,
 } from './trust-signal.ts';
 import {
   rollupVerdict,
+  presentVerification,
   resolveInput,
   runVerify,
   buildCheckRows,
@@ -1956,4 +1959,36 @@ test('control: a signer that is not key-derived, its registry fetched from the d
   assert.equal(p.recognition.status, 'known_publisher');
   assert.equal(p.recognition.publisher?.displayName, BRAND);
   assert.equal(run.registryStep?.label, 'Fetched publisher trust registry');
+});
+
+test('presentVerification is what the page renders: its rows, headline and recognition read the registry’s provenance', async () => {
+  const m = mintSigned({ identifier: 'urn', bindingTier: 'platform', inlineRegistry: true, declareUrl: false });
+  const supplied = { ...m.commitment, trustRegistryUrl: LISTED_REGISTRY_URL };
+  const declared: Record<string, unknown> = { ...supplied };
+  delete declared['trustRegistry'];
+  const suppliedRun = await runWith(supplied, DIRECTORY_ROUTE, 'url');
+  const declaredRun = await runWith(declared, { [LISTED_REGISTRY_URL]: m.registry, ...DIRECTORY_ROUTE }, 'url');
+  for (const run of [suppliedRun, declaredRun]) {
+    const shown = presentVerification(run.resolved, run.vinput, run.result);
+    const p = pageOf(run);
+    assert.deepEqual(shown.rows, run.rows);
+    assert.deepEqual(shown.verdict, p.verdict);
+    assert.deepEqual(shown.recognition, p.recognition);
+  }
+  const shown = presentVerification(suppliedRun.resolved, suppliedRun.vinput, suppliedRun.result);
+  assert.deepEqual(rowOf(shown.rows, '5').signal, { ...KEY_TRUST_SUPPLIED_REGISTRY, icon: 'warning' });
+  assert.equal(rowOf(shown.rows, '14').signal.label, SIGNER_IDENTITY_SUPPLIED_REGISTRY.label);
+  assert.equal(shown.verdict.headline, 'Verified, with caveats');
+  assert.equal(shown.recognition.status, 'host_recognized_key_unconfirmed');
+});
+
+test('a carried publisher directory is reported as its own skipped step, beside the curated directory when that loads', async () => {
+  const m = mintSigned({ identifier: 'urn', bindingTier: 'platform', inlineRegistry: true, declareUrl: false });
+  const run = await runWith({ ...m.commitment, hostDirectory: HOST_DIRECTORY }, DIRECTORY_ROUTE, 'url');
+  const keys = run.steps.map((s) => s.key);
+  assert.equal(new Set(keys).size, keys.length, 'one step per key');
+  const carried = run.steps.find((s) => s.key === 'bundle-directory');
+  assert.equal(carried?.label, 'Publisher directory in the bundle — not used');
+  assert.equal(carried?.state, 'skipped');
+  assert.equal(run.steps.find((s) => s.key === 'directory')?.label, 'Loaded the typedstandards.org publisher directory');
 });

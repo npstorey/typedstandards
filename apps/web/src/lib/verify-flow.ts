@@ -62,6 +62,8 @@ import {
   CAPTURE_METHOD_VOCAB_SIGNALS,
   CONTENT_PROFILE_SIGNALS,
   KEY_TRUST_BUNDLE_REGISTRY_NOT_USED,
+  KEY_TRUST_SUPPLIED_REGISTRY,
+  SIGNER_IDENTITY_SUPPLIED_REGISTRY,
   LIFECYCLE_STATE_SIGNALS,
   LIFECYCLE_SOURCE_SIGNALS,
 } from './trust-signal.ts';
@@ -72,8 +74,9 @@ import {
   fetchHostDirectory,
   isPublisherHostname,
   parseHostSegment,
-  validateHostDirectory,
+  resolveHostRecognition,
   type HostDirectory,
+  type HostRecognition,
 } from './host-directory.ts';
 
 // Re-export the host-recognition surface (Phase D / Q47) so the verifier UI pulls
@@ -153,12 +156,14 @@ export interface Commitment {
   trustRegistryUrlLegacy?: string;
   subjectTitle?: string;
   subjectSummary?: string;
-  /** Offline bundle extensions (not emitted by the endpoint). */
+  /** Offline bundle extensions (not emitted by the endpoint). A `trustRegistry`
+   *  carried here is supplied by whoever made the record: it can lower a key
+   *  status, and never earns what the declared https: registry earns (#78). */
   package?: Record<string, unknown> | null;
   trustRegistry?: unknown;
-  /** Offline snapshot of the typedstandards.org host directory, so a bundle can
-   *  resolve publisher recognition without a network fetch (same staleness caveat
-   *  as the registry snapshot — Q47 / #119). */
+  /** A publisher directory a record may carry. Never read: recognition uses only
+   *  the typedstandards.org directory, and the page says this one was not used
+   *  (#78). */
   hostDirectory?: unknown;
 }
 
@@ -201,9 +206,9 @@ export interface ResolvedInput {
   pkg: Record<string, unknown> | null;
   registry: TrustRegistry | undefined;
   /** The host directory used for publisher recognition (Phase D), or
-   *  `'unavailable'` when it could not be loaded. Distinct from the publisher
-   *  sources below: it comes from the verifier's curator (typedstandards.org),
-   *  not from the package's host, so it is tracked separately. */
+   *  `'unavailable'` when it was not loaded. Distinct from the publisher sources
+   *  below: it is only ever the verifier's curator's (typedstandards.org), never
+   *  one the record carries, so it is tracked separately. */
   directory: HostDirectory | 'unavailable';
   /** Where each piece came from, for the independence disclosure. */
   sources: {
@@ -212,10 +217,12 @@ export interface ResolvedInput {
     registry: { kind: SourceKind; url?: string };
   };
   /** Where `registry` came from, in verify-core's terms (hub ADR-0030 §4 rule 3):
-   *  `bundle` when it was read inline from the bundle, `declared-url` when it was
-   *  fetched from the view's `trustRegistryUrl` / `trustRegistryUrlLegacy`.
-   *  Absent when no registry was loaded — no provenance is claimed for nothing.
-   *  verify-core reads it only for a signer whose identifier is key-derived. */
+   *  `bundle` when it was supplied with the record — read inline, or from a URL
+   *  that is not https: — and `declared-url` when it was fetched from the view's
+   *  https: `trustRegistryUrl` / `trustRegistryUrlLegacy`. Absent when no registry
+   *  was loaded — no provenance is claimed for nothing. verify-core reads it only
+   *  for a signer whose identifier is key-derived; the site reads it for every
+   *  signer (#78). */
   registryProvenance?: TrustRegistryProvenance;
   /** True only when EVERYTHING was read from the bundle — i.e. a true offline
    *  verification, fetching nothing. */
@@ -688,7 +695,8 @@ export async function resolveCommitment(
 
 /** A resolution step, emitted as each piece is obtained (drives the live UI). */
 export interface ResolveStep {
-  key: 'commitment' | 'package' | 'registry' | 'directory';
+  /** `bundle-directory` is the directory a record carries, which is never used. */
+  key: 'commitment' | 'package' | 'registry' | 'directory' | 'bundle-directory';
   label: string;
   kind: SourceKind;
   url?: string;
@@ -778,19 +786,11 @@ export async function resolveInput(
     }
   }
   const registryProvenance = registryProvenanceOf(registry, registrySource);
-  // Under a key-derived signer (hub ADR-0030 §6, §10) the step says where the
-  // registry came from: none declared; a bundle registry that is not valid; or a
-  // registry URL that is not https:, which counts as carried in the bundle. Every
-  // other signer keeps today's step unchanged.
-  const keyDerivedSigner = isKeyDerivedIdentifier(signerIdentifierOf(pkg));
-  const registryStep: ResolveStep = !keyDerivedSigner
-    ? {
-        key: 'registry',
-        label: registrySource.kind === 'inline' ? 'Read trust registry from bundle' : 'Fetched publisher trust registry',
-        kind: registrySource.kind,
-        ...(registrySource.url ? { url: registrySource.url } : {}),
-      }
-    : registrySource.kind === 'inline'
+  // The step says where the registry came from, for every signer (hub ADR-0030 §10;
+  // #78): none declared; a bundle registry that is not valid; or a registry URL that
+  // is not https:, which counts as carried in the bundle.
+  const registryStep: ResolveStep =
+    registrySource.kind === 'inline'
       ? registry === undefined
         ? { key: 'registry', label: 'Trust registry in bundle is not valid — not used', kind: 'inline', state: 'skipped' }
         : { key: 'registry', label: 'Read trust registry from bundle', kind: 'inline' }
@@ -808,31 +808,27 @@ export async function resolveInput(
 
   // Host directory (Phase D recognition dimension). It is the verifier's curator
   // data, not the package's, so it is resolved separately from the publisher
-  // sources above. Bundle mode honours the offline intent: an embedded snapshot is
-  // used if present, otherwise the network is NOT touched (recognition then reads
-  // a calm "directory unavailable"). Online modes fetch the canonical same-origin
-  // directory; any failure degrades to 'unavailable' without affecting the
-  // cryptographic verdict.
-  let directory: HostDirectory | 'unavailable';
-  let directoryStep: SourceKind | null = null;
+  // sources above, and a directory the record carries is never read (#78): it is
+  // the signer's own statement. Bundle mode honours the offline intent and does NOT
+  // touch the network (recognition then reads a calm "directory unavailable").
+  // Online modes fetch the canonical same-origin directory; any failure degrades to
+  // 'unavailable' without affecting the cryptographic verdict.
   if (commitment.hostDirectory !== undefined) {
-    directory = validateHostDirectory(commitment.hostDirectory) ?? 'unavailable';
-    if (directory !== 'unavailable') directoryStep = 'inline';
-  } else if (mode === 'bundle') {
+    onStep?.({
+      key: 'bundle-directory',
+      label: 'Publisher directory in the bundle — not used',
+      kind: 'inline',
+      state: 'skipped',
+    });
+  }
+  let directory: HostDirectory | 'unavailable';
+  if (mode === 'bundle') {
     directory = 'unavailable';
   } else {
     directory = await fetchHostDirectory(globalThis.fetch, HOST_DIRECTORY_PATH, signal);
-    if (directory !== 'unavailable') directoryStep = 'fetched';
-  }
-  if (directoryStep) {
-    onStep?.({
-      key: 'directory',
-      label:
-        directoryStep === 'inline'
-          ? 'Read publisher directory from bundle'
-          : 'Loaded the typedstandards.org publisher directory',
-      kind: directoryStep,
-    });
+    if (directory !== 'unavailable') {
+      onStep?.({ key: 'directory', label: 'Loaded the typedstandards.org publisher directory', kind: 'fetched' });
+    }
   }
 
   // A self-certified signer needs no registry (hub ADR-0030 §6): a bundle whose inline
@@ -877,10 +873,11 @@ export function isHttpsUrl(url: string | undefined): boolean {
  * (hub ADR-0030 §4 rule 3): read from the bundle → `bundle`; fetched from the
  * view's declared `https:` URL → `declared-url`. A trust registry counts as
  * declared only when fetched from an `https:` URL: one read from any other URL
- * (`data:`, `blob:`, `http:`, a relative URL) is `bundle`, so for a key-derived
- * signer it can lower the status and never raise it. `undefined` when no
- * registry was loaded. A `fetched` source with no URL means nothing was fetched.
- * verify-core reads the provenance only for a key-derived signer.
+ * (`data:`, `blob:`, `http:`, a relative URL) is `bundle`, so it can lower the
+ * status and never raise it. `undefined` when no registry was loaded. A `fetched`
+ * source with no URL means nothing was fetched. verify-core reads the provenance
+ * only for a key-derived signer; the site's #5 and #14 rows, headline and
+ * recognition read it for every signer (#78).
  */
 export function registryProvenanceOf(
   registry: TrustRegistry | undefined,
@@ -1049,8 +1046,6 @@ export interface RegistryMeta {
   /** The registry's provenance as passed to verify-core (see
    *  `registryProvenanceOf`), when a registry was loaded. */
   provenance?: TrustRegistryProvenance;
-  /** Whether the package's signer identifier is key-derived (hub ADR-0030 §3). */
-  keyDerived?: boolean;
 }
 
 // Key-trust statuses whose verdict actually CONSULTED the registry — the only ones
@@ -1064,10 +1059,26 @@ const REGISTRY_BACKED_STATUSES = new Set<KeyTrustStatus>([
   'unknown_key',
 ]);
 
+// Key-trust statuses by which a registry CONFIRMS the key (verify-core's
+// `verified: true`). From a registry the record supplied, these are the ones the
+// site never renders as registered (#78); every other status only lowers.
+const REGISTRY_CONFIRMED_STATUSES = new Set<KeyTrustStatus>(['active', 'deprecated_valid']);
+
+/** Whether `keyTrust` is a status a registry the record supplied confirmed — the
+ *  reading that does not establish whose key signed (#78). */
+function confirmedOnlyBySuppliedRegistry(
+  keyTrust: { status: KeyTrustStatus } | null | undefined,
+  registry: RegistryMeta | undefined,
+): boolean {
+  return !!keyTrust && REGISTRY_CONFIRMED_STATUSES.has(keyTrust.status) && registry?.provenance === 'bundle';
+}
+
 /** The honest staleness note for the #5 row, or `undefined` when none applies
- *  (verdict didn't rely on the registry). 'fetched' is current; 'inline' carries
- *  the offline-revocation caveat. A missing `generatedAt` degrades to a dateless
- *  but honest note. */
+ *  (verdict didn't rely on the registry). 'fetched' from the declared https: URL is
+ *  current; one read from a URL that is not https: is not the live declared registry,
+ *  so it gets no note. 'inline' says the snapshot was not checked against the
+ *  publisher's domain (#78) and carries the offline-revocation caveat. A missing
+ *  `generatedAt` degrades to a dateless but honest note. */
 export function keyTrustStalenessNote(
   status: KeyTrustStatus,
   meta: RegistryMeta | undefined,
@@ -1075,10 +1086,11 @@ export function keyTrustStalenessNote(
   if (!meta || !meta.available || !REGISTRY_BACKED_STATUSES.has(status)) return undefined;
   const asOf = meta.generatedAt ? ` (as of ${fmtAsOf(meta.generatedAt)})` : '';
   if (meta.kind === 'fetched') {
-    return `Checked against the live registry${asOf}.`;
+    return meta.provenance === 'bundle' ? undefined : `Checked against the live registry${asOf}.`;
   }
   const asOfInline = meta.generatedAt ? `, as of ${fmtAsOf(meta.generatedAt)}` : ' (date not stated)';
-  return `Verified against the registry snapshot carried in this bundle${asOfInline} — a key revoked after that date cannot be reflected offline. Re-check against the live registry to close the gap.`;
+  const recheck = isHttpsUrl(meta.url) ? ' Re-check against the live registry to close both gaps.' : '';
+  return `Read from the registry snapshot carried in this bundle${asOfInline}. It was not checked against the publisher’s domain, and a key revoked after that date cannot be reflected offline.${recheck}`;
 }
 
 /** The earliest verified "signed before" time the #5 check is bounded by — the min
@@ -1116,8 +1128,9 @@ export interface KeyTrustRecheck {
  * key-derived signer (hub ADR-0030 §3-§4) the check is re-run through
  * `verifyRecord` with the live registry, so the key-derived rule applies, and the
  * registry counts as declared only when the URL is `https:`; from any other URL
- * it can lower the status, never raise it. Every other signer is re-checked
- * exactly as before.
+ * it can lower the status, never raise it. Every other signer is re-checked only
+ * against an `https:` URL: any other URL is part of the record, so it could only
+ * confirm the record against itself, and the re-check refuses it (#78).
  */
 export async function recheckKeyTrustLive(
   commitment: Commitment,
@@ -1127,11 +1140,17 @@ export async function recheckKeyTrustLive(
 ): Promise<KeyTrustRecheck> {
   const url = commitment.trustRegistryUrl ?? commitment.trustRegistryUrlLegacy;
   if (!url) throw new VerifyFlowError('This bundle names no trust-registry URL to re-check against.');
+  const keyDerived = hasKeyDerivedSigner(input.package);
+  if (!keyDerived && !isHttpsUrl(url)) {
+    throw new VerifyFlowError(
+      'This record’s trust-registry URL is not https:, so it cannot confirm key trust against the publisher’s domain.',
+    );
+  }
   const liveRegistry = validateRegistry(await getJson(url, signal));
   const publicKey = commitment.signature?.publicKey;
   const kid = result.kid;
   let live: { status: KeyTrustStatus; verified: boolean };
-  if (hasKeyDerivedSigner(input.package)) {
+  if (keyDerived) {
     const provenance = registryProvenanceOf(liveRegistry, { kind: 'fetched', url });
     const rerun = await verifyRecord(input, {
       registry: liveRegistry,
@@ -1168,20 +1187,18 @@ export function registryMetaOf(resolved: ResolvedInput): RegistryMeta {
     ...(url ? { url } : {}),
     ...(generatedAt ? { generatedAt } : {}),
     ...(resolved.registryProvenance ? { provenance: resolved.registryProvenance } : {}),
-    ...(hasKeyDerivedSigner(resolved.pkg) ? { keyDerived: true } : {}),
   };
 }
 
 /** The online recheck is offered only when an inline SNAPSHOT backed a
- *  registry-dependent verdict AND a live URL is known — i.e. exactly when an
- *  offline-revocation gap could exist and is closeable. For a key-derived signer
- *  the URL must also be `https:`: only a registry fetched from an `https:` URL is
- *  the declared registry (hub ADR-0030 §4 rule 3). */
+ *  registry-dependent verdict AND a live `https:` URL is known — i.e. exactly when
+ *  the snapshot could be stale or not the publisher's, and that is closeable. The
+ *  URL must be `https:` for every signer: only a registry fetched from an `https:`
+ *  URL is the declared registry (hub ADR-0030 §4 rule 3; #78). */
 export function canRecheckKeyTrust(meta: RegistryMeta, result: VerifyResult): boolean {
   return (
     meta.kind === 'inline' &&
-    !!meta.url &&
-    (!meta.keyDerived || isHttpsUrl(meta.url)) &&
+    isHttpsUrl(meta.url) &&
     !!result.keyTrust &&
     REGISTRY_BACKED_STATUSES.has(result.keyTrust.status)
   );
@@ -1274,11 +1291,15 @@ export function buildCheckRows(
   // #5 — key trust (trust-registry lookup). The staleness note (#119 P4) makes the
   // offline-revocation limit legible: a snapshot can't reflect a key revoked after
   // its `generatedAt`; the recheck affordance closes that gap when connected.
-  // Under a key-derived signer identifier (hub ADR-0030 §10) the row states the
-  // registry's source beside the status, labels `kid` as the envelope's key label
-  // only, and says what happened when a bundle-carried registry was set aside.
-  // Every other signer renders exactly as before.
+  // Under a key-derived signer identifier (hub ADR-0030 §10) the row labels `kid`
+  // as the envelope's key label only, and says what happened when a bundle-carried
+  // registry was set aside. For every signer it states the registry's source beside
+  // the status (#78). A registry the record supplied — carried in it, or read from a
+  // URL that is not https: — can lower a status but not raise one: verify-core
+  // applies that for a key-derived signer, and for every other signer a status such
+  // a registry confirms is rendered as supplied, never as registered.
   const keyDerived = hasKeyDerivedSigner(input.package);
+  const suppliedRegistry = registryMeta?.provenance === 'bundle';
   if (result.keyTrust && keyDerived) {
     const status = result.keyTrust.status;
     const bundleRegistrySetAside =
@@ -1293,25 +1314,23 @@ export function buildCheckRows(
           { label: 'Key-trust status', value: status },
           { label: 'Registry source', value: registrySourceOf(registryMeta) },
         ],
-        // A registry read from a URL that is not https: is not the live declared
-        // registry, so the "checked against the live registry" note does not apply.
-        registryMeta?.kind === 'fetched' && registryMeta.provenance === 'bundle'
-          ? undefined
-          : keyTrustStalenessNote(status, registryMeta),
+        keyTrustStalenessNote(status, registryMeta),
       ),
     );
   } else if (result.keyTrust) {
-    const stalenessNote = keyTrustStalenessNote(result.keyTrust.status, registryMeta);
     rows.push(
       row(
         '5',
         'Key trust',
-        resolveKeyTrust(result.keyTrust),
+        confirmedOnlyBySuppliedRegistry(result.keyTrust, registryMeta)
+          ? KEY_TRUST_SUPPLIED_REGISTRY
+          : resolveKeyTrust(result.keyTrust),
         [
           { label: 'kid', value: result.kid ?? '—', mono: true },
           { label: 'Registry status', value: result.keyTrust.status },
+          ...(registryMeta ? [{ label: 'Registry source', value: registrySourceOf(registryMeta) }] : []),
         ],
-        stalenessNote,
+        keyTrustStalenessNote(result.keyTrust.status, registryMeta),
       ),
     );
   } else {
@@ -1404,7 +1423,10 @@ export function buildCheckRows(
     if (si.claimed) math.push({ label: 'Claimed signer', value: si.claimed, mono: true });
     if (si.derived) math.push({ label: 'Derived from the signing key', value: si.derived, mono: true });
     if (si.registered) math.push({ label: 'Registry identity', value: si.registered, mono: true });
-    rows.push(row('14', 'Signer identity', SIGNER_IDENTITY_SIGNALS[si.status], math.length ? math : [{ label: 'Status', value: si.status }]));
+    // A match against a registry the record supplied establishes nothing (#78); a
+    // mismatch against it still alarms.
+    const signal = si.status === 'ok' && suppliedRegistry ? SIGNER_IDENTITY_SUPPLIED_REGISTRY : SIGNER_IDENTITY_SIGNALS[si.status];
+    rows.push(row('14', 'Signer identity', signal, math.length ? math : [{ label: 'Status', value: si.status }]));
   }
 
   // #15 — captureMethod vocabulary (+ the P1 captureMethod disclosure label).
@@ -1429,8 +1451,8 @@ export function buildCheckRows(
   return rows;
 }
 
-/** The registry's source, stated beside a key-derived signer's key-trust status
- *  (hub ADR-0030 §10). */
+/** The registry's source, stated beside every signer's key-trust status (hub
+ *  ADR-0030 §10; #78). */
 function registrySourceOf(meta: RegistryMeta | undefined): string {
   if (meta && !meta.available && meta.kind === 'inline') return 'carried in the bundle, not valid — not used';
   if (!meta || !meta.available) return 'none supplied';
@@ -1458,10 +1480,18 @@ export interface Verdict {
  * MISMATCHES) alarms. Content that is `unavailable` — private by design, or simply
  * unfetchable — is NOT a failure: the public commitment still verifies on its own,
  * and the verdict surfaces that the content hash merely couldn't be recomputed here.
+ *
+ * `registry` is the #5 registry meta (see `registryMetaOf`). A key status confirmed
+ * by a registry the record supplied — carried in it, or read from a URL that is not
+ * https: — does not establish whose key signed, so it never earns the verified
+ * headline (#78). Omitted, the key status is read as given; the page always passes
+ * it (see `presentVerification`).
  */
-export function rollupVerdict(result: VerifyResult): Verdict {
+export function rollupVerdict(result: VerifyResult, registry?: RegistryMeta): Verdict {
   const integrity = result.envelopeIntegrity;
   const contentUnavailable = integrity.status === 'unavailable';
+  const keySuppliedOnly = confirmedOnlyBySuppliedRegistry(result.keyTrust, registry);
+  const keyConfirmed = result.keyTrust?.status === 'active' && !keySuppliedOnly;
 
   const alarm =
     integrity.status === 'altered' || // bytes present + hash mismatch — real tampering
@@ -1497,8 +1527,7 @@ export function rollupVerdict(result: VerifyResult): Verdict {
   // value proposition — a publicly verifiable commitment without disclosing content —
   // so it must read CALM, never as "Verification failed".
   if (contentUnavailable) {
-    const commitmentGreen =
-      result.signatureValid === true && result.keyTrust?.status === 'active';
+    const commitmentGreen = result.signatureValid === true && keyConfirmed;
     if (integrity.reason === 'private') {
       return commitmentGreen
         ? {
@@ -1523,10 +1552,7 @@ export function rollupVerdict(result: VerifyResult): Verdict {
     };
   }
 
-  const fullyGreen =
-    integrity.status === 'verified' &&
-    result.signatureValid === true &&
-    result.keyTrust?.status === 'active';
+  const fullyGreen = integrity.status === 'verified' && result.signatureValid === true && keyConfirmed;
 
   // Hub ADR-0030 §10: a self-certified signer never reads `verified` overall.
   // `self_certified` is tier `normal` with `verified: false` — no registry vouched
@@ -1545,6 +1571,15 @@ export function rollupVerdict(result: VerifyResult): Verdict {
     };
   }
 
+  if (integrity.status === 'verified' && result.signatureValid === true && keySuppliedOnly) {
+    return {
+      tier: 'attention',
+      headline: 'Verified, with caveats',
+      detail:
+        'The bytes are intact and the signature verifies. The signing key is listed in a trust registry supplied with the record, which was not checked against the publisher’s domain, so the key is not confirmed as the publisher’s. See the key-trust check below.',
+    };
+  }
+
   if (fullyGreen) {
     return {
       tier: 'verified',
@@ -1559,6 +1594,37 @@ export function rollupVerdict(result: VerifyResult): Verdict {
     headline: 'Verified, with caveats',
     detail:
       'The core signature and integrity checks pass, but something is unconfirmed or unrecognized (see the amber checks). Not proven bad — just not fully affirmed.',
+  };
+}
+
+// --- What the page shows --------------------------------------------------
+
+export interface Presentation {
+  rows: CheckRow[];
+  verdict: Verdict;
+  recognition: HostRecognition;
+}
+
+/**
+ * The check rows, the rolled-up verdict and the recognition card for one run — what
+ * the <Verifier> renders. One place computes all three from the same resolved input
+ * and result, so the registry's provenance reaches each of them (#78).
+ */
+export function presentVerification(
+  resolved: ResolvedInput,
+  input: VerifyInput,
+  result: VerifyResult,
+): Presentation {
+  const registryMeta = registryMetaOf(resolved);
+  return {
+    rows: buildCheckRows(result, input, resolved.commitment, registryMeta),
+    verdict: rollupVerdict(result, registryMeta),
+    recognition: resolveHostRecognition(
+      resolved.commitment,
+      result.keyTrust,
+      resolved.directory,
+      resolved.registryProvenance,
+    ),
   };
 }
 
