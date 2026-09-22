@@ -54,8 +54,13 @@ import {
   rollupVerdict,
   buildCheckRows,
   registryMetaOf,
+  canRecheckKeyTrust,
+  recheckKeyTrustLive,
+  resolveHostRecognition,
+  HOST_DIRECTORY,
   type ResolveStep,
 } from './verify-flow.ts';
+import { HOST_DIRECTORY_PATH } from './host-directory.ts';
 import { KEY_TRUST_SIGNALS } from './trust-signal.ts';
 import {
   recomputePackageHash,
@@ -555,4 +560,157 @@ test('Q15 self-certified: a registry fetched from an https: trustRegistryUrl tha
     'fetched from the registry URL the record declares',
   );
   assert.equal(run.registryStep?.label, 'Fetched publisher trust registry');
+});
+
+// --- What the page shows for the captured bundles (#78) ----------------------
+//
+// The three captured bundles carry the publisher's registry inline, beside a
+// trustRegistryUrl on its https: domain. Offline, that registry came from the bundle:
+// the page says so, and says it was not checked against the publisher's domain. The
+// signature, content, timestamp and log rows are what they were, and the only rows
+// that depend on where the registry came from are #5 and #14. Online, the re-check
+// fetches the declared https: registry and confirms the key; verifying the record by
+// hash or URL fetches that registry itself and reads Verified.
+
+const CAPTURED = ['d67b8e', '255b8e', 'da9246'] as const;
+
+/** The page for a captured bundle, offline (every fetch throws). */
+async function capturedPage(short: (typeof CAPTURED)[number]) {
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = ((input: unknown) => {
+    throw new Error(`NETWORK BLOCKED: ${String(input)}`);
+  }) as typeof globalThis.fetch;
+  try {
+    const resolved = await resolveInput('bundle', fixture(short));
+    const vinput = buildVerifyInput(resolved.commitment, resolved.pkg, { offline: resolved.fullyOffline });
+    const result = await runVerify(vinput, resolved.registry, resolveCarriedLifecycle(resolved.commitment), resolved.registryProvenance);
+    const meta = registryMetaOf(resolved);
+    return {
+      resolved,
+      vinput,
+      result,
+      meta,
+      rows: buildCheckRows(result, vinput, resolved.commitment, meta),
+      verdict: rollupVerdict(result, meta),
+    };
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+}
+
+const rowIn = (rows: { num: string }[], num: string) => rows.find((r) => r.num === num);
+
+test('Q15 captured bundles offline: the signature, content, timestamp and log rows are unchanged', async () => {
+  for (const short of CAPTURED) {
+    const page = await capturedPage(short);
+    const tierLabel = (num: string) => {
+      const r = rowIn(page.rows, num) as { signal: { tier: string; label: string } } | undefined;
+      return r ? `${r.signal.tier} ${r.signal.label}` : 'absent';
+    };
+    // Measured on main at ed087b1 before the #78 change.
+    assert.equal(tierLabel('1'), 'verified Contents unchanged since signing', `${short} #1`);
+    assert.equal(tierLabel('2'), 'verified Valid cryptographic signature', `${short} #2`);
+    assert.equal(
+      tierLabel('4'),
+      short === 'd67b8e' ? 'verified Content matches its fingerprint' : 'normal Earlier-format content fingerprint',
+      `${short} #4`,
+    );
+    assert.equal(tierLabel('7'), 'verified Timestamped', `${short} #7`);
+    assert.equal(
+      tierLabel('8'),
+      short === 'da9246' ? 'absent' : 'verified Recorded in a public transparency log',
+      `${short} #8`,
+    );
+    // Every row except #5 and #14 reads the same whatever the registry's provenance.
+    const asDeclared = buildCheckRows(page.result, page.vinput, page.resolved.commitment, {
+      ...page.meta,
+      provenance: 'declared-url',
+    });
+    assert.deepEqual(
+      page.rows.filter((r) => r.num !== '5' && r.num !== '14'),
+      asDeclared.filter((r) => r.num !== '5' && r.num !== '14'),
+      `${short}: only #5 and #14 depend on the registry's provenance`,
+    );
+  }
+});
+
+test('Q15 captured bundles offline: the page says the registry came from the bundle and was not checked against the publisher’s domain', async () => {
+  for (const short of ['d67b8e', '255b8e'] as const) {
+    const page = await capturedPage(short);
+    assert.equal(page.resolved.registryProvenance, 'bundle', short);
+    assert.equal(page.result.keyTrust?.status, 'active', `${short}: verify-core’s status is unchanged`);
+    const kt = rowIn(page.rows, '5') as { signal: { tier: string; label: string; detail?: string }; math: { label: string; value: string }[]; depthNote?: string };
+    assert.notEqual(kt.signal.label, KEY_TRUST_SIGNALS.active.label, short);
+    assert.equal(kt.signal.tier, 'attention', short);
+    assert.equal(
+      kt.math.find((m) => m.label === 'Registry source')?.value,
+      'carried in the bundle (can lower this signer’s key status, never raise it)',
+      short,
+    );
+    assert.match(kt.depthNote ?? '', /snapshot carried in this bundle, as of 2026-06-07/, short);
+    assert.match(kt.depthNote ?? '', /not checked against the publisher’s domain/, short);
+    assert.equal(page.verdict.tier, 'attention', short);
+    assert.equal(page.verdict.headline, 'Verified, with caveats', short);
+    assert.match(page.verdict.detail, /not checked against the publisher’s domain/, short);
+    // The re-check is offered: the view names an https: registry URL.
+    assert.equal(canRecheckKeyTrust(page.meta, page.result), true, short);
+  }
+  // da9246 was signed with an embedded key the registry was never consulted for.
+  const legacy = await capturedPage('da9246');
+  const kt = rowIn(legacy.rows, '5') as { signal: { label: string } };
+  assert.equal(kt.signal.label, KEY_TRUST_SIGNALS.legacy_embedded.label);
+  assert.equal(legacy.verdict.headline, 'Verified, with caveats');
+  assert.equal(canRecheckKeyTrust(legacy.meta, legacy.result), false);
+});
+
+test('Q15 captured bundles online: the re-check fetches the declared https: registry, and a hosted run reads Verified', async () => {
+  for (const short of ['d67b8e', '255b8e'] as const) {
+    const page = await capturedPage(short);
+    const bundle = JSON.parse(fixture(short)) as Record<string, unknown> & { trustRegistryUrl: string; trustRegistry: unknown };
+    assert.equal(new URL(bundle.trustRegistryUrl).protocol, 'https:');
+    const realFetch = globalThis.fetch;
+    const requested: string[] = [];
+    const serve = (routes: Record<string, unknown>) => {
+      globalThis.fetch = ((input: unknown) => {
+        const u = String(input);
+        requested.push(u);
+        return Promise.resolve(
+          u in routes
+            ? new Response(JSON.stringify(routes[u]), { status: 200, headers: { 'content-type': 'application/json' } })
+            : new Response('not found', { status: 404, headers: { 'content-type': 'text/plain' } }),
+        );
+      }) as typeof globalThis.fetch;
+    };
+    try {
+      // The live registry lists the key: confirmed, from the declared https: URL.
+      serve({ [bundle.trustRegistryUrl]: bundle.trustRegistry });
+      const live = await recheckKeyTrustLive(page.resolved.commitment, page.result, page.vinput);
+      assert.deepEqual(requested, [bundle.trustRegistryUrl], `${short}: the declared https: URL, nothing else`);
+      assert.equal(live.status, 'active', short);
+      assert.equal(live.verified, true, short);
+      assert.equal(live.changed, false, short);
+
+      // Verified by URL: the commitment without the inline registry, the registry
+      // fetched from its declared https: URL, the curated directory loaded.
+      const hosted = { ...bundle };
+      delete hosted['trustRegistry'];
+      const hostedUrl = 'https://civicaitools.org/api/records/q15-hosted/commitment';
+      serve({
+        [hostedUrl]: hosted,
+        [bundle.trustRegistryUrl]: bundle.trustRegistry,
+        [HOST_DIRECTORY_PATH]: HOST_DIRECTORY,
+      });
+      const resolved = await resolveInput('url', hostedUrl);
+      const vinput = buildVerifyInput(resolved.commitment, resolved.pkg, { offline: resolved.fullyOffline });
+      const result = await runVerify(vinput, resolved.registry, resolveCarriedLifecycle(resolved.commitment), resolved.registryProvenance);
+      assert.equal(resolved.registryProvenance, 'declared-url', short);
+      const rows = buildCheckRows(result, vinput, resolved.commitment, registryMetaOf(resolved));
+      assert.equal((rowIn(rows, '5') as { signal: { label: string } }).signal.label, KEY_TRUST_SIGNALS.active.label, short);
+      assert.equal(rollupVerdict(result, registryMetaOf(resolved)).headline, 'Verified', short);
+      const rec = resolveHostRecognition(resolved.commitment, result.keyTrust, resolved.directory, resolved.registryProvenance);
+      assert.equal(rec.status, 'known_publisher', short);
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+  }
 });

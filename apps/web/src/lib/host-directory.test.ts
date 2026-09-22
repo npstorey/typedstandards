@@ -43,7 +43,7 @@ function mentionsBrand(r: HostRecognition): boolean {
 // --- the six outcomes -----------------------------------------------------
 
 test('active + listed origin → known_publisher (green), brand + profile exposed', () => {
-  const r = resolveHostRecognition(listed, kt('active', true), HOST_DIRECTORY);
+  const r = resolveHostRecognition(listed, kt('active', true), HOST_DIRECTORY, 'declared-url');
   assert.equal(r.status, 'known_publisher');
   assert.equal(r.signal.tier, 'verified');
   assert.ok(r.publisher, 'publisher entry must be set for the earned state');
@@ -52,7 +52,7 @@ test('active + listed origin → known_publisher (green), brand + profile expose
 });
 
 test('deprecated_valid + listed origin → known_publisher (key was valid at signing)', () => {
-  const r = resolveHostRecognition(listed, kt('deprecated_valid', true), HOST_DIRECTORY);
+  const r = resolveHostRecognition(listed, kt('deprecated_valid', true), HOST_DIRECTORY, 'declared-url');
   assert.equal(r.status, 'known_publisher');
   assert.equal(r.signal.tier, 'verified');
 });
@@ -90,10 +90,8 @@ test('self_certified + listed origin + a registry not from the declared URL → 
   }
 });
 
-test('the registry provenance changes no reading for any status other than self_certified', () => {
+test('the registry provenance changes no reading for an unverified key other than self_certified', () => {
   const statuses: [KeyTrustStatus, boolean][] = [
-    ['active', true],
-    ['deprecated_valid', true],
     ['legacy_embedded', false],
     ['unknown_key', false],
     ['revoked', false],
@@ -110,6 +108,24 @@ test('the registry provenance changes no reading for any status other than self_
           `${status} / ${provenance}`,
         );
       }
+    }
+  }
+});
+
+test('a verified key at a listed origin reads Known publisher only when its registry was fetched from the declared https: URL (#78)', () => {
+  for (const [status, verified] of [['active', true], ['deprecated_valid', true]] as [KeyTrustStatus, boolean][]) {
+    for (const provenance of ['bundle', undefined] as const) {
+      const r = resolveHostRecognition(listed, kt(status, verified), HOST_DIRECTORY, provenance);
+      assert.equal(r.status, 'host_recognized_key_unconfirmed', `${status} / ${provenance}`);
+      assert.equal(r.signal.tier, 'attention');
+      assert.equal(r.publisher, undefined, 'no curated entry');
+      assert.equal(mentionsBrand(r), false, 'no curated name');
+    }
+    const declared = resolveHostRecognition(listed, kt(status, verified), HOST_DIRECTORY, 'declared-url');
+    assert.equal(declared.status, 'known_publisher', status);
+    // An unlisted origin stays unknown whatever the provenance.
+    for (const provenance of ['bundle', 'declared-url', undefined] as const) {
+      assert.equal(resolveHostRecognition(unlisted, kt(status, verified), HOST_DIRECTORY, provenance).status, 'unknown_publisher');
     }
   }
 });
@@ -162,7 +178,7 @@ test('R1: displayName ("Civic AI Tools") appears ONLY for known_publisher', () =
     assert.equal(mentionsBrand(r), false, `brand leaked into ${r.status}: ${r.signal.label} / ${r.signal.detail}`);
     assert.equal(r.publisher, undefined, `publisher leaked into ${r.status}`);
   }
-  const green = resolveHostRecognition(listed, kt('active', true), HOST_DIRECTORY);
+  const green = resolveHostRecognition(listed, kt('active', true), HOST_DIRECTORY, 'declared-url');
   assert.equal(mentionsBrand(green), true);
 });
 

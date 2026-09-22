@@ -55,6 +55,7 @@ import {
   type Commitment,
   type ResolvedInput,
 } from './verify-flow.ts';
+import { HOST_DIRECTORY_PATH } from './host-directory.ts';
 
 /** A fully-green VerifyResult; override per case. Cast once — rollupVerdict reads a
  *  well-defined subset, and a focused unit test needn't hand-build all 20+ fields. */
@@ -1203,22 +1204,16 @@ test('provenance: the SAME key-derived signer with the registry fetched from its
   assert.equal(rowOf(run.rows, '14').signal.label, SIGNER_IDENTITY_SIGNALS.key_derived_match.label);
 });
 
-test('provenance: a signer whose identifier is NOT key-derived renders exactly as before in both modes (#78 out of scope)', async () => {
+test('provenance: a signer whose identifier is NOT key-derived keeps its byline in both modes, and the registered-key reading only from its declared https: URL (#78)', async () => {
   for (const mode of ['bundle', 'hosted'] as const) {
     const m = mintSigned({ identifier: 'urn', bindingTier: 'platform', inlineRegistry: mode === 'bundle', declareUrl: true });
     const run = await runFlow(m, mode);
-    assert.equal(run.result.keyTrust?.status, 'active', `${mode}: the inline registry is used as given`);
+    assert.equal(run.result.keyTrust?.status, 'active', `${mode}: verify-core’s status is unchanged`);
     const kt = rowOf(run.rows, '5');
-    assert.equal(kt.signal.label, KEY_TRUST_SIGNALS.active.label, mode);
-    // Today's math lines, unchanged: `kid` and `Registry status`, no source line.
-    assert.deepEqual(
-      kt.math.map((x) => x.label),
-      ['kid', 'Registry status'],
-      `${mode}: the #5 math is today's`,
-    );
-    assert.equal(rowOf(run.rows, '14').signal.label, SIGNER_IDENTITY_SIGNALS.ok.label, mode);
-    assert.equal(run.verdict.tier, 'verified', mode);
-    assert.equal(run.verdict.headline, 'Verified', mode);
+    assert.equal(kt.signal.label === KEY_TRUST_SIGNALS.active.label, mode === 'hosted', mode);
+    // The #5 row states where the registry came from, as it does for a key-derived signer.
+    assert.deepEqual(kt.math.map((x) => x.label), ['kid', 'Registry status', 'Registry source'], mode);
+    assert.equal(rowOf(run.rows, '14').signal.label === SIGNER_IDENTITY_SIGNALS.ok.label, mode === 'hosted', mode);
     // displayName keeps the byline position for a non-key-derived signer.
     assert.equal(run.preview.signerDisplayName, SELF_NAME, mode);
     assert.equal(run.preview.signerSelfDescribedName, undefined, mode);
@@ -1683,17 +1678,44 @@ test('recheck: a key-derived signer re-checked against its https: registry appli
   }
 });
 
-test('recheck: a signer that is not key-derived is re-checked as before, whatever the URL scheme', async () => {
-  const m = mintSigned({ identifier: 'urn', bindingTier: 'platform', inlineRegistry: true, declareUrl: false });
-  const commitment = { ...m.commitment, trustRegistryUrl: HTTP_REGISTRY_URL };
-  const run = await runWith(commitment, {});
-  assert.equal(run.result.keyTrust?.status, 'active');
-  assert.equal(canRecheckKeyTrust(registryMetaOf(run.resolved), run.result), true);
-  const restore = stubFetch({ [HTTP_REGISTRY_URL]: m.registry });
+test('recheck: a signer that is not key-derived is re-checked only against an https: registry URL (#78)', async () => {
+  for (const which of ['data', 'http'] as const) {
+    const m = mintSigned({ identifier: 'urn', bindingTier: 'platform', inlineRegistry: true, declareUrl: false });
+    const url = which === 'data' ? dataUrlOf(m.registry) : HTTP_REGISTRY_URL;
+    const run = await runWith({ ...m.commitment, trustRegistryUrl: url }, {});
+    assert.equal(run.result.keyTrust?.status, 'active', which);
+    assert.equal(canRecheckKeyTrust(registryMetaOf(run.resolved), run.result), false, `${which}: no recheck offered`);
+    // Called anyway, it refuses rather than confirming the key from the same bytes.
+    const restore = stubFetch({ [HTTP_REGISTRY_URL]: m.registry });
+    try {
+      await assert.rejects(
+        recheckKeyTrustLive(run.resolved.commitment as Commitment, run.result, run.vinput),
+        VerifyFlowError,
+        which,
+      );
+    } finally {
+      restore();
+    }
+  }
+  // An https: URL: offered, and the live registry decides.
+  const m = mintSigned({ identifier: 'urn', bindingTier: 'platform', inlineRegistry: true, declareUrl: true });
+  const run = await runWith(m.commitment, {});
+  assert.equal(canRecheckKeyTrust(registryMetaOf(run.resolved), run.result), true, 'https: offered');
+  let restore = stubFetch({ [SC_REGISTRY_URL]: EMPTY_REGISTRY });
+  try {
+    const live = await recheckKeyTrustLive(run.resolved.commitment as Commitment, run.result, run.vinput);
+    assert.equal(live.status, 'unknown_key');
+    assert.equal(live.verified, false);
+    assert.equal(live.changed, true);
+  } finally {
+    restore();
+  }
+  restore = stubFetch({ [SC_REGISTRY_URL]: m.registry });
   try {
     const live = await recheckKeyTrustLive(run.resolved.commitment as Commitment, run.result, run.vinput);
     assert.equal(live.status, 'active');
     assert.equal(live.verified, true);
+    assert.equal(live.changed, false);
   } finally {
     restore();
   }
@@ -1713,12 +1735,225 @@ test('registry step: a key-derived signer whose bundle registry is not valid is 
   assert.equal(run.result.keyTrust?.status, 'self_certified');
 });
 
-test('registry step: a signer that is not key-derived keeps today’s steps, whatever the registry source', async () => {
+test('registry step: a signer that is not key-derived gets the same registry steps as a key-derived one (#78)', async () => {
   const m = mintSigned({ identifier: 'urn', bindingTier: 'platform', inlineRegistry: false, declareUrl: false });
   const invalid = await runWith({ ...m.commitment, trustRegistry: { keys: 'not a list' } }, {});
-  assert.equal(invalid.registryStep?.label, 'Read trust registry from bundle');
+  assert.equal(invalid.registryStep?.label, 'Trust registry in bundle is not valid — not used');
+  assert.equal(invalid.registryStep?.state, 'skipped');
+  const none = await runWith(m.commitment, {});
+  assert.equal(none.registryStep?.label, 'No trust registry declared — none fetched');
+  assert.equal(none.registryStep?.state, 'skipped');
   const http = await runWith({ ...m.commitment, trustRegistryUrl: HTTP_REGISTRY_URL }, { [HTTP_REGISTRY_URL]: m.registry });
-  assert.equal(http.registryStep?.label, 'Fetched publisher trust registry');
+  assert.equal(http.registryStep?.label, 'Read trust registry from a URL that is not https: — it can lower key trust, never raise it');
   assert.equal(http.result.keyTrust?.status, 'active');
-  assert.equal(rollupVerdict(http.result).headline, 'Verified');
+  assert.notEqual(rollupVerdict(http.result, registryMetaOf(http.resolved)).headline, 'Verified');
+  const https = await runWith({ ...m.commitment, trustRegistryUrl: SC_REGISTRY_URL }, { [SC_REGISTRY_URL]: m.registry });
+  assert.equal(https.registryStep?.label, 'Fetched publisher trust registry');
+  assert.equal(rollupVerdict(https.result, registryMetaOf(https.resolved)).headline, 'Verified');
+});
+
+// --- A registry or publisher directory the signer supplied (#78) -------------
+//
+// A trust registry carried in the record, or read from a URL that is not https:, is
+// supplied by whoever made the record; so is a publisher directory carried in it.
+// For every signer, neither earns what a registry fetched from the declared https:
+// URL, or the typedstandards.org directory, earns:
+//   - key trust from such a registry is not shown with the registered-key label or
+//     tier, and the #5 row says where the registry came from;
+//   - the headline does not read an unqualified "Verified";
+//   - the recognition card never reads "Known publisher" or the curated name;
+//   - the live re-check confirms key trust only from an https: URL.
+// verify-core's statuses are unchanged; what the page shows is the site's. Every key
+// is generated at test time and no record file is committed.
+
+const BRAND = HOST_DIRECTORY.publishers[0].displayName;
+const DIRECTORY_ROUTE = { [HOST_DIRECTORY_PATH]: HOST_DIRECTORY };
+const SUPPLIED_SOURCE = 'carried in the bundle (can lower this signer’s key status, never raise it)';
+const NOT_HTTPS_SOURCE = 'read from a registry URL that is not https: (can lower this signer’s key status, never raise it)';
+const NOT_HTTPS_STEP = 'Read trust registry from a URL that is not https: — it can lower key trust, never raise it';
+
+/** What the page shows for a run, computed as the <Verifier> computes it. */
+function pageOf(run: Awaited<ReturnType<typeof runWith>>) {
+  return {
+    keyTrust: rowOf(run.rows, '5'),
+    signerIdentity: run.rows.find((r) => r.num === '14'),
+    verdict: rollupVerdict(run.result, registryMetaOf(run.resolved)),
+    recognition: resolveHostRecognition(
+      run.resolved.commitment,
+      run.result.keyTrust,
+      run.resolved.directory,
+      run.resolved.registryProvenance,
+    ),
+  };
+}
+
+type Page = ReturnType<typeof pageOf>;
+
+function assertNotRegistered(p: Page, label: string): void {
+  assert.notEqual(p.keyTrust.signal.label, KEY_TRUST_SIGNALS.active.label, `${label}: #5 label`);
+  assert.equal(p.keyTrust.signal.tier, 'attention', `${label}: #5 tier`);
+  assert.match(p.keyTrust.signal.detail ?? '', /not checked against the publisher’s domain/, `${label}: #5 detail`);
+  assert.notEqual(p.verdict.tier, 'verified', `${label}: headline tier`);
+  assert.notEqual(p.verdict.headline, 'Verified', `${label}: headline`);
+  assert.match(p.verdict.detail, /not checked against the publisher’s domain/, `${label}: headline detail`);
+}
+
+function assertNoBrand(p: Page, label: string): void {
+  assert.notEqual(p.recognition.status, 'known_publisher', `${label}: recognition`);
+  assert.notEqual(p.recognition.signal.tier, 'verified', `${label}: recognition tier`);
+  assert.equal(p.recognition.publisher, undefined, `${label}: no curated entry`);
+  assert.doesNotMatch(`${p.recognition.signal.label}\n${p.recognition.signal.detail ?? ''}`, new RegExp(BRAND), `${label}: no curated name`);
+}
+
+test('a registry carried in the record never earns the registered-key reading, the Verified headline or Known publisher, in any mode', async () => {
+  const m = mintSigned({ identifier: 'urn', bindingTier: 'platform', inlineRegistry: true, declareUrl: false });
+  const commitment = { ...m.commitment, trustRegistryUrl: LISTED_REGISTRY_URL };
+  const runs = [
+    { label: 'bundle', run: await runWith(commitment, {}), recognition: 'directory_unavailable' },
+    {
+      label: 'bundle carrying the curated directory',
+      run: await runWith({ ...commitment, hostDirectory: HOST_DIRECTORY }, {}),
+      recognition: 'directory_unavailable',
+    },
+    { label: 'url, curated directory', run: await runWith(commitment, DIRECTORY_ROUTE, 'url'), recognition: 'host_recognized_key_unconfirmed' },
+  ];
+  for (const { label, run, recognition } of runs) {
+    assert.equal(run.result.keyTrust?.status, 'active', `${label}: verify-core’s status is unchanged`);
+    assert.equal(run.resolved.registryProvenance, 'bundle', label);
+    const p = pageOf(run);
+    assertNotRegistered(p, label);
+    assert.equal(p.keyTrust.math.find((x) => x.label === 'Registry source')?.value, SUPPLIED_SOURCE, label);
+    assertNoBrand(p, label);
+    assert.equal(p.recognition.status, recognition, label);
+  }
+});
+
+test('a registry read from a URL that is not https: is supplied by the record too, for a signer that is not key-derived', async () => {
+  const m = mintSigned({ identifier: 'urn', bindingTier: 'platform', inlineRegistry: false, declareUrl: false });
+  const cases = [
+    { label: 'data:, bundle', url: dataUrlOf(m.registry), mode: 'bundle' as const },
+    { label: 'data:, url', url: dataUrlOf(m.registry), mode: 'url' as const },
+    { label: 'http:, url', url: HTTP_REGISTRY_URL, mode: 'url' as const },
+  ];
+  for (const c of cases) {
+    const run = await runWith(
+      { ...m.commitment, trustRegistryUrl: c.url },
+      { [HTTP_REGISTRY_URL]: m.registry, ...DIRECTORY_ROUTE },
+      c.mode,
+    );
+    assert.equal(run.result.keyTrust?.status, 'active', `${c.label}: verify-core’s status is unchanged`);
+    assert.equal(run.resolved.registryProvenance, 'bundle', c.label);
+    const p = pageOf(run);
+    assertNotRegistered(p, c.label);
+    assert.equal(p.keyTrust.math.find((x) => x.label === 'Registry source')?.value, NOT_HTTPS_SOURCE, c.label);
+    assert.equal(p.keyTrust.depthNote, undefined, `${c.label}: no "live registry" note`);
+    assert.equal(run.registryStep?.label, NOT_HTTPS_STEP, c.label);
+    assertNoBrand(p, c.label);
+  }
+});
+
+test('#14: an identity only a supplied registry records is not shown as matching the registry', async () => {
+  const m = mintSigned({ identifier: 'urn', bindingTier: 'platform', inlineRegistry: true, declareUrl: true });
+  const supplied = pageOf(await runWith(m.commitment, {}));
+  assert.equal(supplied.signerIdentity?.signal.tier, 'normal');
+  assert.notEqual(supplied.signerIdentity?.signal.label, SIGNER_IDENTITY_SIGNALS.ok.label);
+  assert.match(supplied.signerIdentity?.signal.detail ?? '', /not checked against the publisher’s domain/);
+  // The same identity in a registry fetched from the declared https: URL still matches.
+  const hosted = { ...m.commitment };
+  delete hosted['trustRegistry'];
+  const declared = pageOf(await runWith(hosted, { [SC_REGISTRY_URL]: m.registry }, 'url'));
+  assert.equal(declared.signerIdentity?.signal.label, SIGNER_IDENTITY_SIGNALS.ok.label);
+  // A supplied registry that records a DIFFERENT identity still alarms: it can lower.
+  const other = { ...m.registry, keys: [{ ...(m.registry.keys as Record<string, unknown>[])[0], signerIdentity: { identifier: 'urn:civic-record:platform:other' } }] };
+  const lowered = await runWith({ ...m.commitment, trustRegistry: other }, {});
+  assert.equal(lowered.result.signerIdentity?.status, 'signer_identity_mismatch');
+  assert.equal(pageOf(lowered).signerIdentity?.signal.tier, 'alarm');
+  assert.equal(pageOf(lowered).verdict.tier, 'alarm');
+});
+
+test('a supplied registry still lowers: a key it lists as revoked alarms, as before', async () => {
+  const m = mintSigned({ identifier: 'urn', bindingTier: 'platform', inlineRegistry: false, declareUrl: false });
+  const revoked = {
+    ...m.registry,
+    keys: [{ ...(m.registry.keys as Record<string, unknown>[])[0], status: 'revoked', revokedAt: '2026-02-01T00:00:00.000Z' }],
+  };
+  for (const commitment of [
+    { ...m.commitment, trustRegistry: revoked },
+    { ...m.commitment, trustRegistryUrl: dataUrlOf(revoked) },
+  ]) {
+    const p = pageOf(await runWith(commitment, {}));
+    assert.equal(p.keyTrust.signal.label, KEY_TRUST_SIGNALS.revoked.label);
+    assert.equal(p.keyTrust.signal.tier, 'alarm');
+    assert.equal(p.verdict.tier, 'alarm');
+  }
+});
+
+test('the headline: content-private, and deprecated_valid, from a supplied registry never read verified', async () => {
+  const m = mintSigned({ identifier: 'urn', bindingTier: 'platform', inlineRegistry: true, declareUrl: false });
+  const sealed: Record<string, unknown> = { ...m.commitment, trustRegistryUrl: LISTED_REGISTRY_URL };
+  delete sealed['package'];
+  const run = await runWith(sealed, {});
+  assert.equal(run.result.envelopeIntegrity.status, 'unavailable');
+  assert.equal(run.result.keyTrust?.status, 'active');
+  const v = rollupVerdict(run.result, registryMetaOf(run.resolved));
+  assert.notEqual(v.tier, 'verified');
+  assert.notEqual(v.headline, 'Commitment verified — content private');
+
+  const supplied = { kind: 'inline', available: true, provenance: 'bundle' } as const;
+  const declared = { kind: 'fetched', available: true, provenance: 'declared-url' } as const;
+  const deprecatedValid = { keyTrust: { status: 'deprecated_valid', verified: true } as VerifyResult['keyTrust'] };
+  assert.equal(rollupVerdict(mkResult(), declared).headline, 'Verified', 'control: the declared registry');
+  assert.notEqual(rollupVerdict(mkResult(), supplied).tier, 'verified');
+  const rows = buildCheckRows(mkResult(deprecatedValid), buildVerifyInput({ packageHash: 'ab'.repeat(32) }, {}), { packageHash: 'ab'.repeat(32) }, supplied);
+  assert.notEqual(rowOf(rows, '5').signal.label, KEY_TRUST_SIGNALS.deprecated_valid.label);
+  assert.equal(rowOf(rows, '5').signal.tier, 'attention');
+  const declaredRows = buildCheckRows(mkResult(deprecatedValid), buildVerifyInput({ packageHash: 'ab'.repeat(32) }, {}), { packageHash: 'ab'.repeat(32) }, declared);
+  assert.equal(rowOf(declaredRows, '5').signal.label, KEY_TRUST_SIGNALS.deprecated_valid.label, 'control');
+});
+
+test('a publisher directory carried in the record is never read: recognition uses only the typedstandards.org directory', async () => {
+  // The signer's own https: registry lists its key, so key trust is earned on its own
+  // origin; the directory it carries names that origin with the curated name.
+  const m = mintSigned({ identifier: 'urn', bindingTier: 'platform', inlineRegistry: false, declareUrl: true });
+  const ownOrigin = new URL(SC_REGISTRY_URL).origin;
+  const carried = {
+    ...m.commitment,
+    hostDirectory: { version: 1, updated: '2026-09-21', publishers: [{ registryOrigin: ownOrigin, displayName: BRAND, profileUrl: ownOrigin }] },
+  };
+  for (const mode of ['bundle', 'url'] as const) {
+    const run = await runWith(carried, { [SC_REGISTRY_URL]: m.registry, ...DIRECTORY_ROUTE }, mode);
+    const p = pageOf(run);
+    assertNoBrand(p, mode);
+    assert.equal(p.recognition.status, mode === 'url' ? 'unknown_publisher' : 'directory_unavailable', mode);
+    assert.equal(run.steps.some((s) => s.label === 'Read publisher directory from bundle'), false, `${mode}: not read`);
+    const carriedStep = run.steps.find((s) => /directory/i.test(s.label) && /not used/.test(s.label));
+    assert.equal(carriedStep?.state, 'skipped', `${mode}: the page says the carried directory was not used`);
+  }
+  // An entry for an opaque (data:) origin cannot match a data: registry URL either.
+  const d = mintSigned({ identifier: 'urn', bindingTier: 'platform', inlineRegistry: false, declareUrl: false });
+  const opaque = {
+    ...d.commitment,
+    trustRegistryUrl: dataUrlOf(d.registry),
+    hostDirectory: { version: 1, updated: '2026-09-21', publishers: [{ registryOrigin: 'data:,x', displayName: BRAND }] },
+  };
+  assertNoBrand(pageOf(await runWith(opaque, {})), 'data: origin');
+});
+
+test('control: a signer that is not key-derived, its registry fetched from the declared https: URL, keeps the registered key, Verified and Known publisher', async () => {
+  const m = mintSigned({ identifier: 'urn', bindingTier: 'platform', inlineRegistry: false, declareUrl: false });
+  const run = await runWith(
+    { ...m.commitment, trustRegistryUrl: LISTED_REGISTRY_URL },
+    { [LISTED_REGISTRY_URL]: m.registry, ...DIRECTORY_ROUTE },
+    'url',
+  );
+  assert.equal(run.resolved.registryProvenance, 'declared-url');
+  const p = pageOf(run);
+  assert.equal(p.keyTrust.signal.label, KEY_TRUST_SIGNALS.active.label);
+  assert.equal(p.keyTrust.signal.tier, 'verified');
+  assert.equal(p.keyTrust.math.find((x) => x.label === 'Registry source')?.value, 'fetched from the registry URL the record declares');
+  assert.equal(p.signerIdentity?.signal.label, SIGNER_IDENTITY_SIGNALS.ok.label);
+  assert.equal(p.verdict.headline, 'Verified');
+  assert.equal(p.recognition.status, 'known_publisher');
+  assert.equal(p.recognition.publisher?.displayName, BRAND);
+  assert.equal(run.registryStep?.label, 'Fetched publisher trust registry');
 });

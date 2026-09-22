@@ -98,3 +98,34 @@ test('registryGeneratedAt: present-and-string only; absent/non-string ⇒ undefi
   assert.equal(registryGeneratedAt(undefined), undefined);
   assert.equal(registryGeneratedAt({ keys: [], generatedAt: 123 } as never), undefined);
 });
+
+// A registry supplied with the record — carried in the bundle, or read from a URL that
+// is not https: — was not checked against the publisher's domain, for any signer (#78).
+
+test('inline snapshot ⇒ the note says it was not checked against the publisher’s domain', () => {
+  const note = keyTrustStalenessNote(
+    'active',
+    meta({ kind: 'inline', provenance: 'bundle', generatedAt: '2026-06-07T00:00:00.000Z', url: 'https://x/reg.json' }),
+  );
+  assert.match(note ?? '', /not checked against the publisher’s domain/);
+  assert.doesNotMatch(note ?? '', /^Verified against/, 'no "verified" claim for a supplied registry');
+});
+
+test('a registry read from a URL that is not https: ⇒ no "live registry" note', () => {
+  assert.equal(
+    keyTrustStalenessNote('active', meta({ kind: 'fetched', provenance: 'bundle', url: 'data:application/json,{}' })),
+    undefined,
+  );
+  // Fetched from the declared https: URL: the live note, as before.
+  assert.match(
+    keyTrustStalenessNote('active', meta({ kind: 'fetched', provenance: 'declared-url', url: 'https://x/reg.json' })) ?? '',
+    /live registry/,
+  );
+});
+
+test('canRecheckKeyTrust: offered only for an https: registry URL, for every signer', () => {
+  for (const url of ['http://x/reg.json', 'data:application/json,{}', '/reg.json']) {
+    assert.equal(canRecheckKeyTrust(meta({ kind: 'inline', url }), resultWith('active')), false, url.slice(0, 12));
+  }
+  assert.equal(canRecheckKeyTrust(meta({ kind: 'inline', url: 'https://x/reg.json' }), resultWith('active')), true);
+});
