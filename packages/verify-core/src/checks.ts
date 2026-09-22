@@ -334,12 +334,14 @@ export function checkContentProfile(pkg: Record<string, unknown>): ContentProfil
 // v0.1 ratified node type URIs (spec §8.12.1). Recognized so check #12 resolves
 // them; only `content/analysis/v1` (+ the lifecycle sub-types) are operationalized
 // today, but the full ratified set is registered so conformant packages don't
-// render as `unknown_type`.
+// render as `unknown_type`. The sixteen attestation sub-types are in the order
+// of the §8.12.1 table; `type-resolution.test.ts` holds that table's copy.
 const KNOWN_TYPE_URIS: readonly string[] = [
   'content/analysis/v1',
   'attestation/withdraws/v1',
   'attestation/reinstates/v1',
   'attestation/supersedes/v1',
+  'attestation/revises/v1',
   'attestation/publishes/v1',
   'attestation/locatedAt/v1',
   'attestation/corroborates/v1',
