@@ -442,7 +442,9 @@ export async function fetchHostDirectory(
  *                                          actively disavows the key (`unknown_key`)
  *                                          → normal (calm). NOT a failure — minting
  *                                          a valid envelope is the open property.
- *   - `directory_unavailable`             directory could not be loaded → normal.
+ *   - `directory_unavailable`             directory not loaded: an online fetch
+ *                                          failed, or bundle mode did not fetch it
+ *                                          (`'not_fetched'`) → normal.
  *   - `no_publisher_declared`             no `trustRegistryUrl` to look up → normal.
  */
 export type HostRecognitionStatus =
@@ -489,7 +491,7 @@ function descriptor(tier: TrustTier, label: string, detail: string): TrustSignal
 export function resolveHostRecognition(
   commitment: { trustRegistryUrl?: string; trustRegistryUrlLegacy?: string },
   keyTrust: KeyTrustResult | null | undefined,
-  directory: HostDirectory | 'unavailable' | undefined,
+  directory: HostDirectory | 'unavailable' | 'not_fetched' | undefined,
   registryProvenance?: TrustRegistryProvenance,
 ): HostRecognition {
   const origin = originOf(commitment.trustRegistryUrl ?? commitment.trustRegistryUrlLegacy);
@@ -507,7 +509,12 @@ export function resolveHostRecognition(
     };
   }
 
-  if (directory === undefined || directory === 'unavailable') {
+  if (directory === undefined || directory === 'unavailable' || directory === 'not_fetched') {
+    // Bundle mode does not fetch the directory, so it never says it failed to (#93).
+    const why =
+      directory === 'not_fetched'
+        ? 'A bundle is verified offline, so the typedstandards.org host directory was not fetched and publisher recognition was skipped.'
+        : 'The typedstandards.org host directory could not be loaded, so publisher recognition was skipped.';
     return {
       status: 'directory_unavailable',
       origin,
@@ -515,7 +522,7 @@ export function resolveHostRecognition(
         descriptor(
           'normal',
           'Publisher recognition unavailable',
-          `The typedstandards.org host directory could not be loaded, so publisher recognition was skipped. This package declares the registry origin ${origin}. The cryptographic checks above are unaffected.`,
+          `${why} This package declares the registry origin ${origin}. The cryptographic checks above are unaffected.`,
         ),
       ),
     };

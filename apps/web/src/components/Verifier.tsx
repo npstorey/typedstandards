@@ -563,8 +563,10 @@ function IndependenceNote({ resolved }: { resolved: ResolvedInput }) {
       checks ran client-side here — but the package and proofs were fetched from{" "}
       <span className="font-mono">{host}</span>. Publisher recognition was a
       separate lookup in typedstandards.org&apos;s curated host directory,
-      independent of that host.{suppliedRegistry} To verify with zero trust in the
-      host, download and verify an offline bundle.
+      independent of that host.{suppliedRegistry} To verify the package and proofs
+      without trusting the host, download and verify an offline bundle. Its signing
+      key stays unconfirmed until you re-check it against the publisher’s live
+      registry.
     </p>
   );
 }

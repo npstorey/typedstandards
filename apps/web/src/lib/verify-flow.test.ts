@@ -90,6 +90,11 @@ function mkResult(over: Partial<VerifyResult> = {}): VerifyResult {
   return { ...base, ...over } as unknown as VerifyResult;
 }
 
+/** The #5 registry meta for a registry fetched from the declared https: URL, and for
+ *  one carried in the bundle — what `rollupVerdict` reads when none is passed (#93). */
+const DECLARED_META = { kind: 'fetched', available: true, provenance: 'declared-url' } as const;
+const SUPPLIED_META = { kind: 'inline', available: true, provenance: 'bundle' } as const;
+
 test('rollupVerdict: content-private is a CALM "Commitment verified — content private" (#21)', () => {
   const v = rollupVerdict(
     mkResult({
@@ -97,6 +102,7 @@ test('rollupVerdict: content-private is a CALM "Commitment verified — content 
       envelopeIntegrity: { status: 'unavailable', reason: 'private' }, // …but distinctly unavailable
       recomputedHash: null,
     }),
+    DECLARED_META,
   );
   assert.equal(v.tier, 'verified', 'calm/green — NOT alarm');
   assert.notEqual(v.headline, 'Verification failed');
@@ -141,7 +147,7 @@ test('rollupVerdict: GUARDRAIL — a fetched, hash-mismatching package STILL ala
 });
 
 test('rollupVerdict: a fully-green public package still verifies cleanly', () => {
-  const v = rollupVerdict(mkResult());
+  const v = rollupVerdict(mkResult(), DECLARED_META);
   assert.equal(v.tier, 'verified');
   assert.equal(v.headline, 'Verified');
 });
@@ -1055,7 +1061,8 @@ function mintSigned(o: MintOptions): Minted {
   const signer = { bindingTier: o.bindingTier, identifier, displayName: SELF_NAME };
   const pkg: Record<string, unknown> = {
     protocolVersion: '0.1.0',
-    type: 'analysis/datHere/v1',
+    // A ratified type (spec §8.12.1), so #12 is green and a control reads "Verified" (#86).
+    type: 'content/analysis/v1',
     signer,
     metadata: { signingKeyId: kid },
     subject: { title: 'Synthetic self-certifying fixture' },
@@ -1139,7 +1146,7 @@ async function runFlow(m: Minted, mode: 'bundle' | 'hosted'): Promise<FlowRun> {
       steps,
       provenance: resolved.registryProvenance,
       preview: buildPreview(resolved.pkg, resolved.commitment),
-      verdict: rollupVerdict(result),
+      verdict: rollupVerdict(result, registryMetaOf(resolved)),
     };
   } finally {
     globalThis.fetch = real;
@@ -1487,6 +1494,7 @@ test('#16 content profile: the verdict treats it by tier — inconsistent never 
   assert.notEqual(inconsistent.tier, 'alarm');
   const absent = rollupVerdict(
     mkResult({ contentProfile: { status: 'contentProfile_absent' } as VerifyResult['contentProfile'] }),
+    DECLARED_META,
   );
   assert.equal(absent.tier, 'verified');
 });
@@ -1996,8 +2004,6 @@ test('a carried publisher directory is reported as its own skipped step, beside 
 
 // --- Follow-ons from #78 (#93), and attention-tier checks in the headline (#86) ---
 
-const DECLARED_META = { kind: 'fetched', available: true, provenance: 'declared-url' } as const;
-const SUPPLIED_META = { kind: 'inline', available: true, provenance: 'bundle' } as const;
 
 /** Install a fetch stub that records every URL and serves `routes`; anything else 404s. */
 function recordFetch(routes: Record<string, unknown>): { calls: string[]; restore: () => void } {
