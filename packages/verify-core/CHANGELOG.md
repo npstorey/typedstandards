@@ -37,6 +37,27 @@ gains a field, so a consumer that builds a `VerifyResult` literal (a test double
   BlobRef `output`, checks #9 and #4 each fetched the file. They now share one request per URL within a
   `verifyRecord` call, and report exactly what they reported before, including when the fetch fails and
   when the bytes do not match. No public signature changes, and no request is added.
+- **Check #7 evaluates the TSA signature when the chain does not reach a pinned root
+  (typedstandards#94).** `verifyRfc3161Timestamp` used to return at the chain step, so for a token
+  whose chain did not reach a pinned anchor `signatureValid` read `null` whether the signature was
+  genuine or not. It now reads `true` or `false` there as well. For a consumer:
+  - `signatureValid` is `null` only when an earlier step returned first (`parse_error`,
+    `unexpected_algorithm`, `imprint_mismatch`, `no_message_digest`, `content_not_bound`,
+    `no_signing_cert`, `eku_not_timestamping`). `true` means the signature verifies under the
+    embedded signing cert's key; that key is trusted only when `chainVerified` is `true`;
+  - `reason` reports the token's own faults ahead of the chain's: `genTime_outside_validity`, then
+    `signature_invalid`, then the chain reason. A token with an unpinned chain and a signature that
+    does not verify used to read `untrusted_root` (or another chain reason) and now reads
+    `signature_invalid`. `untrusted_root`, `chain_incomplete` and `chain_signature_invalid` are now
+    reported only for a token whose TSA signature verifies and whose `genTime` is within the signing
+    cert's validity;
+  - `verified` is unchanged: `true` only for a fully verified token chained to a pinned anchor. No
+    request is added.
+- **`KNOWN_TYPE_URIS` is exported.** The type URIs check #12 resolves `ok` (`content/analysis/v1` and
+  the sixteen attestation sub-types), frozen, so a check outside this package can compare them with the
+  specification's list.
+- **`RFC3161_FAIL_REASONS` is exported.** The twelve reasons `verifyRfc3161Timestamp` can return, as a
+  frozen array; `Rfc3161FailReason` is now derived from it, with the same twelve members.
 
 ## 0.10.0 — 2026-09-22
 
