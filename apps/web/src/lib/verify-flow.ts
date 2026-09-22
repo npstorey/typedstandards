@@ -53,8 +53,10 @@ import {
   resolveSignature,
   resolveKeyTrust,
   resolveTimestamp,
+  classifyTimestamp,
   resolveRekor,
-  resolveBlobRefs,
+  resolveBlobRefResults,
+  blobRefsOnlyUnfetched,
   resolveCaptureMethodLabel,
   CONTENT_CANONICALIZATION_SIGNALS,
   CONTENT_HASH_SIGNALS,
@@ -62,6 +64,9 @@ import {
   SIGNER_IDENTITY_SIGNALS,
   CAPTURE_METHOD_VOCAB_SIGNALS,
   CONTENT_PROFILE_SIGNALS,
+  SIGNING_KEY_ID_SIGNALS,
+  TIMESTAMP_FAILURE_NOTES,
+  BLOB_REF_REASON_SIGNALS,
   KEY_TRUST_BUNDLE_REGISTRY_NOT_USED,
   KEY_TRUST_SUPPLIED_REGISTRY,
   SIGNER_IDENTITY_SUPPLIED_REGISTRY,
@@ -927,6 +932,14 @@ function signerIdentifierOf(pkg: Record<string, unknown> | null | undefined): st
   return typeof id === 'string' ? id : undefined;
 }
 
+/** The package's `metadata.signingKeyId`, when it is a non-empty string. */
+function signingKeyIdOf(pkg: Record<string, unknown> | null | undefined): string | undefined {
+  const metadata = pkg?.['metadata'];
+  if (!metadata || typeof metadata !== 'object') return undefined;
+  const id = (metadata as { signingKeyId?: unknown }).signingKeyId;
+  return typeof id === 'string' && id !== '' ? id : undefined;
+}
+
 /** Whether the package's signer identifier is key-derived (hub ADR-0030 §3:
  *  it begins `did:key:`). The site's ADR-0030 §10 display rules key on this,
  *  never on `bindingTier`. */
@@ -1265,18 +1278,46 @@ export function registryMetaOf(resolved: ResolvedInput): RegistryMeta {
   };
 }
 
-/** The online recheck is offered only when an inline SNAPSHOT backed a
- *  registry-dependent verdict AND a live `https:` URL is known — i.e. exactly when
- *  the snapshot could be stale or not the publisher's, and that is closeable. The
- *  URL must be `https:` for every signer: only a registry fetched from an `https:`
- *  URL is the declared registry (hub ADR-0030 §4 rule 3; #78). */
+/** The online recheck is offered only when a registry carried in the bundle decided
+ *  the key status AND a live `https:` URL is known — i.e. exactly when that reading
+ *  could be stale or not the publisher's, and that is closeable. That is either an
+ *  inline SNAPSHOT that backed a registry-dependent verdict, or one verify-core set
+ *  aside for a key-derived signer (#97; see `bundleRegistrySetAside`), whose key
+ *  status only the declared registry can establish. The URL must be `https:` for
+ *  every signer: only a registry fetched from an `https:` URL is the declared
+ *  registry (hub ADR-0030 §4 rule 3; #78). */
 export function canRecheckKeyTrust(meta: RegistryMeta, result: VerifyResult): boolean {
   return (
     meta.kind === 'inline' &&
     isHttpsUrl(meta.url) &&
     !!result.keyTrust &&
-    REGISTRY_BACKED_STATUSES.has(result.keyTrust.status)
+    (REGISTRY_BACKED_STATUSES.has(result.keyTrust.status) || bundleRegistrySetAside(meta, result))
   );
+}
+
+/**
+ * Whether verify-core set aside the registry carried in the bundle (#97): the signer's
+ * identifier is derived from its key and matches it (#14 `key_derived_match`), a valid
+ * registry came with the bundle, and #5 reads `registry_unavailable` — a bundle
+ * registry cannot raise such a signer's key status (hub ADR-0030 §4 rule 3), so no
+ * status was established. Read from the result, so the offer needs nothing else. A
+ * key-derived identifier that does not match its key fails the package at #14, and
+ * no re-check is offered for it.
+ */
+export function bundleRegistrySetAside(meta: RegistryMeta, result: VerifyResult): boolean {
+  return (
+    result.signerIdentity?.status === 'key_derived_match' &&
+    result.keyTrust?.status === 'registry_unavailable' &&
+    meta.kind === 'inline' &&
+    meta.available
+  );
+}
+
+/** The #5 invitation under a set-aside bundle registry when the re-check is offered
+ *  (#97), or `undefined`. */
+function setAsideRecheckNote(meta: RegistryMeta | undefined, result: VerifyResult): string | undefined {
+  if (!meta || !bundleRegistrySetAside(meta, result) || !canRecheckKeyTrust(meta, result)) return undefined;
+  return `Only the registry the record declares can establish it. Re-check against the live registry at ${hostOf(meta.url!)} to do so.`;
 }
 
 /** A check's number, name and trust signal. */
@@ -1327,11 +1368,22 @@ export function checkSignalsOf(
         : resolveKeyTrust(keyTrust),
   );
 
+  // #6 (sprint #98): absent when verify-core did not run it (no package, or no
+  // parsed signature envelope).
+  if (result.signingKeyIdConsistency) {
+    add('6', 'Signing key id', SIGNING_KEY_ID_SIGNALS[result.signingKeyIdConsistency.status]);
+  }
+  // #7: the row reads the same whatever the reason (#94, D1); `rollupVerdict` reads
+  // the reason for the headline.
   add('7', 'Timestamp', resolveTimestamp(result.hasTimestamp, result.rfc3161?.verified ?? null));
   if (result.hasRekor || result.rekorInclusion) {
     add('8', 'Transparency log', resolveRekor(result.hasRekor, rekorInclusionVerifiedOffline(result), result.rekorVerified));
   }
-  if (result.blobRefsVerified !== null) add('9', 'Referenced content', resolveBlobRefs(result.blobRefsVerified));
+  // #9 reads each reference's reason (#89): a file that could not be fetched is
+  // attention, a mismatch or a malformed reference alarm.
+  if (result.blobRefsVerified !== null) {
+    add('9', 'Referenced content', resolveBlobRefResults(result.blobRefsVerified, result.blobRefs ?? []));
+  }
   add('10', 'Lifecycle', LIFECYCLE_STATE_SIGNALS[result.lifecycle.status]);
   if (result.typeResolution) add('12', 'Node type', TYPE_RESOLUTION_SIGNALS[result.typeResolution.status]);
   // #14: a match against a registry the record supplied establishes nothing (#78); a
@@ -1469,7 +1521,7 @@ export function buildCheckRows(
           { label: 'Key-trust status', value: status },
           { label: 'Registry source', value: registrySourceOf(registryMeta) },
         ],
-        keyTrustStalenessNote(status, registryMeta),
+        keyTrustStalenessNote(status, registryMeta) ?? setAsideRecheckNote(registryMeta, result),
       ),
     );
   } else if (result.keyTrust) {
@@ -1488,9 +1540,26 @@ export function buildCheckRows(
     rows.push(checkRow('5', [{ label: 'Status', value: 'no signing key to check' }]));
   }
 
+  // #6 — envelope kid against metadata.signingKeyId (sprint #98). On a mismatch
+  // verify-core carries both values; otherwise they are the envelope's kid and the
+  // package's own field.
+  if (result.signingKeyIdConsistency) {
+    const c = result.signingKeyIdConsistency;
+    const kid = c.status === 'kid_absent' ? undefined : (c.kid ?? result.kid);
+    const signingKeyId =
+      c.status === 'signingKeyId_mismatch' ? (c.signingKeyId ?? 'not a string') : signingKeyIdOf(input.package);
+    rows.push(
+      checkRow('6', [
+        { label: 'Envelope kid', value: kid ?? 'absent', mono: kid !== undefined },
+        { label: 'metadata.signingKeyId', value: signingKeyId ?? 'absent', mono: signingKeyId !== undefined },
+      ]),
+    );
+  }
+
   // #7 — RFC 3161 timestamp (DEEP: TSA signature + cert chain to the pinned root,
   // verified offline by verify-core — #119 P2b). The row reflects that verdict, not
-  // mere presence.
+  // mere presence. A token that did not verify also shows its reason and what it
+  // does to the verdict (#94).
   {
     const ts = result.rfc3161;
     const tsMath: MathLine[] = [
@@ -1504,6 +1573,10 @@ export function buildCheckRows(
         label: 'Certificate chain',
         value: ts.chainVerified ? 'verified to the pinned FreeTSA root' : 'not verified',
       });
+      const reading = classifyTimestamp(result.hasTimestamp, ts);
+      if (!ts.verified && ts.reason && (reading === 'fails' || reading === 'caveats')) {
+        tsMath.push({ label: 'Reason', value: `${ts.reason} — ${TIMESTAMP_FAILURE_NOTES[reading]}` });
+      }
     }
     rows.push(checkRow('7', tsMath));
   }
@@ -1535,6 +1608,10 @@ export function buildCheckRows(
       checkRow('9', [
         { label: 'References', value: String(result.blobRefs.length) },
         { label: 'All verified', value: result.blobRefsVerified ? 'yes' : 'no' },
+        // Each reference that failed, and why (#89).
+        ...result.blobRefs
+          .filter((r) => !r.ok)
+          .map((r) => ({ label: r.field, value: r.reason ? BLOB_REF_REASON_SIGNALS[r.reason].label : 'failed' })),
       ]),
     );
   }
@@ -1633,8 +1710,18 @@ export interface Verdict {
  * A check that is not green — attention or alarm tier (see `checkSignalsOf`) —
  * withholds every unqualified headline: "Verified", "Commitment verified — content
  * private" and the self-certified reading alike. The caveated headline names the
- * checks (#86). The alarm set above still alone decides "Verification failed"; an
- * alarm-tier row outside it (a timestamp that did not verify) reads caveated.
+ * checks (#86). The alarm set below alone decides "Verification failed"; an
+ * alarm-tier row outside it reads caveated — a timestamp whose only fault is this
+ * verifier's policy (#94).
+ *
+ * The alarm set reads reasons, not only verdicts (sprint #98):
+ *   - #7: a timestamp token that does not verify for this package fails it; one whose
+ *     only fault is an authority this verifier does not pin, intermediates it lacks
+ *     or an algorithm it does not check caveats (`classifyTimestamp`, #94 D1).
+ *   - #9: a referenced file fetched and not matching, or a malformed reference,
+ *     fails; one that could not be fetched caveats, as #4 reads the same fact
+ *     (`blobRefsOnlyUnfetched`, #89 D2).
+ *   - #6: an envelope kid that differs from `metadata.signingKeyId` fails (#88).
  */
 export function rollupVerdict(result: VerifyResult, registry: RegistryMeta = UNSTATED_REGISTRY): Verdict {
   const integrity = result.envelopeIntegrity;
@@ -1652,7 +1739,12 @@ export function rollupVerdict(result: VerifyResult, registry: RegistryMeta = UNS
     integrity.status === 'altered' || // bytes present + hash mismatch — real tampering
     result.signatureValid === false ||
     result.contentHash?.status === 'content_hash_mismatch' ||
-    result.blobRefsVerified === false ||
+    // A referenced file that could not be fetched is an availability problem (#89).
+    (result.blobRefsVerified === false && !blobRefsOnlyUnfetched(result.blobRefs ?? [])) ||
+    // A timestamp token that does not verify for this package (#94).
+    classifyTimestamp(result.hasTimestamp, result.rfc3161) === 'fails' ||
+    // The envelope kid is not the one the package signs (#88).
+    result.signingKeyIdConsistency?.status === 'signingKeyId_mismatch' ||
     result.signerIdentity?.status === 'signer_identity_mismatch' ||
     // Hub ADR-0030 §3: the identifier does not name the key that signed — fatal.
     result.signerIdentity?.status === 'key_derived_mismatch' ||

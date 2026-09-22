@@ -33,6 +33,8 @@ import type {
   BlobRefVerifyReason,
   CaptureMethod,
   ContentProfileStatus,
+  Rfc3161FailReason,
+  SigningKeyIdConsistencyStatus,
 } from '@typedstandards/verify-core';
 
 // --- Tiers ---------------------------------------------------------------
@@ -378,11 +380,49 @@ export function resolveKeyTrust(
   return keyTrust ? KEY_TRUST_SIGNALS[keyTrust.status] : NO_SIGNING_KEY_SIGNAL;
 }
 
+// --- #6 Envelope kid = metadata.signingKeyId (spec §9.2 #6, §8.3.1) ------
+//
+// verify-core reports the check since sprint #98 P1 (`signingKeyIdConsistency`).
+// The envelope is not covered by the signature and `metadata.signingKeyId` is, so a
+// difference is the one failing status: §8.3.1 requires the two to be equal and the
+// specification reads a difference as envelope drift. It is alarm, and it is in the
+// verdict's alarm set (`rollupVerdict`), as the #14 identity mismatch is. A `kid` the
+// package does not bind is unconfirmed (attention); no `kid` at all leaves nothing to
+// compare (calm: earlier-format packages, and optional for a key-derived signer).
+
+export const SIGNING_KEY_ID_SIGNALS: Record<SigningKeyIdConsistencyStatus, TrustSignalDescriptor> = {
+  ok: {
+    tier: 'verified',
+    label: 'Envelope key id matches the signed package',
+    detail: 'The signature envelope’s kid equals the metadata.signingKeyId inside the signed package.',
+  },
+  signingKeyId_mismatch: {
+    tier: 'alarm',
+    label: 'Envelope key id does not match the signed package',
+    detail:
+      'The signature envelope’s kid differs from the metadata.signingKeyId the package signs. The envelope is not covered by the signature, so it may have been changed after signing — do not trust.',
+  },
+  signingKeyId_absent: {
+    tier: 'attention',
+    label: 'Envelope key id not bound by the package',
+    detail:
+      'The signature envelope carries a kid, but the signed package states no metadata.signingKeyId, so nothing signed confirms it. The standard requires the field; its absence is unconfirmed, not evidence of a change.',
+  },
+  kid_absent: {
+    tier: 'normal',
+    label: 'No envelope key id to compare',
+    detail:
+      'The signature envelope carries no kid, so there is nothing to compare. Earlier-format packages carry none, and it is optional for a signer whose identifier is derived from its key.',
+  },
+};
+
 // --- #7 RFC 3161 timestamp (DEEP: chain-verified to a pinned TSA root) ----
 // As of verify-core 0.6.0 (#119 P2b) the token is cryptographically verified
 // offline — TSA signature + embedded cert chain to the pinned FreeTSA root — not
 // merely detected. So the signal is driven by that verdict, not presence: a present-
-// but-unverified (e.g. forged) token reads as alarm, an absent one stays calm.
+// but-unverified (e.g. forged) token reads as alarm, an absent one stays calm. The row
+// reads the same whatever the reason; what the reason does to the headline is
+// `classifyTimestamp` below (#94).
 
 export const TIMESTAMP_SIGNALS = {
   verified: {
@@ -412,6 +452,81 @@ export const resolveTimestamp = (
     : rfc3161Verified === true
       ? TIMESTAMP_SIGNALS.verified
       : TIMESTAMP_SIGNALS.failed;
+
+/** What a timestamp token that did not verify does to the verdict. */
+export type TimestampFailureClass = 'fails' | 'caveats';
+
+/**
+ * #94, ruling D1 as amended (sprint #98): each reason verify-core reports for a token
+ * that did not verify, classified by the reason alone. Since verify-core's P1b the
+ * reason names the token's own faults before the chain's, so a chain reason is
+ * reported only beneath a TSA signature that verifies and a signing certificate
+ * valid at genTime.
+ *
+ * `fails` — the token does not verify for this package, and the package fails:
+ * it does not parse, does not bind this package's hash, carries no timestamping
+ * signing certificate, its signing certificate is not valid at genTime, or its TSA
+ * signature does not verify.
+ *
+ * `caveats` — the only fault is this verifier's policy, and the headline is caveated:
+ * an algorithm it does not check (including a signing key outside P-384), a root it
+ * does not pin, intermediates it lacks, an intermediate or root not valid at genTime,
+ * or a chain link it cannot verify. `chain_signature_invalid` is here because the
+ * chain validator reports a link signed with an algorithm it does not implement the
+ * same way as a link whose signature is wrong (#100); once the two are separated, the
+ * invalid-signature reason moves to `fails`.
+ *
+ * The `satisfies` clause makes a reason verify-core adds a compile error here, and
+ * `timestamp-classification.test.ts` fails on one at run time, read from verify-core's
+ * `RFC3161_FAIL_REASONS`.
+ */
+export const TIMESTAMP_FAILURE_CLASS = {
+  parse_error: 'fails',
+  imprint_mismatch: 'fails',
+  no_message_digest: 'fails',
+  content_not_bound: 'fails',
+  no_signing_cert: 'fails',
+  eku_not_timestamping: 'fails',
+  genTime_outside_validity: 'fails',
+  signature_invalid: 'fails',
+  unexpected_algorithm: 'caveats',
+  untrusted_root: 'caveats',
+  chain_incomplete: 'caveats',
+  chain_signature_invalid: 'caveats',
+  chain_outside_validity: 'caveats',
+} as const satisfies Record<Rfc3161FailReason, TimestampFailureClass>;
+
+/** How the verdict reads the timestamp: absent (calm), verified (green), or a token
+ *  that did not verify, which fails the package or caveats it. */
+export type TimestampReading = 'absent' | 'verified' | TimestampFailureClass;
+
+/**
+ * Read check #7 for the verdict (#94). A token that did not verify fails the package
+ * only when its reason is one `TIMESTAMP_FAILURE_CLASS` classes as `fails`. verify-core
+ * sets a reason on every token it evaluates and does not verify; a result with no
+ * reason (hand-built, or from an older result shape) and a token present but not
+ * evaluated (no package hash to check it against) read as caveats, as does a reason
+ * this site does not know — a code the classification guard would have caught.
+ */
+export function classifyTimestamp(
+  hasTimestamp: boolean,
+  rfc3161: { verified: boolean; reason?: string } | null | undefined,
+): TimestampReading {
+  if (!hasTimestamp) return 'absent';
+  if (!rfc3161) return 'caveats';
+  if (rfc3161.verified) return 'verified';
+  const reason = rfc3161.reason;
+  return reason !== undefined && Object.prototype.hasOwnProperty.call(TIMESTAMP_FAILURE_CLASS, reason)
+    ? TIMESTAMP_FAILURE_CLASS[reason as Rfc3161FailReason]
+    : 'caveats';
+}
+
+/** The #7 row's plain reading of a failure class, beside the reason code. */
+export const TIMESTAMP_FAILURE_NOTES: Record<TimestampFailureClass, string> = {
+  fails: 'the token does not verify for this package, so the package fails',
+  caveats:
+    'a limit of this verifier — an authority it does not pin, a chain it cannot complete or check, or an algorithm it does not check — not a fault of the token',
+};
 
 // --- #8 Transparency-log inclusion (DEEP: offline Merkle inclusion) -------
 // As of verify-core 0.6.0 (#119 P1), when an inclusion proof is carried the entry's
@@ -480,12 +595,45 @@ export const resolveBlobRefs = (v: boolean | null): TrustSignalDescriptor =>
   BLOB_REFS_SIGNALS[triKey(v)];
 
 /**
- * #9 BlobRef per-reference failure reasons. Each is a sub-explanation of a
- * failed (Alarm-tier) BlobRef check — surfaced beneath the summary signal when a
- * reference fails. `fetch_failed` is the softest (a transient retrieval failure
- * is possible, paralleling rekor=false); it is tiered Alarm here because a
- * BlobRef is a PRIMARY content carrier whose unavailability breaks the package's
- * content-integrity guarantee, unlike the supplementary Rekor log. See the note.
+ * #9 when every reference that failed could not be fetched (#89, ruling D2): an
+ * availability problem, not alteration. Attention, the tier #4 gives the same fact
+ * (`content_bytes_unavailable`) and #1 gives an unfetchable content location.
+ */
+export const BLOB_REFS_UNAVAILABLE: TrustSignalDescriptor = {
+  tier: 'attention',
+  label: 'Referenced content could not be retrieved',
+  detail:
+    'At least one externally-stored field could not be fetched, so its bytes were not checked against its fingerprint. This is an availability problem, not proof of alteration.',
+};
+
+/** Whether some reference failed and every failed one could not be fetched — the
+ *  reading that caveats rather than fails (#89). A failed reference with no reason
+ *  is read as a mismatch, as a failed check was before. */
+export function blobRefsOnlyUnfetched(
+  refs: readonly { ok: boolean; reason?: BlobRefVerifyReason }[],
+): boolean {
+  const failed = refs.filter((r) => !r.ok);
+  return failed.length > 0 && failed.every((r) => r.reason === 'fetch_failed');
+}
+
+/** Resolve #9 from the check's verdict and its per-reference reasons (#89): a file
+ *  that could not be fetched is attention; one fetched and not matching, or a
+ *  malformed reference, is alarm. */
+export function resolveBlobRefResults(
+  verified: boolean | null,
+  refs: readonly { ok: boolean; reason?: BlobRefVerifyReason }[],
+): TrustSignalDescriptor {
+  return verified === false && blobRefsOnlyUnfetched(refs) ? BLOB_REFS_UNAVAILABLE : resolveBlobRefs(verified);
+}
+
+/**
+ * #9 BlobRef per-reference failure reasons, surfaced beneath the summary signal when
+ * a reference fails. A reference that is malformed, or whose file was fetched and is
+ * the wrong size or hash, is alarm. `fetch_failed` is attention (#89, ruling D2): a
+ * file that cannot be fetched shows an availability problem, not alteration — the
+ * reading #4 gives the same fact. The reference packager accepts a trace or an output
+ * as a reference to content stored out of band, so an alarm here would describe a
+ * storage outage to a reader as alteration.
  */
 export const BLOB_REF_REASON_SIGNALS: Record<BlobRefVerifyReason, TrustSignalDescriptor> = {
   invalid_ref: {
@@ -494,9 +642,10 @@ export const BLOB_REF_REASON_SIGNALS: Record<BlobRefVerifyReason, TrustSignalDes
     detail: 'A referenced field does not carry a valid blob reference.',
   },
   fetch_failed: {
-    tier: 'alarm',
+    tier: 'attention',
     label: 'Referenced content could not be retrieved',
-    detail: 'A referenced blob could not be fetched to confirm its integrity.',
+    detail:
+      'A referenced blob could not be fetched, so its integrity was not checked. This is an availability problem, not proof of alteration.',
   },
   size_mismatch: {
     tier: 'alarm',
@@ -816,9 +965,9 @@ export const NOTEBOOK_PROVENANCE_SIGNALS: Record<NotebookProvenance, TrustSignal
 
 // --- Checks not emitted as discrete status fields today ------------------
 //
-// Spec checks #6 (metadata.signingKeyId consistency) and #13 (nodeId
-// cross-check) are NOT surfaced by today's verify route as discrete status
-// codes — it returns `nodeId` only as a recomputed hash string. Their tiers are
-// RESERVED in the design note (a mismatch on either → Alarm) but intentionally
-// have no runtime map here, and the coverage test asserts only the codes the
-// route actually emits. When #6/#13 gain discrete statuses, add their maps here.
+// Spec check #13 (nodeId cross-check) is NOT surfaced by verify-core as a discrete
+// status code — it returns `nodeId` only as a recomputed hash string. Its tier is
+// RESERVED in the design note (a mismatch → Alarm) but intentionally has no runtime
+// map here. When #13 gains a discrete status, add its map here. Check #6 was reserved
+// beside it until verify-core reported it (sprint #98 P1); its map is
+// `SIGNING_KEY_ID_SIGNALS` above.
