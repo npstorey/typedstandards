@@ -1373,9 +1373,9 @@ export function checkSignalsOf(
   if (result.signingKeyIdConsistency) {
     add('6', 'Signing key id', SIGNING_KEY_ID_SIGNALS[result.signingKeyIdConsistency.status]);
   }
-  // #7: the row reads the same whatever the reason (#94, D1); `rollupVerdict` reads
-  // the reason for the headline.
-  add('7', 'Timestamp', resolveTimestamp(result.hasTimestamp, result.rfc3161?.verified ?? null));
+  // #7: a caveat-class reason reads attention, every other token that did not verify
+  // alarm (#104); `rollupVerdict` reads the same class for the headline (#94).
+  add('7', 'Timestamp', resolveTimestamp(result.hasTimestamp, result.rfc3161?.verified ?? null, result.rfc3161?.reason));
   if (result.hasRekor || result.rekorInclusion) {
     add('8', 'Transparency log', resolveRekor(result.hasRekor, rekorInclusionVerifiedOffline(result), result.rekorVerified));
   }
@@ -1711,8 +1711,8 @@ export interface Verdict {
  * withholds every unqualified headline: "Verified", "Commitment verified — content
  * private" and the self-certified reading alike. The caveated headline names the
  * checks (#86). The alarm set below alone decides "Verification failed"; an
- * alarm-tier row outside it reads caveated — a timestamp whose only fault is this
- * verifier's policy (#94).
+ * alarm-tier row outside it reads caveated — a timestamp token with no reason, or
+ * present but not evaluated (#94, #104).
  *
  * The alarm set reads reasons, not only verdicts (sprint #98):
  *   - #7: a timestamp token that does not verify for this package fails it; one whose

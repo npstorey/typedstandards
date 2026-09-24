@@ -420,9 +420,9 @@ export const SIGNING_KEY_ID_SIGNALS: Record<SigningKeyIdConsistencyStatus, Trust
 // As of verify-core 0.6.0 (#119 P2b) the token is cryptographically verified
 // offline — TSA signature + embedded cert chain to the pinned FreeTSA root — not
 // merely detected. So the signal is driven by that verdict, not presence: a present-
-// but-unverified (e.g. forged) token reads as alarm, an absent one stays calm. The row
-// reads the same whatever the reason; what the reason does to the headline is
-// `classifyTimestamp` below (#94).
+// but-unverified (e.g. forged) token reads as alarm, an absent one stays calm. A token
+// whose reason is caveat-class reads attention, as its headline does (#104); the
+// class is `timestampReasonClass` below, which the headline reads too (#94).
 
 export const TIMESTAMP_SIGNALS = {
   verified: {
@@ -437,21 +437,37 @@ export const TIMESTAMP_SIGNALS = {
     detail:
       'A timestamp token is present, but its TSA signature or certificate chain did not verify against the pinned root.',
   },
+  unconfirmed: {
+    tier: 'attention',
+    label: 'Timestamp not confirmed against a pinned authority',
+    detail:
+      'A timestamp token is present, but this verifier could not confirm it against an authority it pins: the authority, its chain, or an algorithm is outside what this verifier pins or checks. That is a limit of this verifier, not a fault found in the token.',
+  },
   absent: {
     tier: 'normal',
     label: 'No timestamp',
     detail: 'This package carries no timestamp token (common for earlier-format packages).',
   },
 } as const satisfies Record<string, TrustSignalDescriptor>;
+
+/**
+ * Read check #7 for its row. A token that did not verify reads `unconfirmed`
+ * (attention) only when `timestampReasonClass` classes its `reason` as `caveats`
+ * (#104, ruling C). A fail-class reason, no reason, a reason this site does not know,
+ * and a token present but not evaluated (`rfc3161Verified` null) read `failed` (alarm).
+ */
 export const resolveTimestamp = (
   hasTimestamp: boolean,
   rfc3161Verified: boolean | null,
+  reason?: string,
 ): TrustSignalDescriptor =>
   !hasTimestamp
     ? TIMESTAMP_SIGNALS.absent
     : rfc3161Verified === true
       ? TIMESTAMP_SIGNALS.verified
-      : TIMESTAMP_SIGNALS.failed;
+      : rfc3161Verified === false && timestampReasonClass(reason) === 'caveats'
+        ? TIMESTAMP_SIGNALS.unconfirmed
+        : TIMESTAMP_SIGNALS.failed;
 
 /** What a timestamp token that did not verify does to the verdict. */
 export type TimestampFailureClass = 'fails' | 'caveats';
@@ -496,6 +512,15 @@ export const TIMESTAMP_FAILURE_CLASS = {
   chain_outside_validity: 'caveats',
 } as const satisfies Record<Rfc3161FailReason, TimestampFailureClass>;
 
+/** The class `TIMESTAMP_FAILURE_CLASS` gives `reason`, or `undefined` for no reason or
+ *  one it does not name. The #7 row (`resolveTimestamp`) and the headline
+ *  (`classifyTimestamp`) both read the class here, so they cannot disagree about it. */
+export function timestampReasonClass(reason: string | undefined): TimestampFailureClass | undefined {
+  return reason !== undefined && Object.prototype.hasOwnProperty.call(TIMESTAMP_FAILURE_CLASS, reason)
+    ? TIMESTAMP_FAILURE_CLASS[reason as Rfc3161FailReason]
+    : undefined;
+}
+
 /** How the verdict reads the timestamp: absent (calm), verified (green), or a token
  *  that did not verify, which fails the package or caveats it. */
 export type TimestampReading = 'absent' | 'verified' | TimestampFailureClass;
@@ -515,10 +540,7 @@ export function classifyTimestamp(
   if (!hasTimestamp) return 'absent';
   if (!rfc3161) return 'caveats';
   if (rfc3161.verified) return 'verified';
-  const reason = rfc3161.reason;
-  return reason !== undefined && Object.prototype.hasOwnProperty.call(TIMESTAMP_FAILURE_CLASS, reason)
-    ? TIMESTAMP_FAILURE_CLASS[reason as Rfc3161FailReason]
-    : 'caveats';
+  return timestampReasonClass(rfc3161.reason) ?? 'caveats';
 }
 
 /** The #7 row's plain reading of a failure class, beside the reason code. */

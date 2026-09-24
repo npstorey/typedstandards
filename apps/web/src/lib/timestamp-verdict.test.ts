@@ -270,8 +270,9 @@ function assertCaveats(page: Page, headline: string, label: string): void {
   assert.equal(page.verdict.headline, headline, label);
   assert.equal(page.verdict.tier, 'attention', label);
   assert.ok(page.verdict.detail.includes('#7 Timestamp'), `${label}: the headline names #7 (${page.verdict.detail})`);
-  // The #7 row reads as it did (D1): its tier and label are unchanged.
-  assert.equal(rowOf(page.rows, '7').signal.label, 'Timestamp did not verify', label);
+  // The #7 row reads the class the headline reads (#104, ruling C).
+  assert.equal(rowOf(page.rows, '7').signal.tier, 'attention', label);
+  assert.equal(rowOf(page.rows, '7').signal.label, 'Timestamp not confirmed against a pinned authority', label);
 }
 
 /** The #7 row says why the token did not verify. */
