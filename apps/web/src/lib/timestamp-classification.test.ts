@@ -41,7 +41,7 @@ test('guard: every RFC 3161 reason verify-core reports is classified, and no cla
   assertClassified(RFC3161_FAIL_REASONS);
   const reported = new Set<string>(RFC3161_FAIL_REASONS);
   assert.deepEqual(Object.keys(TIMESTAMP_FAILURE_CLASS).filter((k) => !reported.has(k)), []);
-  assert.equal(RFC3161_FAIL_REASONS.length, 13);
+  assert.equal(RFC3161_FAIL_REASONS.length, 14);
 });
 
 test('guard: a reason code verify-core adds without a classification turns the guard red', () => {
@@ -61,10 +61,11 @@ test('#94: the classification is the seat’s, code by code (issuecomment-578423
     eku_not_timestamping: 'fails',
     genTime_outside_validity: 'fails',
     signature_invalid: 'fails',
+    chain_signature_invalid: 'fails',
     unexpected_algorithm: 'caveats',
     untrusted_root: 'caveats',
     chain_incomplete: 'caveats',
-    chain_signature_invalid: 'caveats',
+    chain_algorithm_unsupported: 'caveats',
     chain_outside_validity: 'caveats',
   });
   for (const reason of RFC3161_FAIL_REASONS) {

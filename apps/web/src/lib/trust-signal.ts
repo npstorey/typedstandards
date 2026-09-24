@@ -269,6 +269,15 @@ export const CONTENT_HASH_SIGNALS: Record<ContentHashStatus, TrustSignalDescript
   },
 };
 
+/** #4 under raw-bytes/v1 on a fully offline run (#105, ruling A): the file the package
+ *  fingerprints is stored separately and was not requested. */
+export const CONTENT_FILE_NOT_CHECKED_OFFLINE: TrustSignalDescriptor = {
+  tier: 'attention',
+  label: 'Content file not checked offline',
+  detail:
+    'The file this package fingerprints is stored separately. An offline check requests nothing, so its bytes were not hashed and the content fingerprint was not checked. Verify the record by its URL to check it.',
+};
+
 // --- #5 Trust-registry verdict (keyTrust) --------------------------------
 
 export const KEY_TRUST_SIGNALS: Record<KeyTrustStatus, TrustSignalDescriptor> = {
@@ -420,9 +429,9 @@ export const SIGNING_KEY_ID_SIGNALS: Record<SigningKeyIdConsistencyStatus, Trust
 // As of verify-core 0.6.0 (#119 P2b) the token is cryptographically verified
 // offline — TSA signature + embedded cert chain to the pinned FreeTSA root — not
 // merely detected. So the signal is driven by that verdict, not presence: a present-
-// but-unverified (e.g. forged) token reads as alarm, an absent one stays calm. The row
-// reads the same whatever the reason; what the reason does to the headline is
-// `classifyTimestamp` below (#94).
+// but-unverified (e.g. forged) token reads as alarm, an absent one stays calm. A token
+// whose reason is caveat-class reads attention, as its headline does (#104); the
+// class is `timestampReasonClass` below, which the headline reads too (#94).
 
 export const TIMESTAMP_SIGNALS = {
   verified: {
@@ -437,21 +446,37 @@ export const TIMESTAMP_SIGNALS = {
     detail:
       'A timestamp token is present, but its TSA signature or certificate chain did not verify against the pinned root.',
   },
+  unconfirmed: {
+    tier: 'attention',
+    label: 'Timestamp not confirmed against a pinned authority',
+    detail:
+      'A timestamp token is present, but this verifier could not confirm it against an authority it pins: the authority, its chain, or an algorithm is outside what this verifier pins or checks. That is a limit of this verifier, not a fault found in the token.',
+  },
   absent: {
     tier: 'normal',
     label: 'No timestamp',
     detail: 'This package carries no timestamp token (common for earlier-format packages).',
   },
 } as const satisfies Record<string, TrustSignalDescriptor>;
+
+/**
+ * Read check #7 for its row. A token that did not verify reads `unconfirmed`
+ * (attention) only when `timestampReasonClass` classes its `reason` as `caveats`
+ * (#104, ruling C). A fail-class reason, no reason, a reason this site does not know,
+ * and a token present but not evaluated (`rfc3161Verified` null) read `failed` (alarm).
+ */
 export const resolveTimestamp = (
   hasTimestamp: boolean,
   rfc3161Verified: boolean | null,
+  reason?: string,
 ): TrustSignalDescriptor =>
   !hasTimestamp
     ? TIMESTAMP_SIGNALS.absent
     : rfc3161Verified === true
       ? TIMESTAMP_SIGNALS.verified
-      : TIMESTAMP_SIGNALS.failed;
+      : rfc3161Verified === false && timestampReasonClass(reason) === 'caveats'
+        ? TIMESTAMP_SIGNALS.unconfirmed
+        : TIMESTAMP_SIGNALS.failed;
 
 /** What a timestamp token that did not verify does to the verdict. */
 export type TimestampFailureClass = 'fails' | 'caveats';
@@ -465,16 +490,15 @@ export type TimestampFailureClass = 'fails' | 'caveats';
  *
  * `fails` — the token does not verify for this package, and the package fails:
  * it does not parse, does not bind this package's hash, carries no timestamping
- * signing certificate, its signing certificate is not valid at genTime, or its TSA
- * signature does not verify.
+ * signing certificate, its signing certificate is not valid at genTime, its TSA
+ * signature does not verify, or a link in its chain carries a signature that does
+ * not verify (`chain_signature_invalid`, #100).
  *
  * `caveats` — the only fault is this verifier's policy, and the headline is caveated:
- * an algorithm it does not check (including a signing key outside P-384), a root it
- * does not pin, intermediates it lacks, an intermediate or root not valid at genTime,
- * or a chain link it cannot verify. `chain_signature_invalid` is here because the
- * chain validator reports a link signed with an algorithm it does not implement the
- * same way as a link whose signature is wrong (#100); once the two are separated, the
- * invalid-signature reason moves to `fails`.
+ * an algorithm it does not check (including a signing key outside P-384, and a chain
+ * link signed with an algorithm the chain validator does not implement), a root it
+ * does not pin, intermediates it lacks, or an intermediate or root not valid at
+ * genTime.
  *
  * The `satisfies` clause makes a reason verify-core adds a compile error here, and
  * `timestamp-classification.test.ts` fails on one at run time, read from verify-core's
@@ -489,12 +513,22 @@ export const TIMESTAMP_FAILURE_CLASS = {
   eku_not_timestamping: 'fails',
   genTime_outside_validity: 'fails',
   signature_invalid: 'fails',
+  chain_signature_invalid: 'fails',
   unexpected_algorithm: 'caveats',
   untrusted_root: 'caveats',
   chain_incomplete: 'caveats',
-  chain_signature_invalid: 'caveats',
+  chain_algorithm_unsupported: 'caveats',
   chain_outside_validity: 'caveats',
 } as const satisfies Record<Rfc3161FailReason, TimestampFailureClass>;
+
+/** The class `TIMESTAMP_FAILURE_CLASS` gives `reason`, or `undefined` for no reason or
+ *  one it does not name. The #7 row (`resolveTimestamp`) and the headline
+ *  (`classifyTimestamp`) both read the class here, so they cannot disagree about it. */
+export function timestampReasonClass(reason: string | undefined): TimestampFailureClass | undefined {
+  return reason !== undefined && Object.prototype.hasOwnProperty.call(TIMESTAMP_FAILURE_CLASS, reason)
+    ? TIMESTAMP_FAILURE_CLASS[reason as Rfc3161FailReason]
+    : undefined;
+}
 
 /** How the verdict reads the timestamp: absent (calm), verified (green), or a token
  *  that did not verify, which fails the package or caveats it. */
@@ -515,10 +549,7 @@ export function classifyTimestamp(
   if (!hasTimestamp) return 'absent';
   if (!rfc3161) return 'caveats';
   if (rfc3161.verified) return 'verified';
-  const reason = rfc3161.reason;
-  return reason !== undefined && Object.prototype.hasOwnProperty.call(TIMESTAMP_FAILURE_CLASS, reason)
-    ? TIMESTAMP_FAILURE_CLASS[reason as Rfc3161FailReason]
-    : 'caveats';
+  return timestampReasonClass(rfc3161.reason) ?? 'caveats';
 }
 
 /** The #7 row's plain reading of a failure class, beside the reason code. */
@@ -604,6 +635,15 @@ export const BLOB_REFS_UNAVAILABLE: TrustSignalDescriptor = {
   label: 'Referenced content could not be retrieved',
   detail:
     'At least one externally-stored field could not be fetched, so its bytes were not checked against its fingerprint. This is an availability problem, not proof of alteration.',
+};
+
+/** #9 on a fully offline run (#105, ruling A): bundle mode requests nothing, so a
+ *  referenced file is not fetched. Attention, as a file that could not be fetched is. */
+export const BLOB_REFS_NOT_CHECKED_OFFLINE: TrustSignalDescriptor = {
+  tier: 'attention',
+  label: 'Referenced content not checked offline',
+  detail:
+    'This package references content stored separately. An offline check requests nothing, so that content was not fetched and its fingerprint was not checked. Verify the record by its URL to check it.',
 };
 
 /** Whether some reference failed and every failed one could not be fetched — the

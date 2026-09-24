@@ -122,6 +122,22 @@ function withLeafCurveSecp521r1(tokenB64: string): string {
   return b64(raw);
 }
 
+/** The timestamping leaf's signature algorithm, inner and outer, moved from
+ *  sha512WithRSAEncryption to sha1WithRSAEncryption: a link algorithm the chain validator
+ *  does not implement (#100). The TSA signature still verifies. */
+function withLeafSignatureAlgorithmSha1(tokenB64: string): string {
+  const raw = tokenBytes(tokenB64);
+  const leaf = certNodes(raw).find((n) => parseCertificate(raw, n).ekus.includes(OID_EKU_TIMESTAMPING))!;
+  const [tbs, outerAlg] = children(raw, leaf);
+  const tbsKids = children(raw, tbs);
+  for (const alg of [tbsKids[tbsKids[0].tag === 0xa0 ? 2 : 1], outerAlg]) {
+    const oid = children(raw, alg)[0];
+    assert.equal(raw[oid.contentEnd - 1], 0x0d);
+    raw[oid.contentEnd - 1] = 0x05;
+  }
+  return b64(raw);
+}
+
 // The captured leaf is valid 2026-02-15 .. 2040-02-02; the d67b8e token's genTime is
 // 2026-05-29 and the rfc3161-token.json token's 2026-06-07.
 const LEAF_ONE_YEAR_EARLIER = '250215194422Z'; // still valid at genTime; the link breaks
@@ -254,8 +270,9 @@ function assertCaveats(page: Page, headline: string, label: string): void {
   assert.equal(page.verdict.headline, headline, label);
   assert.equal(page.verdict.tier, 'attention', label);
   assert.ok(page.verdict.detail.includes('#7 Timestamp'), `${label}: the headline names #7 (${page.verdict.detail})`);
-  // The #7 row reads as it did (D1): its tier and label are unchanged.
-  assert.equal(rowOf(page.rows, '7').signal.label, 'Timestamp did not verify', label);
+  // The #7 row reads the class the headline reads (#104, ruling C).
+  assert.equal(rowOf(page.rows, '7').signal.tier, 'attention', label);
+  assert.equal(rowOf(page.rows, '7').signal.label, 'Timestamp not confirmed against a pinned authority', label);
 }
 
 /** The #7 row says why the token did not verify. */
@@ -331,9 +348,9 @@ test('#94 caveat: a token whose only fault is this verifier’s policy reads cav
   const cases: { label: string; page: Page; reason: string }[] = [
     { label: 'unpinned root (anchors = [])', page: withTimestampResult(genuine, unpinned), reason: 'untrusted_root' },
     {
-      label: 'a chain link it cannot verify (#100), end to end',
-      page: await capturedWith(withLeafNotBefore(captured.rfc3161Timestamp, LEAF_ONE_YEAR_EARLIER)),
-      reason: 'chain_signature_invalid',
+      label: 'a chain link signed with an algorithm the validator does not implement (#100), end to end',
+      page: await capturedWith(withLeafSignatureAlgorithmSha1(captured.rfc3161Timestamp)),
+      reason: 'chain_algorithm_unsupported',
     },
     {
       label: 'a root not valid at genTime, end to end',
@@ -375,10 +392,11 @@ const EXPECTED: Record<string, 'fails' | 'caveats'> = {
   eku_not_timestamping: 'fails',
   genTime_outside_validity: 'fails',
   signature_invalid: 'fails',
+  chain_signature_invalid: 'fails',
   unexpected_algorithm: 'caveats',
   untrusted_root: 'caveats',
   chain_incomplete: 'caveats',
-  chain_signature_invalid: 'caveats',
+  chain_algorithm_unsupported: 'caveats',
   chain_outside_validity: 'caveats',
 };
 
@@ -453,4 +471,12 @@ test('#94 classification: a failed result with no reason, and a token present bu
   assert.equal(absent.headline, 'Verified');
   const rows = buildCheckRows(failedWith(undefined, { hasTimestamp: false, rfc3161: null }), buildVerifyInput({ packageHash: 'ab'.repeat(32) }, null), { packageHash: 'ab'.repeat(32) }, DECLARED_META);
   assert.equal(rowOf(rows, '7').signal.tier, 'normal');
+});
+
+test('#100 fail: a chain link whose RSA signature does not verify, beneath a TSA signature that verifies, reads "Verification failed", end to end', async () => {
+  const page = await capturedWith(withLeafNotBefore(captured.rfc3161Timestamp, LEAF_ONE_YEAR_EARLIER));
+  assert.equal(page.result.rfc3161?.signatureValid, true);
+  assert.equal(page.result.rfc3161?.reason, 'chain_signature_invalid');
+  assertFails(page, 'a link whose signature does not verify');
+  assertReasonShown(page, 'chain_signature_invalid', 'a link whose signature does not verify');
 });
