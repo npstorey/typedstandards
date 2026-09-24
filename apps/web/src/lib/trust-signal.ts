@@ -465,16 +465,15 @@ export type TimestampFailureClass = 'fails' | 'caveats';
  *
  * `fails` — the token does not verify for this package, and the package fails:
  * it does not parse, does not bind this package's hash, carries no timestamping
- * signing certificate, its signing certificate is not valid at genTime, or its TSA
- * signature does not verify.
+ * signing certificate, its signing certificate is not valid at genTime, its TSA
+ * signature does not verify, or a link in its chain carries a signature that does
+ * not verify (`chain_signature_invalid`, #100).
  *
  * `caveats` — the only fault is this verifier's policy, and the headline is caveated:
- * an algorithm it does not check (including a signing key outside P-384), a root it
- * does not pin, intermediates it lacks, an intermediate or root not valid at genTime,
- * or a chain link it cannot verify. `chain_signature_invalid` is here because the
- * chain validator reports a link signed with an algorithm it does not implement the
- * same way as a link whose signature is wrong (#100); once the two are separated, the
- * invalid-signature reason moves to `fails`.
+ * an algorithm it does not check (including a signing key outside P-384, and a chain
+ * link signed with an algorithm the chain validator does not implement), a root it
+ * does not pin, intermediates it lacks, or an intermediate or root not valid at
+ * genTime.
  *
  * The `satisfies` clause makes a reason verify-core adds a compile error here, and
  * `timestamp-classification.test.ts` fails on one at run time, read from verify-core's
@@ -489,10 +488,11 @@ export const TIMESTAMP_FAILURE_CLASS = {
   eku_not_timestamping: 'fails',
   genTime_outside_validity: 'fails',
   signature_invalid: 'fails',
+  chain_signature_invalid: 'fails',
   unexpected_algorithm: 'caveats',
   untrusted_root: 'caveats',
   chain_incomplete: 'caveats',
-  chain_signature_invalid: 'caveats',
+  chain_algorithm_unsupported: 'caveats',
   chain_outside_validity: 'caveats',
 } as const satisfies Record<Rfc3161FailReason, TimestampFailureClass>;
 

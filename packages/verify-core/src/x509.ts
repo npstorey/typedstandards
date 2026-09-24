@@ -192,11 +192,19 @@ const RSA_SIG_HASH: Record<string, string> = {
   '1.2.840.113549.1.1.13': 'SHA-512',
 };
 
+/** Whether `oid` is a certificate signature algorithm `verifyCertSignatureRsa`
+ *  implements. The chain validator reports a link signed with any other algorithm as
+ *  `link_algorithm_unsupported`, not as a signature that does not verify (#100). */
+function isImplementedCertSignatureAlgorithm(oid: string): boolean {
+  return Object.prototype.hasOwnProperty.call(RSA_SIG_HASH, oid);
+}
+
 /**
  * Verify `cert.signature` over `cert.tbsBytes` using `issuerSpkiDer` (RSA), via
  * WebCrypto (`globalThis.crypto.subtle` — a browser/Node global, not a `node:`
  * import, so verify-core stays browser-safe). Returns false for an unsupported
- * algorithm or any verification error.
+ * algorithm or any verification error; `verifyCertChainToAnchor` tells the two
+ * apart before it calls this.
  */
 export async function verifyCertSignatureRsa(
   cert: X509Cert,
@@ -242,6 +250,7 @@ export type ChainFailReason =
   | 'issuer_not_ca' // (b) issuer lacks cA:TRUE and/or keyUsage keyCertSign
   | 'path_len_exceeded' // (c) issuer's pathLenConstraint is violated
   | 'link_signature_invalid' // a link's RSA signature does not verify
+  | 'link_algorithm_unsupported' // a link is signed with an algorithm this validator does not implement
   | 'untrusted_root'; // the self-signed terminus is not a pinned anchor
 
 export interface ChainResult {
@@ -295,6 +304,11 @@ export async function verifyCertChainToAnchor(
     if (!issuer.isCA || !issuer.keyCertSign) return { ok: false, reason: 'issuer_not_ca' }; // (b)
     if (issuer.pathLen !== null && depth > issuer.pathLen) {
       return { ok: false, reason: 'path_len_exceeded' }; // (c)
+    }
+    // The algorithm is checked where the signature is, so the reasons before it read
+    // as they did; a link this validator cannot check is not one that fails (#100).
+    if (!isImplementedCertSignatureAlgorithm(current.sigAlgOid)) {
+      return { ok: false, reason: 'link_algorithm_unsupported' };
     }
     if (!(await verifyCertSignatureRsa(current, issuer.spkiDer))) {
       return { ok: false, reason: 'link_signature_invalid' };

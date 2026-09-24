@@ -99,6 +99,7 @@ export const RFC3161_FAIL_REASONS = Object.freeze([
   'genTime_outside_validity',
   'chain_incomplete',
   'chain_signature_invalid',
+  'chain_algorithm_unsupported',
   'chain_outside_validity',
   'untrusted_root',
   'signature_invalid',
@@ -139,8 +140,10 @@ export interface Rfc3161VerifyResult {
    * own faults come first: `genTime_outside_validity` (the signing cert only), then
    * `unexpected_algorithm` (a signing-cert key that is not P-384), then
    * `signature_invalid`, then the chain's reason — `untrusted_root`,
-   * `chain_incomplete`, `chain_signature_invalid`, or `chain_outside_validity` (an
-   * intermediate or root not valid at genTime). So a chain reason is reported only for
+   * `chain_incomplete`, `chain_signature_invalid` (a link whose RSA signature does not
+   * verify), `chain_algorithm_unsupported` (a link signed with an algorithm the chain
+   * validator does not implement), or `chain_outside_validity` (an intermediate or
+   * root not valid at genTime). So a chain reason is reported only for
    * a token whose TSA signature verifies and whose genTime is within the signing cert's
    * validity, and each reason names one kind of fault.
    */
@@ -243,8 +246,10 @@ function parseTstInfo(tst: Uint8Array): {
 
 // Map the X.509 chain verifier's precise reason onto this module's vocabulary. The
 // strict-RFC structural/policy rejections (#119 P4) collapse to `chain_incomplete`
-// (the chain could not be trusted) and only a real RSA link failure surfaces as
-// `chain_signature_invalid`; the chain layer keeps the fine-grained reason. The
+// (the chain could not be trusted), only a real RSA link failure surfaces as
+// `chain_signature_invalid`, and a link signed with an algorithm the validator does
+// not implement is `chain_algorithm_unsupported` (#100); the chain layer keeps the
+// fine-grained reason. The
 // chain's validity failure is `chain_outside_validity`: `verifyRfc3161Timestamp`
 // reports a signing cert not valid at genTime before the chain's reason, so here it
 // can only be an intermediate or the root (typedstandards#94).
@@ -256,6 +261,8 @@ function toRfc3161ChainReason(reason: ChainFailReason): Rfc3161FailReason {
       return 'untrusted_root';
     case 'link_signature_invalid':
       return 'chain_signature_invalid';
+    case 'link_algorithm_unsupported':
+      return 'chain_algorithm_unsupported';
     case 'unsupported_critical_extension':
     case 'algorithm_mismatch':
     case 'issuer_not_found':
