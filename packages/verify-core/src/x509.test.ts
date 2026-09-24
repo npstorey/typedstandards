@@ -163,6 +163,9 @@ interface MintOpts {
   unknownCriticalExtOid?: string;
   /** Force the inner TBS signature algorithm to differ from the outer (check (d)). */
   innerAlgOid?: string;
+  /** The signature algorithm, inner and outer, and the hash `sign` uses (#100).
+   *  Defaults to RSASSA-PKCS1-v1.5 with SHA-256. */
+  sigAlg?: { algId: Uint8Array; hash: string };
 }
 
 /** Mint a signed X.509 cert per opts and return it PARSED (DER round-trips through
@@ -193,8 +196,9 @@ function mint(opts: MintOpts): X509Cert {
   }
 
   const spki = new Uint8Array(opts.subjectKey.export({ type: 'spki', format: 'der' }));
-  const innerAlg = algId(opts.innerAlgOid ?? OID_RSA_SHA256);
-  const outerAlg = algId(OID_RSA_SHA256);
+  const sigAlg = opts.sigAlg ?? { algId: algId(OID_RSA_SHA256), hash: 'sha256' };
+  const innerAlg = opts.innerAlgOid ? algId(opts.innerAlgOid) : sigAlg.algId;
+  const outerAlg = sigAlg.algId;
   const tbs = seq(
     ctx(0, intDer(2)), // version v3
     intDer(1), // serialNumber
@@ -205,7 +209,7 @@ function mint(opts: MintOpts): X509Cert {
     spki,
     ctx(3, seq(...exts)), // extensions [3] EXPLICIT
   );
-  const sig = new Uint8Array(nodeSign('sha256', tbs, opts.issuerPrivateKey)); // RSASSA-PKCS1-v1.5
+  const sig = new Uint8Array(nodeSign(sigAlg.hash, tbs, opts.issuerPrivateKey)); // RSASSA-PKCS1-v1.5 for an RSA key
   const certDer = seq(tbs, outerAlg, bitStr(sig));
   return parseCertificate(certDer, readNode(certDer, 0));
 }
@@ -383,4 +387,54 @@ test('parseCertificate: a NON-timestamping leaf does not expose the timestamping
   assert.deepEqual(leaf.ekus, ['1.3.6.1.5.5.7.3.1']);
   // and the timestamping leaf does expose it (the gate RFC 3161 selection uses).
   assert.equal(makeLeaf().ekus.includes(OID_EKU_TIMESTAMPING), true);
+});
+
+// --- #100: a link algorithm the validator does not implement ------------------
+
+// ecdsa-with-SHA256 takes no parameters (RFC 5758 §3.2); sha1WithRSAEncryption takes NULL.
+const ECDSA_SHA256 = { algId: seq(oidDer('1.2.840.10045.4.3.2')), hash: 'sha256' };
+const RSA_SHA1 = { algId: algId('1.2.840.113549.1.1.5'), hash: 'sha1' };
+const ecKp = generateKeyPairSync('ec', { namedCurve: 'P-256' });
+
+test('#100: a link signed with an algorithm the validator does not implement reads link_algorithm_unsupported', async () => {
+  // An ECDSA-signed intermediate: the root signs the intermediate with RSA (verifies),
+  // the intermediate's EC key signs the leaf with ecdsa-with-SHA256 (a genuine signature).
+  const root = makeRoot();
+  const intermediate = mint({
+    subjectCN: 'test-int',
+    issuerCN: 'test-root',
+    subjectKey: ecKp.publicKey,
+    issuerPrivateKey: rootKp.privateKey,
+    notBefore: NOW - YEAR,
+    notAfter: NOW + YEAR,
+    isCA: true,
+    keyUsage: KU_KEYCERTSIGN,
+  });
+  const ecLeaf = makeLeaf({ issuerCN: 'test-int', issuerPrivateKey: ecKp.privateKey, sigAlg: ECDSA_SHA256 });
+  assert.equal(ecLeaf.sigAlgConsistent, true, 'inner == outer: not an algorithm_mismatch');
+  const ec = await verifyCertChainToAnchor([ecLeaf, intermediate, root], ecLeaf, [anchorOf(rootKp)], NOW);
+  assert.equal(ec.ok, false);
+  assert.equal(ec.reason, 'link_algorithm_unsupported');
+
+  // An RSA link signed with SHA-1, a genuine signature under the root's key.
+  const sha1Leaf = makeLeaf({ sigAlg: RSA_SHA1 });
+  const sha1 = await verifyCertChainToAnchor([sha1Leaf, root], sha1Leaf, [anchorOf(rootKp)], NOW);
+  assert.equal(sha1.ok, false);
+  assert.equal(sha1.reason, 'link_algorithm_unsupported');
+
+  // The link is checked before the terminus is compared with the anchors, so the
+  // reason is the same beneath a root that is not pinned.
+  const unpinned = await verifyCertChainToAnchor([sha1Leaf, root], sha1Leaf, [], NOW);
+  assert.equal(unpinned.reason, 'link_algorithm_unsupported');
+});
+
+test('#100: an RSA link whose signature does not verify reads link_signature_invalid, a reason distinct from an unsupported algorithm', async () => {
+  const root = makeRoot();
+  const wrongKey = makeLeaf({ issuerPrivateKey: strangerKp.privateKey });
+  const invalid = await verifyCertChainToAnchor([wrongKey, root], wrongKey, [anchorOf(rootKp)], NOW);
+  assert.equal(invalid.ok, false);
+  assert.equal(invalid.reason, 'link_signature_invalid');
+  const sha1Leaf = makeLeaf({ sigAlg: RSA_SHA1 });
+  const unsupported = await verifyCertChainToAnchor([sha1Leaf, root], sha1Leaf, [anchorOf(rootKp)], NOW);
+  assert.notEqual(unsupported.reason, invalid.reason);
 });

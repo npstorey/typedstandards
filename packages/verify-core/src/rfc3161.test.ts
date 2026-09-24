@@ -364,3 +364,39 @@ test('P1b: a token that does not bind this package fails on its imprint whatever
     assert.equal(r.signatureValid, null);
   }
 });
+
+/** The same token with the timestamping leaf's signature algorithm, inner and outer, moved
+ *  from sha512WithRSAEncryption (1.2.840.113549.1.1.13) to sha1WithRSAEncryption (…1.1.5): a
+ *  link algorithm the chain validator does not implement (#100). The TSA signature covers
+ *  signedAttrs, not the embedded certificates, so it still verifies. */
+function withLeafSignatureAlgorithmSha1(tokenB64: string): string {
+  const raw = tokenBytes(tokenB64);
+  const certsNode = signedDataKids(raw).find((c) => c.tag === 0xa0)!;
+  const leafNode = children(raw, certsNode).find((n) =>
+    parseCertificate(raw, n).ekus.includes(OID_EKU_TIMESTAMPING),
+  )!;
+  const [tbs, outerAlg] = children(raw, leafNode);
+  const tbsKids = children(raw, tbs);
+  const innerAlg = tbsKids[tbsKids[0].tag === 0xa0 ? 2 : 1];
+  for (const alg of [innerAlg, outerAlg]) {
+    const oid = children(raw, alg)[0];
+    assert.equal(raw[oid.contentEnd - 1], 0x0d);
+    raw[oid.contentEnd - 1] = 0x05;
+  }
+  return b64(raw);
+}
+
+test('#100: bound token whose chain has a link signed with an algorithm the validator does not implement, GENUINE TSA signature -> reason chain_algorithm_unsupported, not chain_signature_invalid', async () => {
+  const sha1 = withLeafSignatureAlgorithmSha1(fx.tokenB64);
+  const r = await verifyRfc3161Timestamp(sha1, fx.expectedHashHex);
+  assert.equal(r.imprintMatches, true);
+  assert.equal(r.contentBound, true);
+  assert.equal(r.withinValidity, true);
+  assert.equal(r.signatureValid, true);
+  assert.equal(r.chainVerified, false);
+  assert.equal(r.verified, false);
+  assert.equal(r.reason, 'chain_algorithm_unsupported');
+  // A link whose RSA signature does not verify keeps chain_signature_invalid.
+  const relinked = await verifyRfc3161Timestamp(withLeafNotBefore(fx.tokenB64, '260215194421Z'), fx.expectedHashHex);
+  assert.equal(relinked.reason, 'chain_signature_invalid');
+});
