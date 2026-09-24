@@ -3,6 +3,19 @@
 Factual record of what changed per published version. Check numbers (#1–#16)
 refer to the Typed Standards specification §9.2 verification sequence.
 
+## 0.7.0 — 2026-09-24
+
+The certificate-chain split in verify-core 0.12.0 (typedstandards#100). **A minor bump**, taken with
+verify-core's; produce-core's own source does not change.
+
+- **Dependency.** `@typedstandards/verify-core` `^0.12.0`. Under 0.x semver `^0.11.0` excludes 0.12.0,
+  so the range moves with verify-core's release. A producer that also verifies gets 0.12.0's readings:
+  a chain link signed with an algorithm the validator does not implement reads
+  `chain_algorithm_unsupported`, and `chain_signature_invalid` means only a link whose signature does
+  not verify. typedstandards.org's verifier now fails a timestamp with an invalid chain signature,
+  where it was a caveat.
+- No export, envelope or hash changes. The byte-golden suite passes unmodified.
+
 ## 0.6.0 — 2026-09-22
 
 The verifier follow-ons (anchored at `typedstandards#98`). **A minor bump** — a new export.
