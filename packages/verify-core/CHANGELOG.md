@@ -6,6 +6,34 @@ references are to `npstorey/civic-ai-tools-website` (#119 is the offline-crypto
 hardening arc; #116 is the standalone-verifier arc this package was extracted
 in).
 
+## 0.12.0 — 2026-09-24
+
+The certificate-chain split (typedstandards#100, shipped in #106). **A minor bump** — `ChainFailReason`
+and `Rfc3161FailReason` each gain a member, so a consumer with an exhaustive `switch` or `Record` over
+either needs the new case.
+
+- **A chain link signed with an algorithm the validator does not implement is no longer reported as an
+  invalid signature.** `verifyCertChainToAnchor` checks each link's signature algorithm at the step
+  where it verifies the link's signature:
+  - an algorithm it does not implement (anything but RSASSA-PKCS1-v1_5 with SHA-256, SHA-384 or
+    SHA-512; an ECDSA-signed intermediate, say) reads the new reason `link_algorithm_unsupported`. It
+    used to read `link_signature_invalid`;
+  - an RSA link whose signature does not verify keeps `link_signature_invalid`;
+  - no other reason changes order, and `verifyCertSignatureRsa` is unchanged.
+- **`verifyRfc3161Timestamp` reports that link as `chain_algorithm_unsupported`**, a new reason, where
+  it used to report `chain_signature_invalid`. `RFC3161_FAIL_REASONS` holds fourteen codes.
+  `chain_signature_invalid` now means only a link whose signature does not verify: a fault in the
+  token, not a limit of the verifier. `verified` is unchanged, and no request is added.
+- **On typedstandards.org** (the site's verifier, live since #106; not part of this package's API):
+  - **a timestamp whose chain has a link with an invalid signature (`chain_signature_invalid`) now
+    fails the package, where it was a caveat.** `chain_algorithm_unsupported` is a caveat, as the
+    verifier's other policy limits are, and the #7 row reads amber for every caveat-class reason
+    (typedstandards#104);
+  - **bundle mode requests nothing.** A fully offline run gives `verifyRecord` a fetcher that sends no
+    request, so a file the package references is not fetched and reads "not checked offline", and no
+    transparency-log lookup is sent (typedstandards#105). A consumer that wants the same passes such a
+    fetcher as `VerifyDeps.fetch`.
+
 ## 0.11.0 — 2026-09-22
 
 The verifier follow-ons (anchored at `typedstandards#98`): specification check #6, the ratified
