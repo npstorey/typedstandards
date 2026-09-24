@@ -1021,6 +1021,24 @@ export function runVerify(
   });
 }
 
+/**
+ * Step 4 as the page runs it: the verify-core input for `resolved`, and the verdict.
+ * Offline-first for a fully self-contained bundle (#119 Q15): the redundant online
+ * Rekor parity is dropped (see `buildVerifyInput`); hosted/URL verification is
+ * unaffected. #10 is resolved from the carried signed attestation chain when there
+ * is one (#119 P3), and at STATE depth otherwise.
+ */
+export async function verifyResolved(resolved: ResolvedInput): Promise<{ input: VerifyInput; result: VerifyResult }> {
+  const input = buildVerifyInput(resolved.commitment, resolved.pkg, { offline: resolved.fullyOffline });
+  const result = await runVerify(
+    input,
+    resolved.registry,
+    resolveCarriedLifecycle(resolved.commitment),
+    resolved.registryProvenance,
+  );
+  return { input, result };
+}
+
 // --- "Show the math" rows -------------------------------------------------
 
 export interface MathLine {
