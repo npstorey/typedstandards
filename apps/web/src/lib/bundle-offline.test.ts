@@ -34,7 +34,7 @@ const blobRef = (bytes: Uint8Array, url: string, contentType: string) => ({
 /** A signed commitment carrying its package and its registry (a bundle), for a package
  *  under raw-bytes/v1 whose `output` and `trace` are BlobRefs — or, with `refs: false`,
  *  a package whose output is inline and which references nothing. */
-function mintBundle(opts: { refs: boolean } = { refs: true }) {
+function mintBundle(opts: { refs: boolean; rekorEntryId?: string } = { refs: true }) {
   const { publicKey, privateKey } = generateKeyPairSync('ed25519');
   const publicKeyB64 = Buffer.from(publicKey.export({ type: 'spki', format: 'der' })).toString('base64');
   const kid = 'test:synthetic-2026';
@@ -81,6 +81,7 @@ function mintBundle(opts: { refs: boolean } = { refs: true }) {
     },
     trustRegistryUrl: REGISTRY_URL,
     trustRegistry: registry,
+    ...(opts.rekorEntryId ? { rekorEntryId: opts.rekorEntryId } : {}),
   };
   return { commitment, registry };
 }
@@ -160,4 +161,15 @@ test('#105: a bundle with no referenced content keeps the offline note as it was
   assert.equal(page.result.blobRefsVerified, null);
   const note = page.independence.parts.map((p) => p.text).join('');
   assert.doesNotMatch(note, /not requested/);
+});
+
+test('#105: a bundle carrying a transparency-log entry id without its inclusion proof sends no lookup either', async () => {
+  // The online lookup is the one other request verify-core can make; a bundle that
+  // carries the proof never makes it (#119 Q15). This one names an entry and no proof.
+  const m = mintBundle({ refs: true, rekorEntryId: 'ab'.repeat(40) });
+  const page = await pageWith('bundle', JSON.stringify(m.commitment), m);
+  assert.equal(page.resolved.fullyOffline, true);
+  assert.deepEqual(page.calls, [], 'no request to the log or for a referenced file');
+  assert.equal(page.result.rekorVerified, false);
+  assert.equal(rowOf(page.rows, '8').signal.tier, 'attention');
 });

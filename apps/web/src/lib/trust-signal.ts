@@ -269,6 +269,15 @@ export const CONTENT_HASH_SIGNALS: Record<ContentHashStatus, TrustSignalDescript
   },
 };
 
+/** #4 under raw-bytes/v1 on a fully offline run (#105, ruling A): the file the package
+ *  fingerprints is stored separately and was not requested. */
+export const CONTENT_FILE_NOT_CHECKED_OFFLINE: TrustSignalDescriptor = {
+  tier: 'attention',
+  label: 'Content file not checked offline',
+  detail:
+    'The file this package fingerprints is stored separately. An offline check requests nothing, so its bytes were not hashed and the content fingerprint was not checked. Verify the record by its URL to check it.',
+};
+
 // --- #5 Trust-registry verdict (keyTrust) --------------------------------
 
 export const KEY_TRUST_SIGNALS: Record<KeyTrustStatus, TrustSignalDescriptor> = {
@@ -626,6 +635,15 @@ export const BLOB_REFS_UNAVAILABLE: TrustSignalDescriptor = {
   label: 'Referenced content could not be retrieved',
   detail:
     'At least one externally-stored field could not be fetched, so its bytes were not checked against its fingerprint. This is an availability problem, not proof of alteration.',
+};
+
+/** #9 on a fully offline run (#105, ruling A): bundle mode requests nothing, so a
+ *  referenced file is not fetched. Attention, as a file that could not be fetched is. */
+export const BLOB_REFS_NOT_CHECKED_OFFLINE: TrustSignalDescriptor = {
+  tier: 'attention',
+  label: 'Referenced content not checked offline',
+  detail:
+    'This package references content stored separately. An offline check requests nothing, so that content was not fetched and its fingerprint was not checked. Verify the record by its URL to check it.',
 };
 
 /** Whether some reference failed and every failed one could not be fetched — the

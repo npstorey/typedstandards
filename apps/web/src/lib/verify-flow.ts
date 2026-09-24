@@ -43,6 +43,7 @@ import {
   type KeyTrustResult,
   type KeyTrustStatus,
   type TrustRegistryProvenance,
+  type FetchLike,
 } from '@typedstandards/verify-core';
 import {
   type TrustTier,
@@ -67,6 +68,8 @@ import {
   SIGNING_KEY_ID_SIGNALS,
   TIMESTAMP_FAILURE_NOTES,
   BLOB_REF_REASON_SIGNALS,
+  BLOB_REFS_NOT_CHECKED_OFFLINE,
+  CONTENT_FILE_NOT_CHECKED_OFFLINE,
   KEY_TRUST_BUNDLE_REGISTRY_NOT_USED,
   KEY_TRUST_SUPPLIED_REGISTRY,
   SIGNER_IDENTITY_SUPPLIED_REGISTRY,
@@ -1002,20 +1005,29 @@ export function resolveCarriedLifecycle(commitment: Commitment): LifecycleResolu
   return verifyLifecycleChain(carried, commitment.packageHash, commitment.signer?.identifier ?? '');
 }
 
+/** The fetcher a fully offline run gives verify-core: it sends nothing and fails, so
+ *  a referenced file (#9, and #4 under raw-bytes/v1) and an online Rekor lookup read
+ *  as not fetched (#105, ruling A). */
+const NO_REQUEST: FetchLike = () =>
+  Promise.reject(new VerifyFlowError('A fully offline check sends no request.'));
+
 /** Run the §9.2 check suite in the browser. A browser-resolved lifecycle chain (from
  *  `resolveCarriedLifecycle`) is injected as the deeper #10 resolution when present.
  *  `registryProvenance` (from `ResolvedInput.registryProvenance`) tells verify-core
  *  where the registry came from; omitted, verify-core treats a registry as carried
- *  in the bundle, which is the conservative reading. */
+ *  in the bundle, which is the conservative reading. `opts.offline` (a fully
+ *  self-contained bundle) gives verify-core a fetcher that sends no request: bundle
+ *  mode requests nothing until the reader asks (#105, ruling A). */
 export function runVerify(
   input: VerifyInput,
   registry: TrustRegistry | undefined,
   lifecycleResolution?: LifecycleResolution,
   registryProvenance?: TrustRegistryProvenance,
+  opts: { offline?: boolean } = {},
 ): Promise<VerifyResult> {
   return verifyRecord(input, {
     registry,
-    fetch: globalThis.fetch,
+    fetch: opts.offline ? NO_REQUEST : globalThis.fetch,
     ...(registryProvenance ? { registryProvenance } : {}),
     ...(lifecycleResolution ? { lifecycleResolution } : {}),
   });
@@ -1024,9 +1036,10 @@ export function runVerify(
 /**
  * Step 4 as the page runs it: the verify-core input for `resolved`, and the verdict.
  * Offline-first for a fully self-contained bundle (#119 Q15): the redundant online
- * Rekor parity is dropped (see `buildVerifyInput`); hosted/URL verification is
- * unaffected. #10 is resolved from the carried signed attestation chain when there
- * is one (#119 P3), and at STATE depth otherwise.
+ * Rekor parity is dropped (see `buildVerifyInput`), and verify-core sends no request
+ * at all (#105); hosted/URL verification is unaffected. #10 is resolved from the
+ * carried signed attestation chain when there is one (#119 P3), and at STATE depth
+ * otherwise.
  */
 export async function verifyResolved(resolved: ResolvedInput): Promise<{ input: VerifyInput; result: VerifyResult }> {
   const input = buildVerifyInput(resolved.commitment, resolved.pkg, { offline: resolved.fullyOffline });
@@ -1035,6 +1048,7 @@ export async function verifyResolved(resolved: ResolvedInput): Promise<{ input: 
     resolved.registry,
     resolveCarriedLifecycle(resolved.commitment),
     resolved.registryProvenance,
+    { offline: resolved.fullyOffline },
   );
   return { input, result };
 }
@@ -1354,12 +1368,15 @@ export interface CheckSignal {
  *
  * `keyDerived` is whether the signer's identifier is key-derived. It chooses #5's
  * descriptor, not its tier: the one it adds, KEY_TRUST_BUNDLE_REGISTRY_NOT_USED,
- * has the tier of the `registry_unavailable` it replaces.
+ * has the tier of the `registry_unavailable` it replaces. `offline` (a fully offline
+ * run, #105) likewise chooses #4's and #9's descriptors for a file that was not
+ * requested, at the tier of one that could not be fetched.
  */
 export function checkSignalsOf(
   result: VerifyResult,
   registryMeta: RegistryMeta | undefined,
   keyDerived: boolean,
+  offline = false,
 ): CheckSignal[] {
   const out: CheckSignal[] = [];
   const add = (num: string, name: string, signal: TrustSignalDescriptor) => out.push({ num, name, signal });
@@ -1368,7 +1385,15 @@ export function checkSignalsOf(
   if (result.contentCanonicalization) {
     add('3', 'Canonicalization', CONTENT_CANONICALIZATION_SIGNALS[result.contentCanonicalization.status]);
   }
-  if (result.contentHash) add('4', 'Content fingerprint', CONTENT_HASH_SIGNALS[result.contentHash.status]);
+  if (result.contentHash) {
+    add(
+      '4',
+      'Content fingerprint',
+      offline && result.contentHash.status === 'content_bytes_unavailable'
+        ? CONTENT_FILE_NOT_CHECKED_OFFLINE
+        : CONTENT_HASH_SIGNALS[result.contentHash.status],
+    );
+  }
 
   // #5: under a key-derived signer, a bundle registry verify-core set aside is said
   // so; for every other signer, a status only a supplied registry confirmed reads as
@@ -1398,9 +1423,17 @@ export function checkSignalsOf(
     add('8', 'Transparency log', resolveRekor(result.hasRekor, rekorInclusionVerifiedOffline(result), result.rekorVerified));
   }
   // #9 reads each reference's reason (#89): a file that could not be fetched is
-  // attention, a mismatch or a malformed reference alarm.
+  // attention, a mismatch or a malformed reference alarm. On a fully offline run no
+  // file was requested, so that attention says so (#105).
   if (result.blobRefsVerified !== null) {
-    add('9', 'Referenced content', resolveBlobRefResults(result.blobRefsVerified, result.blobRefs ?? []));
+    const refs = result.blobRefs ?? [];
+    add(
+      '9',
+      'Referenced content',
+      offline && result.blobRefsVerified === false && blobRefsOnlyUnfetched(refs)
+        ? BLOB_REFS_NOT_CHECKED_OFFLINE
+        : resolveBlobRefResults(result.blobRefsVerified, refs),
+    );
   }
   add('10', 'Lifecycle', LIFECYCLE_STATE_SIGNALS[result.lifecycle.status]);
   if (result.typeResolution) add('12', 'Node type', TYPE_RESOLUTION_SIGNALS[result.typeResolution.status]);
@@ -1431,17 +1464,20 @@ function rekorInclusionVerifiedOffline(result: VerifyResult): boolean {
  * Build the per-check rows from the verdict + input. Each row carries the trust
  * signal (tier/label) AND the computed values the verifier saw — the "math".
  * Ordered by spec §9.2 check number. Null checks (e.g. on a missing package) are
- * skipped rather than rendered as failures.
+ * skipped rather than rendered as failures. `opts.offline` marks a fully offline
+ * run, whose referenced files were not requested (#105).
  */
 export function buildCheckRows(
   result: VerifyResult,
   input: VerifyInput,
   commitment: Commitment,
   registryMeta?: RegistryMeta,
+  opts: { offline?: boolean } = {},
 ): CheckRow[] {
   const rows: CheckRow[] = [];
+  const offline = opts.offline === true;
   const keyDerived = hasKeyDerivedSigner(input.package);
-  const signals = new Map(checkSignalsOf(result, registryMeta, keyDerived).map((c) => [c.num, c]));
+  const signals = new Map(checkSignalsOf(result, registryMeta, keyDerived, offline).map((c) => [c.num, c]));
   /** The row for check `num`, its name and signal read from `checkSignalsOf`. */
   const checkRow = (num: string, math: MathLine[], depthNote?: string): CheckRow => {
     const c = signals.get(num);
@@ -1626,10 +1662,19 @@ export function buildCheckRows(
       checkRow('9', [
         { label: 'References', value: String(result.blobRefs.length) },
         { label: 'All verified', value: result.blobRefsVerified ? 'yes' : 'no' },
-        // Each reference that failed, and why (#89).
+        // Each reference that failed, and why (#89); on a fully offline run, one not
+        // requested (#105).
         ...result.blobRefs
           .filter((r) => !r.ok)
-          .map((r) => ({ label: r.field, value: r.reason ? BLOB_REF_REASON_SIGNALS[r.reason].label : 'failed' })),
+          .map((r) => ({
+            label: r.field,
+            value:
+              offline && r.reason === 'fetch_failed'
+                ? 'Not checked offline'
+                : r.reason
+                  ? BLOB_REF_REASON_SIGNALS[r.reason].label
+                  : 'failed',
+          })),
       ]),
     );
   }
@@ -1895,10 +1940,11 @@ export function presentVerification(
   result: VerifyResult,
   recheck?: KeyTrustRecheck,
 ): Presentation {
+  const offline = { offline: resolved.fullyOffline };
   if (!recheck) {
     const registryMeta = registryMetaOf(resolved);
     return {
-      rows: buildCheckRows(result, input, resolved.commitment, registryMeta),
+      rows: buildCheckRows(result, input, resolved.commitment, registryMeta, offline),
       verdict: rollupVerdict(result, registryMeta),
       recognition: resolveHostRecognition(
         resolved.commitment,
@@ -1906,7 +1952,7 @@ export function presentVerification(
         resolved.directory,
         resolved.registryProvenance,
       ),
-      independence: independenceNoteOf(resolved),
+      independence: independenceNoteOf(resolved, undefined, result),
     };
   }
   const live: ResolvedInput = {
@@ -1919,7 +1965,7 @@ export function presentVerification(
   const registryMeta = registryMetaOf(live);
   const provenance = recheckedLine(recheck);
   return {
-    rows: buildCheckRows(recheck.result, input, resolved.commitment, registryMeta).map((r) =>
+    rows: buildCheckRows(recheck.result, input, resolved.commitment, registryMeta, offline).map((r) =>
       r.num === '5' ? { ...r, depthNote: provenance } : r,
     ),
     verdict: { ...rollupVerdict(recheck.result, registryMeta), provenance },
@@ -1940,9 +1986,15 @@ export interface IndependenceNote {
 /**
  * What the run did and did not trust. An offline bundle leaves the signing key
  * unconfirmed until it is re-checked (#93 item 4); after a re-check the note says
- * the session went online (#93 item 3).
+ * the session went online (#93 item 3). A fully offline run requests no file the
+ * package references, so the note says that content was not checked and that a
+ * check by URL covers it (#105); `result` is the run's verdict, which names them.
  */
-export function independenceNoteOf(resolved: ResolvedInput, recheck?: KeyTrustRecheck): IndependenceNote {
+export function independenceNoteOf(
+  resolved: ResolvedInput,
+  recheck?: KeyTrustRecheck,
+  result?: VerifyResult,
+): IndependenceNote {
   // A registry the record supplied — carried in it, or read from a URL that is not
   // https: — was not checked against the publisher's domain (#78).
   const supplied =
@@ -1958,6 +2010,10 @@ export function independenceNoteOf(resolved: ResolvedInput, recheck?: KeyTrustRe
         },
       ]
     : [];
+  const notRequested =
+    resolved.fullyOffline && (result?.blobRefs ?? []).some((r) => r.reason === 'fetch_failed')
+      ? ' This package references content stored separately, which was not requested, so it was not checked. Verifying the record by its URL checks it.'
+      : '';
   if (resolved.fullyOffline) {
     return recheck
       ? {
@@ -1968,7 +2024,7 @@ export function independenceNoteOf(resolved: ResolvedInput, recheck?: KeyTrustRe
           lead: 'Fully offline.',
           parts: [
             {
-              text: `Every proof was read from your bundle and verified in your browser — nothing was fetched.${supplied} Publisher recognition was skipped: it reads only the typedstandards.org directory, which an offline check does not fetch.`,
+              text: `Every proof was read from your bundle and verified in your browser — nothing was fetched.${notRequested}${supplied} Publisher recognition was skipped: it reads only the typedstandards.org directory, which an offline check does not fetch.`,
             },
           ],
         };
