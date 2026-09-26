@@ -50,6 +50,8 @@ export interface LifecycleAttestationView {
   reason?: string;
   effectiveAt?: string;
   priorWithdrawalNodeId?: string;
+  /** `supersedes` / `revises`: the successor node's id. */
+  successorNodeId?: string;
   /** Ed25519ph signature over the recomputed nodeId; null when unsigned. */
   signatureValid: boolean | null;
   /** Recomputed envelope hash equals the stored nodeId (integrity). */
@@ -68,6 +70,9 @@ export interface LifecycleAttestationView {
    *  signer it names (see `verifyLifecycleChain`). Absent on views built
    *  elsewhere. */
   keyBound?: boolean;
+  /** Set by `verifyLifecycleChain`: the node's `signer.identifier` equals the
+   *  target's, whether or not its key is bound. Absent on views built elsewhere. */
+  namesTarget?: boolean;
 }
 
 export interface LifecycleResolution {
@@ -82,6 +87,10 @@ export interface LifecycleResolution {
   withdrawnReason?: string;
   reinstatedAt?: string;
   reinstatedReason?: string;
+  /** The latest counting `supersedes`: its envelope timestamp. */
+  supersededAt?: string;
+  /** The latest counting `supersedes`: its `successorNodeId`. */
+  successorNodeId?: string;
 }
 
 export interface AttestationVerifyResult {
@@ -343,4 +352,57 @@ export function verifyLifecycleChain(
     });
   }
   return resolveLifecycleFromChain(views);
+}
+
+// ---------------------------------------------------------------------------
+// The per-node authorization check (typedstandards#113 G0 D6) — STUB
+
+export type AttestationAuthorizationRule = 'publisher-only' | 'any-with-binding';
+
+export const ATTESTATION_AUTHORIZATION_STATUSES = [
+  'authorized',
+  'not_checked',
+  'other_signer',
+  'publisher_key_unbound',
+  'key_unbound',
+  'binding_tier_off_ladder',
+  'unsigned',
+  'signature_invalid',
+  'node_id_mismatch',
+] as const;
+export type AttestationAuthorizationStatus = (typeof ATTESTATION_AUTHORIZATION_STATUSES)[number];
+
+export interface AttestationCheckContext {
+  target?: { signerIdentifier: string; publicKey: string };
+  registry?: TrustRegistry;
+  registryProvenance?: TrustRegistryProvenance;
+}
+
+export interface AttestationCheck {
+  nodeId: string;
+  type: string;
+  rule: AttestationAuthorizationRule | null;
+  nodeIdMatches: boolean;
+  signatureValid: boolean | null;
+  keyBound: boolean;
+  status: AttestationAuthorizationStatus;
+  missingFields: string[];
+}
+
+/** STUB: integrity and signature only; no binding, rule or payload check yet. */
+export function checkAttestationNode(
+  carried: CarriedLifecycleNode,
+  _context: AttestationCheckContext = {},
+): AttestationCheck {
+  const verdict = verifyAttestationNode(carried.node, carried.nodeId, carried.signature ?? null);
+  return {
+    nodeId: verdict.nodeId,
+    type: pickString(carried.node['type']) ?? '',
+    rule: null,
+    nodeIdMatches: verdict.nodeIdMatches,
+    signatureValid: verdict.signatureValid,
+    keyBound: false,
+    status: 'not_checked',
+    missingFields: [],
+  };
 }
