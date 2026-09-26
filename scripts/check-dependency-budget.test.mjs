@@ -147,12 +147,17 @@ test('budget file restates the decisions of record', () => {
     ['@typedstandards/verify-core', '@noble/curves'],
     'produce-core: verify-core (ADR-0021) + @noble/curves (typedstandards#35)',
   );
+  assert.deepEqual(
+    byName.get('@typedstandards/cli').budget,
+    ['@typedstandards/produce-core', '@typedstandards/verify-core'],
+    'cli: the two cores and nothing else (typedstandards#109 G0 D2)',
+  );
 });
 
 test('passing case: the real packages satisfy their budgets', () => {
   const doc = JSON.parse(readFileSync(join(here, 'dependency-budgets.json'), 'utf8'));
   const { results, ok } = runBudgetCheck(repoRoot, doc);
-  assert.equal(results.length, 2, 'both budgeted packages checked');
+  assert.equal(results.length, 3, 'all three budgeted packages checked');
   for (const { entry, violations, scanned } of results) {
     assert.deepEqual(violations, [], `${entry.name}: no violations`);
     assert.ok(scanned.files > 0, `${entry.name}: shipped src actually scanned`);

@@ -18,6 +18,12 @@
       "name": "@typedstandards/produce-core",
       "budget": ["@typedstandards/verify-core", "@noble/curves"],
       "source": "civic-ai-tools ADR-0021 §C — @typedstandards/verify-core as the load-bearing runtime dependency — plus typedstandards#35, which declared @noble/curves as a direct dependency (the phantom-dep incident this checker guards against)."
+    },
+    {
+      "path": "packages/cli",
+      "name": "@typedstandards/cli",
+      "budget": ["@typedstandards/produce-core", "@typedstandards/verify-core"],
+      "source": "typedstandards#109 G0 D2, the owner's ruling of 2026-09-26 (https://github.com/npstorey/typedstandards/issues/109#issuecomment-5847043689): the CLI signs and verifies only through the two reference cores, and parses its arguments with node:util's parseArgs, so it takes no third runtime dependency."
     }
   ]
 }
