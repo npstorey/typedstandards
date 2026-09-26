@@ -998,6 +998,11 @@ export function buildVerifyInput(
  * `source: 'attestation-chain'` having verified each node itself (hash, signature,
  * reachability). The target signer is the content node's `signer.identifier`; with
  * none, no attestation can signer-match, so the status honestly stays active.
+ *
+ * An attestation moves the status only when its signing key is bound to the signer
+ * it names (typedstandards#113). What can bind it is passed to verify-core: the
+ * record's own signing key, and `registry` only when `registryProvenance` is
+ * `declared-url`. A registry carried in the bundle is not passed.
  */
 export function resolveCarriedLifecycle(
   commitment: Commitment,
@@ -1006,7 +1011,11 @@ export function resolveCarriedLifecycle(
 ): LifecycleResolution | undefined {
   const carried = commitment.lifecycleAttestations;
   if (!carried || carried.length === 0) return undefined;
-  return verifyLifecycleChain(carried, commitment.packageHash, commitment.signer?.identifier ?? '');
+  const targetPublicKey = commitment.signature?.publicKey;
+  return verifyLifecycleChain(carried, commitment.packageHash, commitment.signer?.identifier ?? '', {
+    ...(targetPublicKey ? { targetPublicKey } : {}),
+    ...(registry && registryProvenance === 'declared-url' ? { registry, registryProvenance } : {}),
+  });
 }
 
 /** The fetcher a fully offline run gives verify-core: it sends nothing and fails, so
@@ -1050,7 +1059,7 @@ export async function verifyResolved(resolved: ResolvedInput): Promise<{ input: 
   const result = await runVerify(
     input,
     resolved.registry,
-    resolveCarriedLifecycle(resolved.commitment),
+    resolveCarriedLifecycle(resolved.commitment, resolved.registry, resolved.registryProvenance),
     resolved.registryProvenance,
     { offline: resolved.fullyOffline },
   );

@@ -58,7 +58,9 @@ export async function viewCommand(values: ViewValues, io: Io): Promise<JsonObjec
   const signer = isObject(pkg['signer']) ? pkg['signer'] : undefined;
   let lifecycle: CommitmentLifecycle | undefined;
   if (carried.length > 0) {
-    const life = verifyLifecycleChain(carried, signed.envelopeHash, optionalString(signer?.['identifier']) ?? '');
+    const life = verifyLifecycleChain(carried, signed.envelopeHash, optionalString(signer?.['identifier']) ?? '', {
+      targetPublicKey: signed.signature.publicKey,
+    });
     lifecycle = {
       status: life.status,
       ...(life.withdrawnAt ? { withdrawnAt: life.withdrawnAt } : {}),

@@ -49,8 +49,12 @@ export async function verifyOffline(io: Io, record: RecordToVerify): Promise<Ver
   const offline = offlineFetch(record.local);
   const signer = record.package['signer'];
   const signerId = isObject(signer) && typeof signer['identifier'] === 'string' ? signer['identifier'] : '';
+  // A carried attestation moves status only when its key is bound to the signer it
+  // names; the record's own signing key is what verify holds to bind it.
   const lifecycleResolution =
-    record.carried.length > 0 ? verifyLifecycleChain(record.carried, record.packageHash, signerId) : undefined;
+    record.carried.length > 0
+      ? verifyLifecycleChain(record.carried, record.packageHash, signerId, { targetPublicKey: record.signature.publicKey })
+      : undefined;
   const checks = await (io.verifyRecord ?? verifyRecord)(
     { package: record.package, packageHash: record.packageHash, signature: record.signature },
     { registry: undefined, fetch: offline.fetch, ...(lifecycleResolution ? { lifecycleResolution } : {}) },
