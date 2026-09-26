@@ -1,7 +1,7 @@
 // A lifecycle attestation moves a record's status only when its signing key is
 // bound to the signer it names (typedstandards#113, G0 D5). For the CLI:
-//   - `withdraw` verifies its own result before printing, so a signer.identifier
-//     its seed does not derive fails that check: exit 1, nothing on stdout;
+//   - `withdraw` verifies its own result before printing, so a did:key its seed
+//     does not derive fails that check: exit 1, nothing on stdout;
 //   - `view` and `verify` pass the record's own signing key, which binds a
 //     withdrawal signed by that key under a registry-bound identifier.
 

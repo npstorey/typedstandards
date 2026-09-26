@@ -52,12 +52,18 @@ export async function withdrawCommand(values: WithdrawValues, io: Io): Promise<J
   }
 
   // Before printing: the node recomputes to its id, the signature verifies, and a
-  // record carrying it reads withdrawn under verify-core's lifecycle resolution.
+  // record carrying it reads withdrawn under verify-core's lifecycle resolution,
+  // taking the seed's own key as the target record's signing key. A did:key signer
+  // identifier binds only by derivation, so one the seed does not derive fails
+  // here. Any other identifier binds through that key; a verifier binds it only
+  // through the target record's own signing key or a registry fetched from its
+  // declared URL, so it reads active on a record signed by another key that no
+  // such registry lists.
   const carried = checkCarriedNode(printed, 'the signed withdrawal');
   const check = verifyAttestationNode(carried.node, carried.nodeId, carried.signature ?? null);
   const target = carried.node['targetNodeId'] as string;
   const signerId = (carried.node['signer'] as { identifier: string }).identifier;
-  const life = verifyLifecycleChain([carried], target, signerId);
+  const life = verifyLifecycleChain([carried], target, signerId, { targetPublicKey: carried.signature?.publicKey });
   if (!check.nodeIdMatches || check.signatureValid !== true || life.status !== 'withdrawn' || life.chain.length !== 1) {
     throw new CliError(
       EXIT.verificationFailed,
