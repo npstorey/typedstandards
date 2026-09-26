@@ -75,6 +75,7 @@ import {
   SIGNER_IDENTITY_SUPPLIED_REGISTRY,
   LIFECYCLE_STATE_SIGNALS,
   LIFECYCLE_SOURCE_SIGNALS,
+  ATTESTATION_AUTHORIZATION_SIGNALS,
 } from './trust-signal.ts';
 import {
   BARE_ID_ANCHOR,
@@ -1449,6 +1450,11 @@ export function checkSignalsOf(
     );
   }
   add('10', 'Lifecycle', LIFECYCLE_STATE_SIGNALS[result.lifecycle.status]);
+  // One #10 line at attention when any carried event names the publisher under a
+  // key not bound to the publisher (G0 D6 as corrected); a third party's adds none.
+  if (unboundPublisherEvents(result).length > 0) {
+    add('10', 'Lifecycle', ATTESTATION_AUTHORIZATION_SIGNALS.publisher_key_unbound);
+  }
   if (result.typeResolution) add('12', 'Node type', TYPE_RESOLUTION_SIGNALS[result.typeResolution.status]);
   // #14: a match against a registry the record supplied establishes nothing (#78); a
   // mismatch against it still alarms.
@@ -1465,6 +1471,20 @@ export function checkSignalsOf(
   }
   if (result.contentProfile) add('16', 'Content profile', CONTENT_PROFILE_SIGNALS[result.contentProfile.status]);
   return out;
+}
+
+/** Tier order, calmest first, for a check with more than one line. */
+const TIER_RANK: Record<TrustSignalDescriptor['tier'], number> = { verified: 0, normal: 1, attention: 2, alarm: 3 };
+
+/**
+ * The carried lifecycle events that name the record's signer but whose signing key
+ * is not bound to it (typedstandards#113, G0 D6 as corrected). Read from the chain
+ * `verifyLifecycleChain` built; a third party's event (another identifier) is not
+ * one of them.
+ */
+function unboundPublisherEvents(result: VerifyResult): LifecycleResolution['chain'] {
+  // Read defensively: a result assembled by hand may carry a lifecycle with no chain.
+  return (result.lifecycle?.chain ?? []).filter((v) => v.namesTarget === true && v.keyBound === false);
 }
 
 /** Whether #8's Merkle inclusion and signed checkpoint both verified offline. */
@@ -1490,7 +1510,13 @@ export function buildCheckRows(
   const rows: CheckRow[] = [];
   const offline = opts.offline === true;
   const keyDerived = hasKeyDerivedSigner(input.package);
-  const signals = new Map(checkSignalsOf(result, registryMeta, keyDerived, offline).map((c) => [c.num, c]));
+  // A check with more than one line (#10) shows its least-green one, so the row
+  // reads the tier the headline reads (#86).
+  const signals = new Map<string, CheckSignal>();
+  for (const c of checkSignalsOf(result, registryMeta, keyDerived, offline)) {
+    const seen = signals.get(c.num);
+    if (!seen || TIER_RANK[c.signal.tier] > TIER_RANK[seen.signal.tier]) signals.set(c.num, c);
+  }
   /** The row for check `num`, its name and signal read from `checkSignalsOf`. */
   const checkRow = (num: string, math: MathLine[], depthNote?: string): CheckRow => {
     const c = signals.get(num);
@@ -1692,15 +1718,22 @@ export function buildCheckRows(
     );
   }
 
-  // #10 — lifecycle state.
+  // #10 — lifecycle state, the successor when superseded, and the carried events
+  // that name the publisher under a key not bound to it.
   {
-    const source = LIFECYCLE_SOURCE_SIGNALS[result.lifecycle.source];
-    rows.push(
-      checkRow('10', [
-        { label: 'State', value: result.lifecycle.status },
-        { label: 'Derived from', value: source.label },
-      ]),
-    );
+    const life = result.lifecycle;
+    const source = LIFECYCLE_SOURCE_SIGNALS[life.source];
+    const math: MathLine[] = [
+      { label: 'State', value: life.status },
+      { label: 'Derived from', value: source.label },
+    ];
+    if (life.status === 'superseded' && life.successorNodeId) {
+      math.push({ label: 'Successor', value: truncMiddle(life.successorNodeId), mono: true, full: life.successorNodeId });
+    }
+    for (const v of unboundPublisherEvents(result)) {
+      math.push({ label: 'Key not bound to the publisher', value: truncMiddle(v.nodeId), mono: true, full: v.nodeId });
+    }
+    rows.push(checkRow('10', math));
   }
 
   // #12 — type resolution.

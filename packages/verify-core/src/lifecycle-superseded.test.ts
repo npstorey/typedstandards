@@ -211,3 +211,14 @@ test('the legacy-columns path never derives superseded', () => {
     assert.equal(r.successorNodeId, undefined);
   }
 });
+
+test('verifyRecord at STATE depth: a sidecar reading superseded does not reach #10 without the signed chain', async () => {
+  const { verifyRecord } = await import('./index.ts');
+  const r = await verifyRecord(
+    { package: null, packageHash: TARGET, lifecycle: { status: 'superseded', supersededAt: T1, successorNodeId: SUCCESSOR } },
+    { registry: undefined },
+  );
+  assert.equal(r.lifecycle.source, 'none');
+  assert.equal(r.lifecycle.status, 'active');
+  assert.equal(r.lifecycle.successorNodeId, undefined);
+});

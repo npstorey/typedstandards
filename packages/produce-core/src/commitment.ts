@@ -56,17 +56,22 @@ const SELF_CERTIFYING_TIER = 'pseudonymous';
 
 /**
  * Current lifecycle state of the content node, surfaced alongside the proofs
- * so an independent verifier can render a withdrawn state without a separate
- * lookup. A withdrawn package's base signature still verifies (withdrawal is
- * a separate, separately-signed action) — this is informational state.
- * Derivation from an implementation's stored columns is caller work.
+ * so an independent verifier can render a withdrawn or superseded state
+ * without a separate lookup. A withdrawn or superseded package's base
+ * signature still verifies (each is a separate, separately-signed action) —
+ * this is informational state. Derivation from an implementation's stored
+ * columns, or from verify-core's lifecycle resolution, is caller work.
  */
 export interface CommitmentLifecycle {
-  status: 'active' | 'withdrawn';
+  status: 'active' | 'withdrawn' | 'superseded';
   withdrawnAt?: string;
   withdrawnReason?: string;
   reinstatedAt?: string;
   reinstatedReason?: string;
+  /** When the record was superseded. */
+  supersededAt?: string;
+  /** The superseding record's nodeId. */
+  successorNodeId?: string;
 }
 
 /** Neutral input to `buildCommitmentView` — the caller-supplied proof fields. */

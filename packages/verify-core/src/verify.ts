@@ -112,13 +112,20 @@ export interface EnvelopeIntegrityResult {
   reason?: ContentUnavailableReason;
 }
 
-/** Lifecycle STATE as carried by the WS1 sidecar (`CommitmentLifecycle`). */
+/** Lifecycle STATE as carried by the WS1 sidecar (`CommitmentLifecycle`). The
+ *  STATE path (`resolveLifecycleFromLegacyColumns`) reads only the withdrawal and
+ *  reinstatement columns, so a sidecar's `superseded` never reaches #10 without
+ *  the signed chain. */
 export interface CommitmentLifecycleState {
-  status: 'active' | 'withdrawn';
+  status: 'active' | 'withdrawn' | 'superseded';
   withdrawnAt?: string;
   withdrawnReason?: string;
   reinstatedAt?: string;
   reinstatedReason?: string;
+  /** When the record was superseded (the latest counting `supersedes`). */
+  supersededAt?: string;
+  /** The superseding record's nodeId. */
+  successorNodeId?: string;
 }
 
 /**

@@ -14,6 +14,14 @@ refer to the Typed Standards specification §9.2 verification sequence.
   - `view` and `verify` resolve carried lifecycle attestations with the record's own signing key, as
     verify-core's `verifyLifecycleChain` now binds them: a node whose key is not bound stays in the
     chain and does not move the record's status.
+- **`view` carries a `superseded` status (typedstandards#113, G0 D2)** into the view's `lifecycle`,
+  with `supersededAt` and `successorNodeId`, when a carried `supersedes` signer-matches the record.
+- **`verify` reads each carried lifecycle node's signer (typedstandards#113, G0 D6 as corrected).** For
+  a `withdraws`, `reinstates`, `supersedes` or `revises` node that is intact and validly signed:
+  `authorized` (verified); `other_signer`, a third party's event (normal); or
+  `publisher_key_unbound`, an event naming the record's signer under a key not bound to it
+  (attention, printed on stderr, exit 0). The tiers are copied from typedstandards.org's
+  `ATTESTATION_AUTHORIZATION_SIGNALS`.
 
 ## 0.1.0 — 2026-09-26
 

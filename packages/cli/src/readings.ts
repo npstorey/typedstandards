@@ -13,7 +13,10 @@
 // and check #8 (a transparency-log entry).
 
 import {
+  checkAttestationNode,
   verifyAttestationNode,
+  ATTESTATION_AUTHORIZATION_RULES,
+  type AttestationAuthorizationStatus,
   type BlobRefVerifyReason,
   type CaptureMethodVocabStatus,
   type ContentCanonicalizationStatus,
@@ -98,6 +101,21 @@ const BLOB_REF_REASON: Record<BlobRefVerifyReason, Tier> = {
 const LIFECYCLE_NODE_ID = { true: 'verified', false: 'alarm' } as const satisfies Record<string, Tier>;
 const LIFECYCLE_SIGNATURE = SIGNATURE;
 
+// ATTESTATION_AUTHORIZATION_SIGNALS, trust-signal.ts (typedstandards#113 G0 D6 as
+// corrected). A carried lifecycle node's signer reads `authorized`,
+// `other_signer` (a third party's event) or `publisher_key_unbound`.
+const ATTESTATION_AUTHORIZATION: Record<AttestationAuthorizationStatus, Tier> = {
+  authorized: 'verified',
+  not_checked: 'normal',
+  other_signer: 'normal',
+  publisher_key_unbound: 'attention',
+  key_unbound: 'attention',
+  binding_tier_off_ladder: 'attention',
+  unsigned: 'attention',
+  signature_invalid: 'alarm',
+  node_id_mismatch: 'alarm',
+};
+
 // TYPE_RESOLUTION_SIGNALS, trust-signal.ts:839.
 const TYPE_RESOLUTION: Record<TypeResolutionStatus, Tier> = {
   ok: 'verified',
@@ -148,6 +166,7 @@ export const SITE_TABLES = {
   BLOB_REF_REASON_SIGNALS: BLOB_REF_REASON,
   LIFECYCLE_ATTESTATION_NODE_ID_SIGNALS: LIFECYCLE_NODE_ID,
   LIFECYCLE_ATTESTATION_SIGNATURE_SIGNALS: LIFECYCLE_SIGNATURE,
+  ATTESTATION_AUTHORIZATION_SIGNALS: ATTESTATION_AUTHORIZATION,
   TYPE_RESOLUTION_SIGNALS: TYPE_RESOLUTION,
   SIGNER_IDENTITY_SIGNALS: SIGNER_IDENTITY,
   CAPTURE_METHOD_VOCAB_SIGNALS: CAPTURE_METHOD_VOCAB,
@@ -161,8 +180,23 @@ export interface CarriedNode {
   signature?: { signature?: string; publicKey?: string; algorithm?: string } | null;
 }
 
-/** Every check's reading for one `verifyRecord` result and the lifecycle nodes the record carries. */
-export function readingsOf(result: VerifyResult, carried: readonly CarriedNode[], packageHash: string): Reading[] {
+/** The record the carried nodes attest about: its signer identifier and signing key. */
+export interface ReadingTarget {
+  signerIdentifier: string;
+  publicKey: string;
+}
+
+/**
+ * Every check's reading for one `verifyRecord` result and the lifecycle nodes the
+ * record carries. With `target`, each carried lifecycle node that is intact and
+ * validly signed also gets a signer reading from verify-core's per-node check.
+ */
+export function readingsOf(
+  result: VerifyResult,
+  carried: readonly CarriedNode[],
+  packageHash: string,
+  target?: ReadingTarget,
+): Reading[] {
   const out: Reading[] = [];
   const add = (check: string, field: string, status: string, tier: Tier) => out.push({ check, field, status, tier });
 
@@ -192,6 +226,13 @@ export function readingsOf(result: VerifyResult, carried: readonly CarriedNode[]
     const verdict = verifyAttestationNode(entry.node, entry.nodeId, entry.signature ?? null);
     add('#10', `${field}.nodeId`, String(verdict.nodeIdMatches), LIFECYCLE_NODE_ID[String(verdict.nodeIdMatches) as 'true' | 'false']);
     add('#10', `${field}.signature`, String(verdict.signatureValid), LIFECYCLE_SIGNATURE[String(verdict.signatureValid) as keyof typeof SIGNATURE]);
+    // The signer of a lifecycle node (publisher-only), read once the node is intact
+    // and signed; the two readings above already speak for one that is not.
+    const lifecycleNode = ATTESTATION_AUTHORIZATION_RULES[String(entry.node['type'])] === 'publisher-only';
+    if (target && lifecycleNode && verdict.nodeIdMatches && verdict.signatureValid === true) {
+      const check = checkAttestationNode(entry, { target });
+      add('#10', `${field}.signer`, check.status, ATTESTATION_AUTHORIZATION[check.status]);
+    }
   });
   if (result.typeResolution) add('#12', 'typeResolution', result.typeResolution.status, TYPE_RESOLUTION[result.typeResolution.status]);
   if (result.signerIdentity) add('#14', 'signerIdentity', result.signerIdentity.status, SIGNER_IDENTITY[result.signerIdentity.status]);

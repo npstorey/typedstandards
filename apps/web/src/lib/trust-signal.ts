@@ -30,6 +30,7 @@ import type {
   CaptureMethodVocabStatus,
   LifecycleStatus,
   LifecycleSource,
+  AttestationAuthorizationStatus,
   BlobRefVerifyReason,
   CaptureMethod,
   ContentProfileStatus,
@@ -701,8 +702,8 @@ export const BLOB_REF_REASON_SIGNALS: Record<BlobRefVerifyReason, TrustSignalDes
 
 // --- #10 Lifecycle state -------------------------------------------------
 //
-// Lifecycle is a separate axis from cryptographic integrity (P7). Neither state
-// is an integrity verdict, so both are calm. Whether lifecycle renders in the
+// Lifecycle is a separate axis from cryptographic integrity (P7). No state is an
+// integrity verdict, so all are calm. Whether lifecycle renders in the
 // verify panel at all is left to #111 (the note explains the reasoning).
 
 export const LIFECYCLE_STATE_SIGNALS: Record<LifecycleStatus, TrustSignalDescriptor> = {
@@ -718,6 +719,14 @@ export const LIFECYCLE_STATE_SIGNALS: Record<LifecycleStatus, TrustSignalDescrip
     label: 'Withdrawn by the publisher',
     detail:
       'The publisher has withdrawn this package — a legitimate signed action. The reason is shown with the package.',
+  },
+  // The same tier as `withdrawn` (typedstandards#113 G0 D3): a supersession is a
+  // legitimate signed action, and the successor is named in the #10 detail.
+  superseded: {
+    tier: 'normal',
+    label: 'Superseded by the publisher',
+    detail:
+      'The publisher has replaced this package with a newer one and signed that replacement; rely on the successor instead. This package’s own signature still verifies.',
   },
 };
 
@@ -742,9 +751,9 @@ export const LIFECYCLE_SOURCE_SIGNALS: Record<LifecycleSource, TrustSignalDescri
 // #10 per-attestation signals. Integrity of a lifecycle event (signature,
 // node-id) alarms when false — a forged or altered transition. The signer-match,
 // timestamp, and Rekor checks are NOT failures when false: a non-signer-matched
-// attestation is a legitimately-surfaced third-party event (§8.10.3 retention
-// asymmetry — it is shown but does not move the publisher's status), and the
-// timestamp / Rekor checks are supplementary. (See the note's deviation log: the
+// attestation is a legitimately-surfaced third-party event (§8.12.3, the
+// publisher-only rule — it is shown but does not move the publisher's status), and
+// the timestamp / Rekor checks are supplementary. (See the note's deviation log: the
 // brief grouped signer-match with the integrity checks; the retention-asymmetry
 // semantics and the existing verify.ts test place it at Normal.)
 export const LIFECYCLE_ATTESTATION_SIGNATURE_SIGNALS: Record<
@@ -780,6 +789,66 @@ export const LIFECYCLE_ATTESTATION_SIGNER_MATCH_SIGNALS: Record<
       'A third party attested this transition; per the standard it is shown but does not change the status the publisher sets.',
   },
 };
+// verify-core's per-node authorization check (`checkAttestationNode`, spec
+// §8.12.3; typedstandards#113 G0 D6 as corrected). Alarm is kept for an altered or
+// forged node. For a lifecycle event, a third party's (`other_signer`) is calm, as
+// LIFECYCLE_ATTESTATION_SIGNER_MATCH_SIGNALS reads it; one that names the
+// publisher under a key not bound to the publisher is attention, and so is a
+// claim-to-claim node that fails its rule. None of them moves the status.
+export const ATTESTATION_AUTHORIZATION_SIGNALS: Record<
+  AttestationAuthorizationStatus,
+  TrustSignalDescriptor
+> = {
+  authorized: {
+    tier: 'verified',
+    label: 'Attestation authorized',
+    detail: 'Its signing key is bound to the signer it names, and that signer meets the sub-type’s authorization rule.',
+  },
+  not_checked: {
+    tier: 'normal',
+    label: 'Authorization not checked',
+    detail: 'The attested record’s signer was not available to check the rule against, or the sub-type has no rule checked here.',
+  },
+  other_signer: {
+    tier: 'normal',
+    label: 'Lifecycle event from a different signer',
+    detail:
+      'A third party attested this event; under the standard’s publisher-only rule it is shown but does not change the status the publisher sets.',
+  },
+  publisher_key_unbound: {
+    tier: 'attention',
+    label: 'Lifecycle event key not bound to the publisher',
+    detail:
+      'The event names the publisher, but its signing key is not bound to the publisher, so it does not change the status. A key the publisher rotated to reads the same way when it cannot be bound here.',
+  },
+  key_unbound: {
+    tier: 'attention',
+    label: 'Attestation key not bound to its signer',
+    detail:
+      'The signing key is not bound to the signer the attestation names: not derived from it, and not listed for it in a registry fetched from the signer’s declared address.',
+  },
+  binding_tier_off_ladder: {
+    tier: 'attention',
+    label: 'Attestation signer’s identity tier not recognized',
+    detail: 'The signer’s binding tier is not one the standard’s identity ladder defines.',
+  },
+  unsigned: {
+    tier: 'attention',
+    label: 'Attestation unsigned',
+    detail: 'The attestation carries no signature, so no signer can be bound to it.',
+  },
+  signature_invalid: {
+    tier: 'alarm',
+    label: 'Attestation signature does not verify',
+    detail: 'The attestation claims a signature that does not validate — it may be forged.',
+  },
+  node_id_mismatch: {
+    tier: 'alarm',
+    label: 'Attestation has been altered',
+    detail: 'The attestation does not hash to its recorded id — it may have been tampered with.',
+  },
+};
+
 export const LIFECYCLE_ATTESTATION_TIMESTAMP_SIGNALS: Record<BiStateKey, TrustSignalDescriptor> = {
   true: { tier: 'verified', label: 'Lifecycle event timestamped' },
   false: {

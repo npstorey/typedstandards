@@ -97,7 +97,7 @@ test('readingsOf: the three outcomes, each at the tier the site gives it', async
   const { publicKey } = signEnvelopeHash(target, seed, KID);
   const result = await verifyRecord({ package: null, packageHash: target }, { registry: undefined });
   const read = (c: CarriedNode): Reading[] =>
-    (readingsOf as (...a: unknown[]) => Reading[])(result, [c], target, { signerIdentifier: publisher.identifier, publicKey })
+    readingsOf(result, [c], target, { signerIdentifier: publisher.identifier, publicKey })
       .filter((r) => r.field === 'lifecycleAttestations[0].signer');
   for (const [type, payload] of [WITHDRAWS, SUPERSEDES, ['attestation/reinstates/v1', { priorWithdrawalNodeId: 'c'.repeat(64) }], ['attestation/revises/v1', { successorNodeId: SUCCESSOR }]] as const) {
     assert.deepEqual(read(carriedNode(type, seed, target, publisher, payload)), [
