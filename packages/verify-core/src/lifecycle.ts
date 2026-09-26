@@ -16,13 +16,17 @@
 // signed attestation chain independently in the browser is civic-ai-tools-website#119.
 
 import { computeEnvelopeHash } from './canonicalization.ts';
-import { verifySignature } from './signature.ts';
+import { extractRawPublicKey, verifySignature } from './signature.ts';
+import { checkSignerIdentity } from './checks.ts';
+import { isKeyDerivedIdentifier } from './did-key.ts';
+import { verifyKeyTrust } from './trust-registry.ts';
 import {
   ATTESTATION_WITHDRAWS,
   ATTESTATION_REINSTATES,
   LIFECYCLE_ATTESTATION_TYPES,
 } from './attestation.ts';
 import type { SignerIdentity } from './types.ts';
+import type { TrustRegistry, TrustRegistryProvenance } from './trust-registry.ts';
 
 export const LIFECYCLE_STATUSES = ['active', 'withdrawn'] as const;
 export type LifecycleStatus = (typeof LIFECYCLE_STATUSES)[number];
@@ -57,8 +61,13 @@ export interface LifecycleAttestationView {
    *  cryptographic verification is a follow-up). */
   hasRekor: boolean;
   /** Publisher-only conformance (§8.12.3): the attestation's signer.identifier
-   *  matches the target content node's signer.identifier. */
+   *  matches the target content node's signer.identifier. On a view built by
+   *  `verifyLifecycleChain`, it also requires `keyBound`. */
   signerMatchesTarget: boolean;
+  /** Set by `verifyLifecycleChain`: the node's signing key is bound to the
+   *  signer it names (see `verifyLifecycleChain`). Absent on views built
+   *  elsewhere. */
+  keyBound?: boolean;
 }
 
 export interface LifecycleResolution {
@@ -204,14 +213,66 @@ export interface CarriedLifecycleNode {
   /** The stored nodeId (envelope hash) the recomputed hash must match. */
   nodeId: string;
   /** The signature envelope over the node (`{signature, publicKey, algorithm}`). */
-  signature?: { signature?: string; publicKey?: string; algorithm?: string } | null;
+  signature?: { signature?: string; publicKey?: string; algorithm?: string; kid?: string } | null;
   /** Presence flags (surfaced; per-attestation TSA/Rekor depth is a follow-up). */
   hasTimestamp?: boolean;
   hasRekor?: boolean;
 }
 
+/** What a caller holds that can bind a lifecycle attestation's signing key to
+ *  the signer it names (see `verifyLifecycleChain`). */
+export interface LifecycleKeyBinding {
+  /** The target record's own signing key (the base64 SPKI `publicKey` of its
+   *  signature envelope). */
+  targetPublicKey?: string;
+  /** A parsed trust registry. */
+  registry?: TrustRegistry;
+  /** Where `registry` came from. Only `declared-url` can bind a key; absent is
+   *  treated as `bundle`. */
+  registryProvenance?: TrustRegistryProvenance;
+}
+
 function pickString(v: unknown): string | undefined {
   return typeof v === 'string' && v.length > 0 ? v : undefined;
+}
+
+function sameKey(a: string, b: string): boolean {
+  try {
+    const x = extractRawPublicKey(a);
+    const y = extractRawPublicKey(b);
+    return x.length === y.length && x.every((byte, i) => byte === y[i]);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Whether a lifecycle attestation's signing key is bound to the signer it names.
+ *   - A key-derived identifier (`did:key:`) binds by derivation from `publicKey`,
+ *     under the rule check #14 applies to a record: it binds when #14 reads
+ *     `key_derived_match`.
+ *   - Any other identifier binds when `publicKey` is the target record's own
+ *     signing key, or when a registry fetched from its declared URL lists it
+ *     under that identifier: check #14 reads `ok` for the node's `kid`, and
+ *     check #5 reads the `(kid, publicKey)` pair as verified. The node carries
+ *     no verified signing time, so a deprecated key does not bind.
+ * A registry carried in a bundle, or one with no stated provenance, never binds.
+ */
+function isKeyBound(
+  node: Record<string, unknown>,
+  publicKey: string,
+  kid: string | undefined,
+  binding: LifecycleKeyBinding,
+): boolean {
+  const signer = node['signer'] as SignerIdentity | undefined;
+  if (!signer || typeof signer !== 'object' || typeof signer.identifier !== 'string') return false;
+  if (isKeyDerivedIdentifier(signer.identifier)) {
+    return checkSignerIdentity(node, kid, binding.registry, publicKey).status === 'key_derived_match';
+  }
+  if (binding.targetPublicKey && sameKey(publicKey, binding.targetPublicKey)) return true;
+  if (!kid || !binding.registry || binding.registryProvenance !== 'declared-url') return false;
+  if (checkSignerIdentity(node, kid, binding.registry).status !== 'ok') return false;
+  return verifyKeyTrust(publicKey, kid, undefined, binding.registry).verified;
 }
 
 /**
@@ -227,15 +288,26 @@ function pickString(v: unknown): string | undefined {
  *   - INTEGRITY: the recomputed envelope hash MUST equal the stored `nodeId`.
  *   - SIGNATURE: the Ed25519(ph) signature MUST verify over that hash.
  * A node failing any of these is EXCLUDED (a forged/tampered/misdirected transition
- * cannot move the status). Surviving nodes go to `resolveLifecycleFromChain`, which
- * applies the §8.10.3 retention asymmetry (a valid but non-signer-matched attestation
- * is surfaced in the chain yet does NOT move the publisher's status). That shared
- * resolver is unchanged, so the server route's output stays byte-identical.
+ * cannot move the status). A surviving node is signer-matched only when its
+ * `signer.identifier` equals the target's AND its signing key is bound to that
+ * identifier (`keyBound`), by what `binding` supplies:
+ *   - a key-derived identifier (`did:key:`) binds by derivation from the node's own
+ *     public key, the rule check #14 applies to a record;
+ *   - any other identifier binds by `binding.targetPublicKey` (the node is signed by
+ *     the target record's own key), or by `binding.registry` when
+ *     `binding.registryProvenance` is `declared-url` and it lists the node's
+ *     `(kid, publicKey)` under that identifier, read by the rules of checks #5 and
+ *     #14. A registry carried in a bundle, or with no stated provenance, never binds.
+ * Surviving nodes go to `resolveLifecycleFromChain`, which applies the §8.10.3
+ * retention asymmetry (a valid but non-signer-matched attestation is surfaced in the
+ * chain yet does NOT move the publisher's status). That shared resolver is unchanged,
+ * so the server route's output stays byte-identical.
  */
 export function verifyLifecycleChain(
   carried: CarriedLifecycleNode[],
   contentNodeId: string,
   targetSignerIdentifier: string,
+  binding: LifecycleKeyBinding = {},
 ): LifecycleResolution {
   const views: LifecycleAttestationView[] = [];
   for (const entry of carried) {
@@ -248,6 +320,12 @@ export function verifyLifecycleChain(
 
     const signer = entry.node['signer'] as SignerIdentity | undefined;
     const metadata = entry.node['metadata'] as Record<string, unknown> | undefined;
+    const keyBound = isKeyBound(
+      entry.node,
+      entry.signature?.publicKey ?? '',
+      pickString(entry.signature?.kid),
+      binding,
+    );
     views.push({
       nodeId: entry.nodeId,
       type: pickString(entry.node['type']) ?? '',
@@ -260,7 +338,8 @@ export function verifyLifecycleChain(
       nodeIdMatches: verdict.nodeIdMatches,
       hasTimestamp: !!entry.hasTimestamp,
       hasRekor: !!entry.hasRekor,
-      signerMatchesTarget: !!signer && signer.identifier === targetSignerIdentifier,
+      signerMatchesTarget: !!signer && signer.identifier === targetSignerIdentifier && keyBound,
+      keyBound,
     });
   }
   return resolveLifecycleFromChain(views);

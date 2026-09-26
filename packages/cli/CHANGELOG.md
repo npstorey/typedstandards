@@ -3,6 +3,18 @@
 Factual record of what changed per published version. Check numbers (#1–#16)
 refer to the Typed Standards specification §9.2 verification sequence.
 
+## Unreleased
+
+- **A lifecycle attestation moves status only when its signing key is bound to the signer it names
+  (typedstandards#113).**
+  - `withdraw`: a `did:key` signer identifier must be derived from the seed, as check #14 requires of
+    `sign`; a `did:key` naming another key fails verify-before-print, exit 1 with nothing on stdout.
+    Any other identifier prints; a verifier binds it only through the target record's own signing key
+    or a trust registry fetched from its declared URL.
+  - `view` and `verify` resolve carried lifecycle attestations with the record's own signing key, as
+    verify-core's `verifyLifecycleChain` now binds them: a node whose key is not bound stays in the
+    chain and does not move the record's status.
+
 ## 0.1.0 — 2026-09-26
 
 The first release (typedstandards#109): a command line over

@@ -6,6 +6,27 @@ references are to `npstorey/civic-ai-tools-website` (#119 is the offline-crypto
 hardening arc; #116 is the standalone-verifier arc this package was extracted
 in).
 
+## Unreleased
+
+- **A lifecycle attestation moves status only when its signing key is bound to the signer it names
+  (typedstandards#113).** `verifyLifecycleChain` takes an optional fourth argument, a
+  `LifecycleKeyBinding` (`targetPublicKey`, `registry`, `registryProvenance`), and a carried node
+  signer-matches only when its `signer.identifier` equals the target's and its key is bound:
+  - a key-derived identifier (`did:key:`) binds by derivation from the node's own public key, the rule
+    check #14 applies to a record;
+  - any other identifier binds when the node is signed by the target record's own key
+    (`targetPublicKey`), or when a registry fetched from its declared URL (`registryProvenance:
+    'declared-url'`) lists the node's `(kid, publicKey)` under that identifier, read by the rules of
+    checks #5 and #14. A registry carried in a bundle, or one with no stated provenance, never binds.
+
+  A node that is not bound stays in `chain` and does not move status. A caller that passes no binding
+  material gets a status moved only by `did:key` signers. `LifecycleAttestationView` gains an optional
+  `keyBound`, set by `verifyLifecycleChain`, and `CarriedLifecycleNode.signature` gains an optional
+  `kid`. `resolveLifecycleFromChain` is unchanged.
+- **On typedstandards.org** (the site's verifier; not part of this package's API): the carried lifecycle
+  chain is resolved with the record's own signing key, and with the trust registry only when it was
+  fetched from the record's declared URL.
+
 ## 0.12.0 — 2026-09-24
 
 The certificate-chain split (typedstandards#100, shipped in #106). **A minor bump** — `ChainFailReason`
