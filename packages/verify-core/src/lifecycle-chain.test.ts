@@ -71,7 +71,7 @@ function buildAttestation(opts: {
 }
 
 const resolve = (nodes: CarriedLifecycleNode[]) =>
-  verifyLifecycleChain(nodes, CONTENT_NODE_ID, PUBLISHER.identifier);
+  verifyLifecycleChain(nodes, CONTENT_NODE_ID, PUBLISHER.identifier, { targetPublicKey: rawToSpkiB64(ed25519.getPublicKey(SEED)) });
 
 test('a valid signed withdrawal resolves to withdrawn via the attestation chain', () => {
   const w = buildAttestation({ type: ATTESTATION_WITHDRAWS, createdAt: '2026-06-02T00:00:00.000Z', reason: 'superseded', effectiveAt: '2026-06-02T00:00:00.000Z' });

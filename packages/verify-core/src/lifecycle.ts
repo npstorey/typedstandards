@@ -23,6 +23,7 @@ import {
   LIFECYCLE_ATTESTATION_TYPES,
 } from './attestation.ts';
 import type { SignerIdentity } from './types.ts';
+import type { TrustRegistry, TrustRegistryProvenance } from './trust-registry.ts';
 
 export const LIFECYCLE_STATUSES = ['active', 'withdrawn'] as const;
 export type LifecycleStatus = (typeof LIFECYCLE_STATUSES)[number];
@@ -59,6 +60,10 @@ export interface LifecycleAttestationView {
   /** Publisher-only conformance (§8.12.3): the attestation's signer.identifier
    *  matches the target content node's signer.identifier. */
   signerMatchesTarget: boolean;
+  /** Set by `verifyLifecycleChain`: the node's signing key is bound to the
+   *  signer it names (see `LifecycleKeyBinding`). Absent on views built
+   *  elsewhere. */
+  keyBound?: boolean;
 }
 
 export interface LifecycleResolution {
@@ -204,10 +209,22 @@ export interface CarriedLifecycleNode {
   /** The stored nodeId (envelope hash) the recomputed hash must match. */
   nodeId: string;
   /** The signature envelope over the node (`{signature, publicKey, algorithm}`). */
-  signature?: { signature?: string; publicKey?: string; algorithm?: string } | null;
+  signature?: { signature?: string; publicKey?: string; algorithm?: string; kid?: string } | null;
   /** Presence flags (surfaced; per-attestation TSA/Rekor depth is a follow-up). */
   hasTimestamp?: boolean;
   hasRekor?: boolean;
+}
+
+/** What a caller holds that can bind a lifecycle attestation's signing key to
+ *  the signer it names (see `verifyLifecycleChain`). */
+export interface LifecycleKeyBinding {
+  /** The target record's own signing key (the base64 SPKI `publicKey` of its
+   *  signature envelope). */
+  targetPublicKey?: string;
+  /** A parsed trust registry. */
+  registry?: TrustRegistry;
+  /** Where `registry` came from. Absent is treated as `bundle`. */
+  registryProvenance?: TrustRegistryProvenance;
 }
 
 function pickString(v: unknown): string | undefined {
@@ -236,6 +253,7 @@ export function verifyLifecycleChain(
   carried: CarriedLifecycleNode[],
   contentNodeId: string,
   targetSignerIdentifier: string,
+  binding: LifecycleKeyBinding = {},
 ): LifecycleResolution {
   const views: LifecycleAttestationView[] = [];
   for (const entry of carried) {

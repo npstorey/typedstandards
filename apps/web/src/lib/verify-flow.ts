@@ -999,7 +999,11 @@ export function buildVerifyInput(
  * reachability). The target signer is the content node's `signer.identifier`; with
  * none, no attestation can signer-match, so the status honestly stays active.
  */
-export function resolveCarriedLifecycle(commitment: Commitment): LifecycleResolution | undefined {
+export function resolveCarriedLifecycle(
+  commitment: Commitment,
+  registry?: TrustRegistry,
+  registryProvenance?: TrustRegistryProvenance,
+): LifecycleResolution | undefined {
   const carried = commitment.lifecycleAttestations;
   if (!carried || carried.length === 0) return undefined;
   return verifyLifecycleChain(carried, commitment.packageHash, commitment.signer?.identifier ?? '');
