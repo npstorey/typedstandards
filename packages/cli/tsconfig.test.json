@@ -1,0 +1,13 @@
+{
+  // Type-check config for the CLI's TEST files (typedstandards#68): it extends the
+  // build config, emits nothing, and opts the tests back into Node's types. The
+  // build config, which the typecheck script also runs, holds shipped `src/` to
+  // the purity rule.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": ["node"]
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["dist", "node_modules"]
+}

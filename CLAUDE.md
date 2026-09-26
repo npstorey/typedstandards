@@ -1,9 +1,10 @@
 # CLAUDE.md
 
-Typed Standards monorepo: the spec site (`apps/web`, typedstandards.org) and the
+Typed Standards monorepo: the spec site (`apps/web`, typedstandards.org), the
 reference cores — `packages/verify-core` (the spec §9.2 verification suite) and
-`packages/produce-core` (the I/O-free producer core). npm workspaces; Node ≥ 22 at
-the root (packages support ≥ 18); `npm ci` at the **repo root** installs everything.
+`packages/produce-core` (the I/O-free producer core) — and `packages/cli`, the
+command line over both. npm workspaces; Node ≥ 22 at the root (the cores declare
+≥ 18, #110; the CLI ≥ 20.19); `npm ci` at the **repo root** installs everything.
 
 ## Build / test
 
@@ -34,10 +35,12 @@ differs from ci.yml's steps in either direction or in order.
 
 ## Purity discipline
 
-Both cores stay browser-safe and I/O-free in shipped `src/`; test files are exempt.
+Every published package stays browser-safe and I/O-free in shipped `src/` (the two
+cores and the CLI's command logic); test files are exempt. A Node program's I/O
+lives in one entry outside `src/` whose config the guard pins (#109).
 Enumerated rules and enforcement: [`.claude/rules/purity.md`](.claude/rules/purity.md).
-Don't weaken any of it — and a diff touching produce-core's ESLint config, or a core
-build config's `types`, must say so.
+Don't weaken any of it — and a diff touching produce-core's ESLint config, a build
+config's `types`, or the guard's `NODE_ENTRIES`, must say so.
 <!-- each is one of the three checks (typecheck, lint, browser-safety.test.ts), so a quiet edit there retires the rule it enforces -->
 
 ## Secret hygiene

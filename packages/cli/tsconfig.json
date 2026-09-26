@@ -1,0 +1,34 @@
+{
+  // Build config for the CLI's command logic, `src/` (typedstandards#109 G0 D1).
+  // It is held to the purity rule exactly as a core is: `"types": []`, so a
+  // `process` or `Buffer` read, or a Node built-in import, anywhere in `src/`
+  // fails `npm run typecheck`, and scripts/type-check-universe.test.mjs probes
+  // this config like the cores' build configs. Everything the commands need from
+  // the machine (the environment, file bytes, stdout, the clock) arrives through
+  // the `Io` object that `node/main.ts` builds.
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+
+    "declaration": true,
+    "declarationMap": false,
+    "sourceMap": false,
+    "outDir": "dist",
+    "rootDir": "src",
+
+    "strict": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "allowImportingTsExtensions": true,
+    "rewriteRelativeImportExtensions": true,
+    "forceConsistentCasingInFileNames": true,
+    "noUncheckedIndexedAccess": false,
+
+    // No ambient type packages: the purity rule (.claude/rules/purity.md).
+    "types": []
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["src/**/*.test.ts", "dist", "node_modules"]
+}

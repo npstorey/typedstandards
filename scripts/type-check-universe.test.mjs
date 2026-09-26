@@ -1,9 +1,11 @@
 // Guard: every test file in every workspace is type-checked by a config its
 // `typecheck` script runs, and no config that emits contains a test file
 // (typedstandards#68); and a published workspace's build configs resolve no
-// Node type definitions, so the typecheck enforces the purity rule (second
-// section below). Run: node --test scripts/type-check-universe.test.mjs
-// (after `npm run build`: the pack check needs each published `dist/`).
+// Node type definitions, so the typecheck enforces the purity rule, except the
+// pinned Node entries of #109, and a published package ships no script its
+// guarded configs did not emit (second section below). Run:
+// node --test scripts/type-check-universe.test.mjs
+// (after `npm run build`: the pack checks need each published `dist/`).
 //
 // WHAT WAS MEASURED. At 1d24991 both cores' build configs excluded
 // `src/**/*.test.ts` and each `typecheck` script ran only the build config, so
@@ -38,7 +40,7 @@ import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import { dirname, join, relative, resolve } from 'node:path';
+import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -200,13 +202,22 @@ test('#68: no config that emits contains a test file', () => {
   assert.deepEqual(offenders, [], 'an emitting config carries test files, which the published dist would then contain');
 });
 
+/** The paths `npm pack` would publish for a workspace, relative to it; one pack per workspace per run. */
+const packed = new Map();
+function packedFilesOf(dir) {
+  if (!packed.has(dir)) {
+    const r = spawnSync('npm', ['pack', '--dry-run', '--json'], { cwd: dir, encoding: 'utf8' });
+    assert.equal(r.status, 0, `npm pack --dry-run failed in ${rel(dir)}:\n${r.stderr}`);
+    packed.set(dir, JSON.parse(r.stdout)[0].files.map((f) => f.path));
+  }
+  return packed.get(dir);
+}
+
 test('#68: npm pack lists no test file for any published workspace', () => {
   const published = workspaceDirs().filter((d) => manifestOf(d).private !== true);
   assert.ok(published.length > 0, 'derived no published workspace');
   for (const dir of published) {
-    const r = spawnSync('npm', ['pack', '--dry-run', '--json'], { cwd: dir, encoding: 'utf8' });
-    assert.equal(r.status, 0, `npm pack --dry-run failed in ${rel(dir)}:\n${r.stderr}`);
-    const files = JSON.parse(r.stdout)[0].files.map((f) => f.path);
+    const files = packedFilesOf(dir);
     assert.ok(
       files.some((f) => f.startsWith('dist/') && f.endsWith('.js')),
       `${rel(dir)}: npm pack lists no dist/*.js, so this check could not see a test file; run npm run build first`,
@@ -234,7 +245,38 @@ test("#68: CI's typecheck step runs every workspace's typecheck script", () => {
 // browser-safety.test.ts checks imports and Buffer usage but not `process`: a
 // `process.env` read appended to verify-core/src/index.ts passed every CI step.
 //
-// Universe: every emitting config of every non-private (published) workspace.
+// Universe: every emitting config of every non-private (published) workspace,
+// less the pinned Node entries below.
+//
+// NODE ENTRIES (typedstandards#109 G0 D1). A published Node program keeps its
+// command logic in `src/`, under this rule and these probes like a core, and its
+// I/O in one entry built by a config of its own: the one kind of emitting config
+// of a published workspace that may load Node's types. Each pin names that config,
+// its program's source files exactly, and the Node built-ins those files may
+// import (plus the package's own `#` imports, which reach the pure build). A
+// second Node program joins by adding its config here, in the diff that adds it;
+// the set is asserted exactly, both ways. The entry itself is checked by its own
+// config's typecheck, not by the probes.
+//
+// And the gap this section had before #109: a published package could ship a
+// script outside every build config (a `bin/x.js` listed in `files`), and no
+// check read it. Every script `npm pack` would publish must now be the output
+// of one of the package's guarded configs.
+
+export const NODE_ENTRIES = {
+  'packages/cli/tsconfig.node.json': {
+    files: ['packages/cli/node/main.ts'],
+    builtins: ['node:fs', 'node:process', 'node:util'],
+  },
+};
+
+const isNodeEntry = (config) => Object.hasOwn(NODE_ENTRIES, rel(config));
+
+/** Where `tsc` writes a source file's JavaScript under `rootDir` and `outDir`. */
+export function emittedScriptOf(file, rootDir, outDir) {
+  const out = join(outDir, relative(rootDir, file));
+  return out.replace(/\.mts$/, '.mjs').replace(/\.cts$/, '.cjs').replace(/\.tsx?$/, '.js');
+}
 
 function emittingConfigsOfPublished() {
   const out = [];
@@ -276,8 +318,8 @@ test('purity: every config a published workspace builds with is also run by its 
   }
 });
 
-test('purity: no emitting config of a published workspace resolves Node type definitions', () => {
-  for (const { dir, config, ts, parsed } of emittingConfigsOfPublished()) {
+test('purity: no emitting config of a published workspace resolves Node type definitions, except a pinned Node entry', () => {
+  for (const { dir, config, ts, parsed } of emittingConfigsOfPublished().filter((c) => !isNodeEntry(c.config))) {
     assert.ok(parsed.fileNames.length > 0, `${rel(config)} compiles no file`);
     const program = ts.createProgram({ rootNames: parsed.fileNames, options: parsed.options });
     const nodeTypes = program
@@ -293,7 +335,15 @@ test('purity: no emitting config of a published workspace resolves Node type def
 });
 
 test('purity: a `process` read, a `Buffer` use, or a Node built-in import in shipped source is a type error', () => {
-  for (const { config, ts, parsed } of emittingConfigsOfPublished()) {
+  const probed = emittingConfigsOfPublished().filter((c) => !isNodeEntry(c.config));
+  // Every published workspace's source is probed: the cores' and a Node program's `src/`.
+  const published = workspaceDirs().filter((d) => manifestOf(d).private !== true);
+  assert.deepEqual(
+    published.filter((d) => !probed.some((c) => c.dir === d)).map(rel),
+    [],
+    'a published workspace has no probed build config',
+  );
+  for (const { config, ts, parsed } of probed) {
     const srcDir = parsed.options.rootDir ?? dirname(config);
 
     // Control: browser-safe code under the same options produces no diagnostic,
@@ -314,4 +364,68 @@ test('purity: a `process` read, a `Buffer` use, or a Node built-in import in shi
     assert.ok(onLine(2).some((d) => /'Buffer'/.test(d.text)), `${rel(config)}: a \`Buffer\` use type-checks: ${JSON.stringify(diagnostics)}`);
     assert.ok(onLine(3).some((d) => /'node:fs'/.test(d.text)), `${rel(config)}: a node:fs import type-checks: ${JSON.stringify(diagnostics)}`);
   }
+});
+
+test('extractor: emittedScriptOf maps a source file to the script tsc writes', () => {
+  assert.equal(emittedScriptOf('/w/src/a.ts', '/w/src', '/w/dist'), '/w/dist/a.js');
+  assert.equal(emittedScriptOf('/w/src/sub/b.mts', '/w/src', '/w/dist'), '/w/dist/sub/b.mjs');
+  assert.equal(emittedScriptOf('/w/node/main.ts', '/w/node', '/w/dist/bin'), '/w/dist/bin/main.js');
+  assert.equal(emittedScriptOf('/w/src/c.cts', '/w/src', '/w/dist'), '/w/dist/c.cjs');
+});
+
+function loadsNodeTypes(ts, parsed) {
+  const program = ts.createProgram({ rootNames: parsed.fileNames, options: parsed.options });
+  return program.getSourceFiles().some((sf) => resolve(sf.fileName).includes(`${join('node_modules', '@types', 'node')}/`));
+}
+
+test('purity (#109): the pinned Node entries are exactly the emitting configs of published workspaces that load Node types', () => {
+  const emitting = emittingConfigsOfPublished();
+  const loading = emitting.filter(({ ts, parsed }) => loadsNodeTypes(ts, parsed)).map((c) => rel(c.config)).sort();
+  assert.deepEqual(loading, Object.keys(NODE_ENTRIES).sort(), 'the Node-entry pins and the configs that load Node types differ');
+});
+
+test('purity (#109): a Node entry\'s program holds only its pinned files', () => {
+  for (const [config, pin] of Object.entries(NODE_ENTRIES)) {
+    const entry = emittingConfigsOfPublished().find((c) => rel(c.config) === config);
+    assert.ok(entry, `${config} is pinned but is not an emitting config of a published workspace`);
+    const program = entry.ts.createProgram({ rootNames: entry.parsed.fileNames, options: entry.parsed.options });
+    const sources = program
+      .getSourceFiles()
+      .map((sf) => resolve(sf.fileName))
+      .filter((f) => !f.includes(`${sep}node_modules${sep}`) && !f.endsWith('.d.ts'))
+      .map(rel)
+      .sort();
+    assert.deepEqual(sources, [...pin.files].sort(), `${config}: its program holds source files it does not pin`);
+  }
+});
+
+test('purity (#109): a Node entry imports only its pinned built-ins and its package\'s own # imports', () => {
+  for (const [config, pin] of Object.entries(NODE_ENTRIES)) {
+    const ts = createRequire(join(ROOT, config))('typescript');
+    for (const file of pin.files) {
+      const text = readFileSync(join(ROOT, file), 'utf8');
+      const specifiers = ts.preProcessFile(text, true, true).importedFiles.map((f) => f.fileName);
+      assert.ok(specifiers.length > 0, `${file}: read no import: the instrument saw nothing`);
+      const refused = specifiers.filter((s) => !pin.builtins.includes(s) && !s.startsWith('#'));
+      assert.deepEqual(refused, [], `${file} imports what its pin does not allow`);
+    }
+  }
+});
+
+test('purity (#109): every script a published package packs is emitted by one of its guarded configs', () => {
+  const published = workspaceDirs().filter((d) => manifestOf(d).private !== true);
+  let checked = 0;
+  for (const dir of published) {
+    const emitted = new Set();
+    for (const { parsed } of emittingConfigsOfPublished().filter((c) => c.dir === dir)) {
+      const { rootDir, outDir } = parsed.options;
+      assert.ok(rootDir && outDir, `${rel(dir)}: an emitting config without rootDir and outDir cannot be mapped`);
+      for (const f of parsed.fileNames) if (!f.endsWith('.d.ts')) emitted.add(emittedScriptOf(resolve(f), rootDir, outDir));
+    }
+    const scripts = packedFilesOf(dir).filter((f) => /\.[cm]?js$/.test(f));
+    assert.ok(scripts.length > 0, `${rel(dir)}: npm pack lists no script; run npm run build first`);
+    checked += scripts.length;
+    assert.deepEqual(scripts.filter((f) => !emitted.has(join(dir, f))), [], `${rel(dir)} would publish scripts no guarded config emitted`);
+  }
+  assert.ok(checked > 0, 'checked no packed script: the instrument saw nothing');
 });
