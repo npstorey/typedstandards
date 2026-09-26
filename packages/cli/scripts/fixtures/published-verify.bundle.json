@@ -1,0 +1,95 @@
+{
+  "protocolVersion": "0.1.0",
+  "packageHash": "376798c3c6efeb350eb05690b4f7c31ab40c8d6b7f5b2af254b2b1191f32be64",
+  "visibility": "public",
+  "captureMethod": "script-run",
+  "contentProfile": "default",
+  "producerProfile": "scripted-recomputation/example",
+  "type": "content/analysis/v1",
+  "signer": {
+    "bindingTier": "pseudonymous",
+    "displayName": "Example signer",
+    "identifier": "did:key:z6MktwupdmLXVVqTzCw4i46r4uGyosGXRnR3XjN4Zq7oMMsw"
+  },
+  "contentHash": {
+    "sha256": "c3a7a3179971da07f68856fdbef52343e5856a5036e034704e3438199b8338f3"
+  },
+  "contentCanonicalization": "https://typedstandards.org/canonicalization/raw-bytes/v1",
+  "signature": {
+    "signature": "ceI/p1MAI5H+NuHJuVumUkGUGeKabLIfQTk+V5RK4ZCE3MG991SfS06Up/7ltIuJ0C52jPS5hDGhQCIWw0sACQ==",
+    "publicKey": "MCowBQYDK2VwAyEA11qYAYKxCrfVS/7TyWQHOg7hcvPapiMlrwIaaPcHURo=",
+    "algorithm": "Ed25519ph",
+    "kid": "did:key:z6MktwupdmLXVVqTzCw4i46r4uGyosGXRnR3XjN4Zq7oMMsw"
+  },
+  "lifecycle": {
+    "status": "withdrawn",
+    "withdrawnAt": "2026-09-26T00:01:00.000Z",
+    "withdrawnReason": "An example withdrawal."
+  },
+  "lifecycleAttestations": [
+    {
+      "node": {
+        "metadata": {
+          "schemaVersion": "0.1.0",
+          "packageId": "a0b1c2d3-e4f5-4a6b-8c7d-9e0f1a2b3c4d",
+          "createdAt": "2026-09-26T00:01:00.000Z",
+          "signingKeyId": "did:key:z6MktwupdmLXVVqTzCw4i46r4uGyosGXRnR3XjN4Zq7oMMsw"
+        },
+        "type": "attestation/withdraws/v1",
+        "signer": {
+          "bindingTier": "pseudonymous",
+          "displayName": "Example signer",
+          "identifier": "did:key:z6MktwupdmLXVVqTzCw4i46r4uGyosGXRnR3XjN4Zq7oMMsw"
+        },
+        "targetNodeId": "376798c3c6efeb350eb05690b4f7c31ab40c8d6b7f5b2af254b2b1191f32be64",
+        "contentCanonicalization": "https://typedstandards.org/canonicalization/legacy-json/v1",
+        "reason": "An example withdrawal.",
+        "effectiveAt": "2026-09-26T00:01:00.000Z",
+        "contentHash": {
+          "sha256": "f727e96ba6360180011d6d96b0691bd5d0ebb5517300f8d95a974e1ee2489cee"
+        }
+      },
+      "nodeId": "4a887841de92f5cb04d365b8f43a6b2edc72bdc5bf3e5576f6c965bb98125530",
+      "signature": {
+        "signature": "raw4PoUjpDFWnh057kLciT1tVWc9B+8g4T2139C8T8I0bmtQ/wmyoUe33Ep3JjD0q0Ioo+6XJuCrS1kCu401Dg==",
+        "publicKey": "MCowBQYDK2VwAyEA11qYAYKxCrfVS/7TyWQHOg7hcvPapiMlrwIaaPcHURo=",
+        "algorithm": "Ed25519ph",
+        "kid": "did:key:z6MktwupdmLXVVqTzCw4i46r4uGyosGXRnR3XjN4Zq7oMMsw"
+      }
+    }
+  ],
+  "subjectTitle": "Published-verify fixture",
+  "package": {
+    "metadata": {
+      "schemaVersion": "0.1.0",
+      "packageId": "f1e2d3c4-b5a6-4978-8a6b-5c4d3e2f1a0b",
+      "createdAt": "2026-09-26T00:00:00.000Z",
+      "signingKeyId": "did:key:z6MktwupdmLXVVqTzCw4i46r4uGyosGXRnR3XjN4Zq7oMMsw",
+      "captureMethod": "script-run"
+    },
+    "producerProfile": "scripted-recomputation/example",
+    "type": "content/analysis/v1",
+    "signer": {
+      "bindingTier": "pseudonymous",
+      "displayName": "Example signer",
+      "identifier": "did:key:z6MktwupdmLXVVqTzCw4i46r4uGyosGXRnR3XjN4Zq7oMMsw"
+    },
+    "contentCanonicalization": "https://typedstandards.org/canonicalization/raw-bytes/v1",
+    "prompt": {
+      "hash": "0dfa4f0a728377ebc0ce7230cc574c23a85f2f9972376e055c0e6391afdfdbb3",
+      "visibility": "full_text",
+      "text": "Sign the file as the output of a scripted run."
+    },
+    "queries": [],
+    "dataSources": [],
+    "cost": {
+      "model": "none"
+    },
+    "skillMetadata": {},
+    "output": "An example record, signed with the RFC 8032 section 7.1 TEST 1 seed.\n",
+    "trace": {},
+    "contentHash": {
+      "sha256": "c3a7a3179971da07f68856fdbef52343e5856a5036e034704e3438199b8338f3"
+    }
+  }
+}
