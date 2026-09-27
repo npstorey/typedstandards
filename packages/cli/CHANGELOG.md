@@ -39,10 +39,13 @@ refer to the Typed Standards specification §9.2 verification sequence.
   non-empty strings; `path` and `ref` optional strings; any other key exits 2 naming it. A `vcsRef`
   on an input with no `type` exits 2. This replaces 0.1.0's refusal of `vcsRef` by name.
 - **`sign --output-file --output-url` under `raw-bytes/v1` (G0 D8).** A file signed by reference on
-  an input with a `type` is signed under `raw-bytes/v1` when the input names that rule or none;
-  `contentHash.sha256` is the hex of the BlobRef's `ref`, the file's SHA-256. 0.1.0 refused
-  `raw-bytes/v1` by reference and, with no rule named, signed the reference under produce-core's
-  default, `legacy-json/v1`. An input naming another rule keeps it.
+  an input with a `type` may name `raw-bytes/v1`, which 0.1.0 refused; `contentHash.sha256` is then
+  the hex of the BlobRef's `ref`, the file's SHA-256. An input naming another rule keeps it.
+- **Behaviour change from 0.1.0: the rule a file signed by reference defaults to.** In 0.1.0, a
+  typed input signed with `--output-file --output-url` and no `contentCanonicalization` was signed
+  under `legacy-json/v1`, produce-core's default. In 0.2.0 it defaults to `raw-bytes/v1`, as a file
+  signed inline does, so the same input and file produce a different envelope and envelope hash.
+  An input with no `type` is unchanged: it is signed on the legacy chain, which carries no rule.
 
 ## 0.1.0 — 2026-09-26
 

@@ -81,7 +81,9 @@ tests. The record's output comes from one of three places:
   `contentHash.sha256` is the hex of the BlobRef's `ref`, the file's SHA-256, as when
   it is signed inline. `verify --blob <path>` then checks the file's bytes against the
   reference. An input naming another rule keeps it, and an input with no `type` is
-  signed on the legacy chain, which carries no rule.
+  signed on the legacy chain, which carries no rule. This default is a change from
+  0.1.0, which signed a typed input by reference with no rule named under
+  `legacy-json/v1`.
 
 The CLI fills these fields only when the input omits them:
 

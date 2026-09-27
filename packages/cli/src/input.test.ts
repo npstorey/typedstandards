@@ -91,7 +91,7 @@ test('--output-file refuses: bytes that are not UTF-8, an input with no type, an
 });
 
 test('usage: no command, an unknown command and an unknown flag exit 2; --help and --version exit 0 on stdout', async () => {
-  for (const argv of [[], ['attest'], ['verify', '--input', 'x', '--strict']]) {
+  for (const argv of [[], ['no-such-command'], ['verify', '--input', 'x', '--strict']]) {
     const io = memoryIo();
     assert.equal(await run(argv, io), EXIT.usage, argv.join(' '));
     assert.deepEqual(io.out, []);
