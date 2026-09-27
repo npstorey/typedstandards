@@ -7,8 +7,27 @@ refer to the Typed Standards specification §9.2 verification sequence.
 
 - **`CommitmentLifecycle.status` widens to `'superseded'` (typedstandards#113, G0 D2)**, with optional
   `supersededAt` and `successorNodeId`, matching verify-core's lifecycle statuses.
-  `buildCommitmentView` carries the value verbatim, as before. `EmittableAttestationType` does not
-  change: `supersedes` and the claim-to-claim sub-types are still not emitted.
+  `buildCommitmentView` carries the value verbatim, as before. This change alone does not widen
+  `EmittableAttestationType`; the next entry does.
+- **`buildAttestationNode` emits `attestation/supersedes/v1`, `revises/v1`, `corroborates/v1` and
+  `contradicts/v1` (typedstandards#113, G0 D1-D4).** They join `EmittableAttestationType`, and their
+  URI constants (`ATTESTATION_SUPERSEDES`, `ATTESTATION_REVISES`, `ATTESTATION_CORROBORATES`,
+  `ATTESTATION_CONTRADICTS`) are re-exported from verify-core. The spec §8.12.1 payload fields are new
+  optional inputs, each emitted only when supplied: `successorNodeId` (supersedes, revises), `scope`
+  and `reasoning` (corroborates, contradicts). `scope` is a string; `reasoning` is a string or a JSON
+  object (new type `AttestationReasoning`), emitted verbatim. Required fields are not enforced here.
+  `attestation/endorses/v1` stays reserved.
+- **`vcsRef` (G0 D7; hub ADR-0016 §B).** `EnvelopeInput` and `RecordPackage` gain an optional
+  `vcsRef` (new type `VcsRef`: `repoUrl` and `commitSha`, `path` and `ref` optional). `buildEnvelope`
+  emits it verbatim as a top-level field after `signer`, on v0.1 envelopes only, so the envelope hash
+  and, under legacy-json/v1, the content hash cover it. An input with no `type` carrying `vcsRef`
+  throws.
+- **raw-bytes/v1 over a BlobRef (G0 D8; spec §8.2).** For a v0.1 input under raw-bytes/v1 whose
+  `output` is a BlobRef, `buildEnvelope` sets `contentHash.sha256` to the hex part of `output.ref`;
+  it threw before. A malformed reference, or an object `output` that is not a BlobRef, throws.
+- Inputs that supply none of these build byte-identical packages and nodes: `reference-golden.json`
+  and its suite are unchanged. New derived golden cases, hand-written from their spec rows, are in
+  `src/__fixtures__/derived-golden.json`.
 
 ## 0.7.0 — 2026-09-24
 

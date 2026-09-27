@@ -38,6 +38,8 @@ const ENVELOPE_FIELDS = {
   producerProfile: 'string',
   type: 'string',
   signer: 'object',
+  // Named here because EnvelopeInput has it; checkEnvelopeInput refuses it by name first.
+  vcsRef: 'object',
   contentCanonicalization: 'string',
   provenance: 'object',
   extensions: 'object',
