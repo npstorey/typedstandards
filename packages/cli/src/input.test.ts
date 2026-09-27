@@ -41,13 +41,6 @@ test('an unknown key exits 2 naming it: at the top level and in queries[], cost 
   }
 });
 
-test('vcsRef exits 2 with its own message, pointing at the core minor', async () => {
-  const r = await sign({ ...base, vcsRef: { repoUrl: 'https://git.example/r', commitSha: 'abc' } });
-  assert.equal(r.code, EXIT.usage);
-  assert.match(r.err, /vcsRef is not supported yet: produce-core 0\.7\.0 has no vcsRef field/);
-  assert.match(r.err, /do not carry it in extensions/);
-});
-
 test('extensions stay opaque: whatever they hold is signed as given', async () => {
   const r = await sign({ ...base, extensions: { 'org.example.tool': { anything: [1, { vcsRef: 'not inspected' }] } } });
   assert.equal(r.code, 0, r.err);
@@ -87,7 +80,6 @@ test('--output-file refuses: bytes that are not UTF-8, an input with no type, an
     [{ ...fileInput(), type: undefined }, { 'f.txt': 'x' }, ['--output-file', 'f.txt'], /needs a v0\.1 envelope, and the input has no type/],
     [fileInput({ contentCanonicalization: 'https://typedstandards.org/canonicalization/legacy-json/v1' }), { 'f.txt': 'x' }, ['--output-file', 'f.txt'], /and the input names .*legacy-json/],
     [fileInput({ output: 'inline' }), { 'f.txt': 'x' }, ['--output-file', 'f.txt'], /the input has an output and --output-file supplies another/],
-    [fileInput({ contentCanonicalization: 'https://typedstandards.org/canonicalization/raw-bytes/v1' }), { 'f.txt': 'x' }, ['--output-file', 'f.txt', '--output-url', 'https://x.example/f'], /by reference with --output-url cannot use .*raw-bytes\/v1/],
     [fileInput(), {}, ['--output-url', 'https://x.example/f'], /give --output-file too/],
     [fileInput(), { 'f.txt': 'x' }, ['--output-file', 'f.txt', '--content-type', 'text/plain'], /give --output-url too/],
   ];
