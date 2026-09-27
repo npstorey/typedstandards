@@ -33,9 +33,11 @@ in).
   `resolveLifecycleFromChain` and `checkAttestationNode` are unchanged.
 - **On typedstandards.org** (the site's verifier; not part of this package's API): the carried lifecycle
   chain is resolved with the record's own signing key, and with the trust registry only when it was
-  fetched from the record's declared URL. A carried lifecycle event that lacks a required payload field
-  adds one #10 line at `attention`, whose detail names the field, and the #10 row lists the event
-  under the fields it lacks.
+  fetched from the record's declared URL. A carried lifecycle event that names the record's signer and
+  lacks a required payload field adds one #10 line at `attention`, whose detail names the field, and
+  the #10 row lists the event under the fields it lacks. A third party's event that lacks one reads as
+  any third-party event does and adds no line (the owner's correction at the P5-fix gate, per G0 D6 as
+  corrected).
 - **`superseded` is a lifecycle status (typedstandards#113, G0 D2).** `LIFECYCLE_STATUSES` is
   `active`, `withdrawn`, `superseded`. `resolveLifecycleFromChain` reads the status from the latest
   signer-matched node among `withdraws`, `reinstates` and `supersedes`: a `supersedes` reads

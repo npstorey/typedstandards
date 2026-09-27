@@ -850,16 +850,31 @@ export const ATTESTATION_AUTHORIZATION_SIGNALS: Record<
 };
 
 // A carried lifecycle event that lacks a payload field the standard requires of its
-// sub-type (spec §8.12.1, §8.12.3; typedstandards#113, the P5 ruling on F1). It
-// stays in the chain and does not change the status; it reads attention, not alarm,
-// since nothing about its integrity or signature failed. The verifier's #10 line
-// names the fields (`lifecycleMissingFieldSignal` in verify-flow.ts); this is its
-// tier and label.
-export const LIFECYCLE_ATTESTATION_MISSING_FIELD: TrustSignalDescriptor = {
-  tier: 'attention',
-  label: 'Lifecycle event lacks a required field',
-  detail:
-    'The event lacks a field the standard requires of its sub-type, so it does not change the status.',
+// sub-type (spec §8.12.1, §8.12.3; typedstandards#113, the P5 ruling on F1, as the
+// owner corrected it at the P5-fix gate). It stays in the chain and does not change
+// the status. Keyed by whose event it is:
+//   - `names_publisher`: the event names the record's signer. Attention, not alarm,
+//     since nothing about its integrity or signature failed; the verifier's #10 line
+//     names the fields (`lifecycleMissingFieldSignal` in verify-flow.ts).
+//   - `other_signer`: a third party's event. Normal, as any third-party event reads
+//     (G0 D6 as corrected); the verifier adds no #10 line for it, so an incomplete
+//     event attached under another name cannot raise the record's headline.
+export const LIFECYCLE_ATTESTATION_MISSING_FIELD_SIGNALS: Record<
+  'names_publisher' | 'other_signer',
+  TrustSignalDescriptor
+> = {
+  names_publisher: {
+    tier: 'attention',
+    label: 'Lifecycle event lacks a required field',
+    detail:
+      'The event names the publisher but lacks a field the standard requires of its sub-type, so it does not change the status.',
+  },
+  other_signer: {
+    tier: 'normal',
+    label: 'Lifecycle event from a different signer lacks a required field',
+    detail:
+      'A third party’s event lacks a field the standard requires of its sub-type; like any third-party event, it does not change the status the publisher sets.',
+  },
 };
 
 export const LIFECYCLE_ATTESTATION_TIMESTAMP_SIGNALS: Record<BiStateKey, TrustSignalDescriptor> = {

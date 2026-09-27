@@ -116,11 +116,15 @@ const ATTESTATION_AUTHORIZATION: Record<AttestationAuthorizationStatus, Tier> = 
   node_id_mismatch: 'alarm',
 };
 
-// LIFECYCLE_ATTESTATION_MISSING_FIELD, trust-signal.ts (typedstandards#113, the P5
-// ruling on F1): a carried lifecycle node that lacks a payload field §8.12.1
-// requires of its sub-type. It does not move the status; each field it lacks reads
-// here, by name.
-const LIFECYCLE_MISSING_FIELD: Tier = 'attention';
+// LIFECYCLE_ATTESTATION_MISSING_FIELD_SIGNALS, trust-signal.ts (typedstandards#113,
+// the P5 ruling on F1 as the owner corrected it at the P5-fix gate): a carried
+// lifecycle node that lacks a payload field §8.12.1 requires of its sub-type. It
+// does not move the status; each field it lacks reads here, by name: attention on a
+// node naming the record's signer, normal on a third party's (G0 D6 as corrected).
+const LIFECYCLE_MISSING_FIELD = {
+  names_publisher: 'attention',
+  other_signer: 'normal',
+} as const satisfies Record<string, Tier>;
 
 // TYPE_RESOLUTION_SIGNALS, trust-signal.ts:839.
 const TYPE_RESOLUTION: Record<TypeResolutionStatus, Tier> = {
@@ -173,7 +177,7 @@ export const SITE_TABLES = {
   LIFECYCLE_ATTESTATION_NODE_ID_SIGNALS: LIFECYCLE_NODE_ID,
   LIFECYCLE_ATTESTATION_SIGNATURE_SIGNALS: LIFECYCLE_SIGNATURE,
   ATTESTATION_AUTHORIZATION_SIGNALS: ATTESTATION_AUTHORIZATION,
-  LIFECYCLE_ATTESTATION_MISSING_FIELD: LIFECYCLE_MISSING_FIELD,
+  LIFECYCLE_ATTESTATION_MISSING_FIELD_SIGNALS: LIFECYCLE_MISSING_FIELD,
   TYPE_RESOLUTION_SIGNALS: TYPE_RESOLUTION,
   SIGNER_IDENTITY_SIGNALS: SIGNER_IDENTITY,
   CAPTURE_METHOD_VOCAB_SIGNALS: CAPTURE_METHOD_VOCAB,
@@ -199,7 +203,9 @@ export interface ReadingTarget {
  * validly signed also gets a signer reading from verify-core's per-node check.
  * Each carried node in the result's lifecycle chain that lacks a payload field
  * §8.12.1 requires of its sub-type gets one reading per field, named in the field
- * (`missingFields`, which `verifyLifecycleChain` records on the node's view).
+ * (`missingFields`, which `verifyLifecycleChain` records on the node's view):
+ * attention when the node names the record's signer (`namesTarget`), normal on a
+ * third party's.
  */
 export function readingsOf(
   result: VerifyResult,
@@ -244,10 +250,12 @@ export function readingsOf(
       add('#10', `${field}.signer`, check.status, ATTESTATION_AUTHORIZATION[check.status]);
     }
     // A node in the chain that lacks a required payload field does not move the
-    // status (§8.12.3); each field it lacks reads attention, by name.
+    // status (§8.12.3); each field it lacks reads by name, at attention when the node
+    // names the record's signer and at normal on a third party's.
     const view = (result.lifecycle?.chain ?? []).find((v) => v.nodeId === entry.nodeId);
+    const missingTier = LIFECYCLE_MISSING_FIELD[view?.namesTarget === true ? 'names_publisher' : 'other_signer'];
     for (const missing of view?.missingFields ?? []) {
-      add('#10', `${field}.${missing}`, 'missing_required_field', LIFECYCLE_MISSING_FIELD);
+      add('#10', `${field}.${missing}`, 'missing_required_field', missingTier);
     }
   });
   if (result.typeResolution) add('#12', 'typeResolution', result.typeResolution.status, TYPE_RESOLUTION[result.typeResolution.status]);
