@@ -6,7 +6,12 @@ references are to `npstorey/civic-ai-tools-website` (#119 is the offline-crypto
 hardening arc; #116 is the standalone-verifier arc this package was extracted
 in).
 
-## Unreleased
+## 0.13.0 — 2026-09-27
+
+The core-minors release (typedstandards#113, shipped in #114, #115 and #118). **A minor bump** —
+`LIFECYCLE_STATUSES` gains `superseded`, so a consumer with an exhaustive `switch` or `Record` over
+`LifecycleStatus` needs the new case, and `verifyLifecycleChain` now moves status only on a node
+whose key is bound to the signer it names and that carries its required fields.
 
 - **A lifecycle attestation moves status only when its signing key is bound to the signer it names
   (typedstandards#113).** `verifyLifecycleChain` takes an optional fourth argument, a

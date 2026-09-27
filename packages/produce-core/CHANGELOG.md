@@ -3,7 +3,12 @@
 Factual record of what changed per published version. Check numbers (#1–#16)
 refer to the Typed Standards specification §9.2 verification sequence.
 
-## Unreleased
+## 0.8.0 — 2026-09-27
+
+The core-minors release (typedstandards#113, shipped in #115 and #116). **A minor bump** — four more
+attestation sub-types are emittable, `EnvelopeInput` gains `vcsRef`, raw-bytes/v1 signs over a
+BlobRef, and `CommitmentLifecycle.status` gains `superseded`. It depends on
+`@typedstandards/verify-core` `^0.13.0`.
 
 - **`CommitmentLifecycle.status` widens to `'superseded'` (typedstandards#113, G0 D2)**, with optional
   `supersededAt` and `successorNodeId`, matching verify-core's lifecycle statuses.

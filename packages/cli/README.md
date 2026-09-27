@@ -266,9 +266,9 @@ in GitHub Actions:
   env:
     TYPEDSTANDARDS_SIGNING_SEED_B64: ${{ secrets.TYPEDSTANDARDS_SIGNING_SEED_B64 }}
   run: |
-    npx --yes @typedstandards/cli@0.1.0 sign --input record.json --output-file analysis.ipynb > signed.json
-    npx --yes @typedstandards/cli@0.1.0 view --signed signed.json --visibility public > bundle.json
-    npx --yes @typedstandards/cli@0.1.0 verify --input bundle.json
+    npx --yes @typedstandards/cli@0.2.0 sign --input record.json --output-file analysis.ipynb > signed.json
+    npx --yes @typedstandards/cli@0.2.0 view --signed signed.json --visibility public > bundle.json
+    npx --yes @typedstandards/cli@0.2.0 verify --input bundle.json
 ```
 
 A checked-in input template plus the file's bytes describe the record fully. Pin the

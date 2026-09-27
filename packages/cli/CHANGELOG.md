@@ -3,7 +3,12 @@
 Factual record of what changed per published version. Check numbers (#1–#16)
 refer to the Typed Standards specification §9.2 verification sequence.
 
-## Unreleased
+## 0.2.0 — 2026-09-27
+
+The core-minors release (typedstandards#113, shipped in #114, #115, #116, #117 and #118). **A minor
+bump** — `attest`, `view --attestation`, `vcsRef` and raw-bytes/v1 by reference, over
+`@typedstandards/produce-core` `^0.8.0` and `@typedstandards/verify-core` `^0.13.0`. One behaviour
+change from 0.1.0, the rule a file signed by reference defaults to, is recorded below.
 
 - **A lifecycle attestation moves status only when its signing key is bound to the signer it names
   (typedstandards#113).**
