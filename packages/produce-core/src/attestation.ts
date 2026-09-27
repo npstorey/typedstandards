@@ -15,11 +15,12 @@
 // Determinism inputs (`packageId`, `createdAt`, `signingKeyId`) are
 // caller-supplied — no RNG, no clock, no active-key probe in the core.
 
-// Lifecycle sub-type URIs are defined once in verify-core (the verify side
-// dispatches on them); imported for the builder body and re-exported so a
-// producer needs a single import. `supersedes` and the claim-to-claim
-// sub-types remain reserved name-only — nothing here emits them until an
-// adopter needs them.
+// The URIs of the sub-types verify-core checks (the withdraws/reinstates pair,
+// `supersedes`, `revises`, `corroborates`, `contradicts`) are defined once in
+// verify-core, which dispatches on them; imported for the builder body and
+// re-exported so a producer needs a single import. `endorses` stays reserved
+// name-only: nothing here emits it until the spec defines its role check
+// (typedstandards#113 G0 D1).
 import {
   ATTESTATION_WITHDRAWS,
   ATTESTATION_REINSTATES,
@@ -47,10 +48,11 @@ export {
 };
 
 // Publication-pair sub-types (spec §8.10, §8.12.1). Defined here (not in
-// verify-core) because lifecycle STATUS resolution intentionally ignores them
-// — verify-core's `resolveLifecycleFromChain` filters to
-// withdraws/reinstates; publishes/locatedAt express the visibility dimension,
-// which surfaces read directly from the chain.
+// verify-core) because lifecycle resolution does not read them: verify-core's
+// `resolveLifecycleFromChain` keeps withdraws, reinstates, supersedes and
+// revises in the chain and reads the status from the first three only;
+// publishes/locatedAt express the visibility dimension, which surfaces read
+// directly from the chain.
 export const ATTESTATION_PUBLISHES = 'attestation/publishes/v1';
 export const ATTESTATION_LOCATED_AT = 'attestation/locatedAt/v1';
 
@@ -60,8 +62,9 @@ export const ATTESTATION_LOCATED_AT = 'attestation/locatedAt/v1';
 // (spec §8.5), NOT duplicated in the payload.
 export const ATTESTATION_EVALUATES = 'attestation/evaluates/v1';
 
-/** The sub-types this builder can emit: the verify-core lifecycle pair, the
- *  publication pair, and the adversarial evaluation. */
+/** The sub-types this builder can emit: the verify-core lifecycle pair,
+ *  `supersedes` and `revises`, the claim-to-claim `corroborates` and
+ *  `contradicts`, the publication pair, and the adversarial evaluation. */
 export type EmittableAttestationType =
   | LifecycleAttestationType
   | typeof ATTESTATION_SUPERSEDES
@@ -239,6 +242,14 @@ export function buildAttestationNode(
     ...(input.methodology !== undefined ? { methodology: input.methodology } : {}),
     ...(input.scoringRubric !== undefined ? { scoringRubric: input.scoringRubric } : {}),
     ...(input.results !== undefined ? { results: input.results } : {}),
+    // `supersedes` / `revises` payload (§8.12.1): the successor node.
+    ...(input.successorNodeId !== undefined
+      ? { successorNodeId: input.successorNodeId }
+      : {}),
+    // `corroborates` / `contradicts` payload (§8.12.1): scope + optional
+    // reasoning, a string or a JSON object, emitted verbatim.
+    ...(input.scope !== undefined ? { scope: input.scope } : {}),
+    ...(input.reasoning !== undefined ? { reasoning: input.reasoning } : {}),
   };
 
   const contentHash = {

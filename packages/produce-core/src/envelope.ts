@@ -27,8 +27,11 @@
 
 import {
   LEGACY_JSON_CANONICALIZATION,
+  RAW_BYTES_CANONICALIZATION,
   computeContentHashSha256,
   computeEnvelopeHash,
+  isBlobRef,
+  parseBlobRef,
   sha256Hex,
   type BlobRef,
   type SignerIdentity,
@@ -284,6 +287,11 @@ type _EvidencePackageAliasHolds = AssertTrue<
  * BlobRef fields (`trace`, `output`, `skillMetadata.skillText`) are passed
  * through unchanged; the core never downloads them, so the package commits to
  * the reference object while the content stays wherever the caller stored it.
+ * Under raw-bytes/v1 a BlobRef `output` sets `contentHash.sha256` to the hex
+ * part of `output.ref` (spec §8.2), and a malformed reference throws.
+ *
+ * `vcsRef` (hub ADR-0016 §B) is emitted verbatim on v0.1 envelopes only; a
+ * legacy input (no `type`) carrying it throws.
  *
  * Byte-compat discipline (the refactor-safety bar): conditional spreads keep
  * inputs that omit optional labels byte-identical to the pre-label envelope
@@ -321,6 +329,18 @@ export function buildEnvelope(
   const contentCanonicalization =
     input.contentCanonicalization ?? LEGACY_JSON_CANONICALIZATION;
 
+  // vcsRef rides the JCS chain only (typedstandards#113 G0 D7): spec §8.2
+  // names it among the JCS-canonicalized envelope fields and says nothing of
+  // the legacy `JSON.stringify` chain, so a legacy input carrying it is refused
+  // rather than signed on a chain the spec does not cover.
+  if (input.vcsRef !== undefined && !isV01Envelope) {
+    throw new Error(
+      'vcsRef is emitted on v0.1 envelopes only (hub ADR-0016 §B, spec §8.2): ' +
+        'the input has no type, so it would be signed on the legacy chain. ' +
+        'Give a type, or omit vcsRef',
+    );
+  }
+
   const pkgBase: RecordPackage = {
     metadata: {
       schemaVersion: PACKAGE_SCHEMA_VERSION,
@@ -342,6 +362,9 @@ export function buildEnvelope(
     ...(input.producerProfile ? { producerProfile: input.producerProfile } : {}),
     ...(input.type ? { type: input.type } : {}),
     ...(input.signer ? { signer: input.signer } : {}),
+    // Version-control reference (hub ADR-0016 §B), verbatim; v0.1 only (the
+    // legacy case threw above).
+    ...(input.vcsRef !== undefined ? { vcsRef: input.vcsRef } : {}),
     // v0.1 content-canonicalization rule URI (spec §8.2), gated on the v0.1
     // discriminator so pre-v0.1 callers stay byte-identical. `contentHash` is
     // computed from this base object below and spread on last — it cannot be
@@ -391,10 +414,7 @@ export function buildEnvelope(
     ? {
         ...pkgBase,
         contentHash: {
-          sha256: computeContentHashSha256(
-            pkgBase as unknown as Record<string, unknown>,
-            contentCanonicalization,
-          ),
+          sha256: contentHashSha256(pkgBase, contentCanonicalization),
         },
       }
     : pkgBase;
@@ -407,4 +427,31 @@ export function buildEnvelope(
   );
 
   return { pkg, envelopeHash };
+}
+
+/**
+ * The v0.1 `contentHash.sha256` under the package's rule (spec §8.2). Every rule
+ * goes through verify-core's `computeContentHashSha256`, the one the verifier
+ * uses, except raw-bytes/v1 over a BlobRef `output`: the bytes are not in the
+ * package, and spec §8.2 (SPEC:565) requires `contentHash.sha256` to equal the
+ * hex part of `output.ref`, which already names their SHA-256. verify-core's
+ * function keeps its documented throw for that case; check #4 fetches the bytes.
+ */
+function contentHashSha256(pkgBase: RecordPackage, rule: string): string {
+  const output: unknown = pkgBase.output;
+  if (rule === RAW_BYTES_CANONICALIZATION && typeof output !== 'string') {
+    // A malformed reference throws here, with parseBlobRef's message.
+    if (typeof output === 'object' && output !== null) {
+      const ref = (output as { ref?: unknown }).ref;
+      if (typeof ref === 'string') parseBlobRef(ref);
+    }
+    if (!isBlobRef(output)) {
+      throw new Error(
+        'raw-bytes/v1 needs output to be an inline string or a BlobRef (spec §8.2): ' +
+          'an object output must carry ref, url, contentType and size',
+      );
+    }
+    return parseBlobRef(output.ref).hash;
+  }
+  return computeContentHashSha256(pkgBase as unknown as Record<string, unknown>, rule);
 }
