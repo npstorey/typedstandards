@@ -849,6 +849,19 @@ export const ATTESTATION_AUTHORIZATION_SIGNALS: Record<
   },
 };
 
+// A carried lifecycle event that lacks a payload field the standard requires of its
+// sub-type (spec §8.12.1, §8.12.3; typedstandards#113, the P5 ruling on F1). It
+// stays in the chain and does not change the status; it reads attention, not alarm,
+// since nothing about its integrity or signature failed. The verifier's #10 line
+// names the fields (`lifecycleMissingFieldSignal` in verify-flow.ts); this is its
+// tier and label.
+export const LIFECYCLE_ATTESTATION_MISSING_FIELD: TrustSignalDescriptor = {
+  tier: 'attention',
+  label: 'Lifecycle event lacks a required field',
+  detail:
+    'The event lacks a field the standard requires of its sub-type, so it does not change the status.',
+};
+
 export const LIFECYCLE_ATTESTATION_TIMESTAMP_SIGNALS: Record<BiStateKey, TrustSignalDescriptor> = {
   true: { tier: 'verified', label: 'Lifecycle event timestamped' },
   false: {

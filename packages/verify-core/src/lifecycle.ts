@@ -69,9 +69,11 @@ export interface LifecycleAttestationView {
   /** Rekor inclusion-proof entry present (presence only; per-attestation Rekor
    *  cryptographic verification is a follow-up). */
   hasRekor: boolean;
-  /** Publisher-only conformance (§8.12.3): the attestation's signer.identifier
-   *  matches the target content node's signer.identifier. On a view built by
-   *  `verifyLifecycleChain`, it also requires `keyBound`. */
+  /** Whether the node counts toward the status (§8.12.3). The attestation's
+   *  signer.identifier matches the target content node's signer.identifier. On a
+   *  view built by `verifyLifecycleChain`, it also requires `keyBound`, and that the
+   *  node carries every payload field §8.12.1 requires of its sub-type
+   *  (`missingFields` empty): §8.12.3's conformance covers the payload fields. */
   signerMatchesTarget: boolean;
   /** Set by `verifyLifecycleChain`: the node's signing key is bound to the
    *  signer it names (see `verifyLifecycleChain`). Absent on views built
@@ -80,6 +82,11 @@ export interface LifecycleAttestationView {
   /** Set by `verifyLifecycleChain`: the node's `signer.identifier` equals the
    *  target's, whether or not its key is bound. Absent on views built elsewhere. */
   namesTarget?: boolean;
+  /** Set by `verifyLifecycleChain`: each payload field §8.12.1 requires of the
+   *  node's sub-type (`ATTESTATION_REQUIRED_FIELDS`) that the node lacks (absent,
+   *  null or the empty string), by name; empty when it lacks none. A node that
+   *  lacks one does not count toward the status. Absent on views built elsewhere. */
+  missingFields?: string[];
 }
 
 export interface LifecycleResolution {
@@ -351,6 +358,10 @@ function isKeyBound(
  * Each view records `namesTarget` (the identifiers are equal) beside `keyBound`, so a
  * reader can tell a third party's node from one that names the publisher under a key
  * not bound to it.
+ * A surviving node that lacks a payload field §8.12.1 requires of its sub-type
+ * (§8.12.3; `ATTESTATION_REQUIRED_FIELDS`, absent, null or the empty string) is not
+ * signer-matched either, whoever signed it: it stays in the chain, names the fields
+ * in `missingFields`, and does not move the status.
  * Surviving nodes go to `resolveLifecycleFromChain`, which applies the §8.10.3
  * retention asymmetry (a valid but non-signer-matched attestation is surfaced in the
  * chain yet does NOT move the publisher's status).
@@ -379,9 +390,11 @@ export function verifyLifecycleChain(
       binding,
     );
     const namesTarget = !!signer && signer.identifier === targetSignerIdentifier;
+    const type = pickString(entry.node['type']) ?? '';
+    const missingFields = missingRequiredFields(entry.node, type);
     views.push({
       nodeId: entry.nodeId,
-      type: pickString(entry.node['type']) ?? '',
+      type,
       signer,
       createdAt: pickString(metadata?.['createdAt']) ?? '',
       reason: pickString(entry.node['reason']),
@@ -392,9 +405,10 @@ export function verifyLifecycleChain(
       nodeIdMatches: verdict.nodeIdMatches,
       hasTimestamp: !!entry.hasTimestamp,
       hasRekor: !!entry.hasRekor,
-      signerMatchesTarget: namesTarget && keyBound,
+      signerMatchesTarget: namesTarget && keyBound && missingFields.length === 0,
       keyBound,
       namesTarget,
+      missingFields,
     });
   }
   return resolveLifecycleFromChain(views);
@@ -498,6 +512,11 @@ function isAbsent(v: unknown): boolean {
   return v === undefined || v === null || v === '';
 }
 
+/** Each payload field §8.12.1 requires of `type` that `node` lacks, by name. */
+function missingRequiredFields(node: Record<string, unknown>, type: string): string[] {
+  return (ATTESTATION_REQUIRED_FIELDS[type] ?? []).filter((f) => isAbsent(node[f]));
+}
+
 /**
  * Check one `attestation/*` node on its own (spec §8.12.3), for `withdraws`,
  * `reinstates`, `supersedes`, `revises`, `corroborates` and `contradicts`, in
@@ -525,7 +544,7 @@ export function checkAttestationNode(
   const type = pickString(node['type']) ?? '';
   const rule = ATTESTATION_AUTHORIZATION_RULES[type] ?? null;
   const verdict = verifyAttestationNode(node, carried.nodeId, carried.signature ?? null);
-  const missingFields = (ATTESTATION_REQUIRED_FIELDS[type] ?? []).filter((f) => isAbsent(node[f]));
+  const missingFields = missingRequiredFields(node, type);
   const publicKey = carried.signature?.publicKey ?? '';
   const signed = verdict.nodeIdMatches && verdict.signatureValid === true;
   const keyBound =
