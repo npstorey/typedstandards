@@ -4,9 +4,14 @@
 // a host decides (visibility, locations, a title). Under a self-certifying signer
 // (a did:key at bindingTier "pseudonymous") trustRegistryUrl may be omitted, and
 // produce-core then checks the identifier against the signature's key.
+//
+// `--attestation` carries any lifecycle node (`withdraws`, `reinstates`,
+// `supersedes`, `revises`) into `lifecycleAttestations`; `--withdrawal` is its
+// alias (typedstandards#113 G0 D10). This version carries no claim-to-claim node in
+// a view (G0 D6), so `corroborates`, `contradicts` and `endorses` are refused.
 
 import { buildCommitmentView, type CommitmentLifecycle, type SignerIdentity } from '@typedstandards/produce-core';
-import { verifyLifecycleChain } from '@typedstandards/verify-core';
+import { ATTESTATION_CONTRADICTS, ATTESTATION_CORROBORATES, verifyLifecycleChain } from '@typedstandards/verify-core';
 import { CliError, EXIT, usageError } from './errors.ts';
 import { isObject, readJson, type JsonObject } from './input.ts';
 import type { Io } from './io.ts';
@@ -14,6 +19,7 @@ import { checkCarriedNode, checkSignedDocument, failureSummary, reportVerdict, v
 
 export const VIEW_OPTIONS = {
   signed: { type: 'string' },
+  attestation: { type: 'string', multiple: true },
   withdrawal: { type: 'string', multiple: true },
   visibility: { type: 'string' },
   'trust-registry-url': { type: 'string' },
@@ -23,6 +29,7 @@ export const VIEW_OPTIONS = {
 
 export interface ViewValues {
   signed?: string;
+  attestation?: string[];
   withdrawal?: string[];
   visibility?: string;
   'trust-registry-url'?: string;
@@ -32,20 +39,32 @@ export interface ViewValues {
 
 const optionalString = (v: unknown): string | undefined => (typeof v === 'string' ? v : undefined);
 
+// The claim-to-claim sub-types (spec §8.12.1), which a view does not carry.
+const CLAIM_TO_CLAIM = [ATTESTATION_CORROBORATES, ATTESTATION_CONTRADICTS, 'attestation/endorses/v1'];
+
 export async function viewCommand(values: ViewValues, io: Io): Promise<JsonObject> {
   if (values.signed === undefined) throw usageError('--signed is required: a file sign printed');
   if (values.visibility === undefined || values.visibility === '') {
     throw usageError('--visibility is required (for example public or sealed); a view states its disclosure state and it is never defaulted');
   }
   const signed = checkSignedDocument(readJson(io, values.signed, '--signed'), '--signed');
-  const carried = (values.withdrawal ?? []).map((path) => checkCarriedNode(readJson(io, path, '--withdrawal'), `--withdrawal ${path}`));
-  carried.forEach((c) => {
-    if (c.node['targetNodeId'] !== signed.envelopeHash) {
-      throw usageError(`a --withdrawal targets ${String(c.node['targetNodeId'])}, not this record (${signed.envelopeHash})`);
+  const given = [
+    ...(values.withdrawal ?? []).map((path) => ({ flag: '--withdrawal', path })),
+    ...(values.attestation ?? []).map((path) => ({ flag: '--attestation', path })),
+  ];
+  const carried = given.map(({ flag, path }) => {
+    const c = checkCarriedNode(readJson(io, path, flag), `${flag} ${path}`);
+    const type = c.node['type'];
+    if (typeof type === 'string' && CLAIM_TO_CLAIM.includes(type)) {
+      throw usageError(`${flag} ${path} is an ${type}, a claim-to-claim node: this version carries none in a view (typedstandards#113 G0 D6)`);
     }
+    if (c.node['targetNodeId'] !== signed.envelopeHash) {
+      throw usageError(`a ${flag} targets ${String(c.node['targetNodeId'])}, not this record (${signed.envelopeHash})`);
+    }
+    return c;
   });
 
-  // A host serves only a record that verifies, with withdrawals that verify.
+  // A host serves only a record that verifies, with lifecycle nodes that verify.
   const verdict = await verifyOffline(io, { package: signed.package, packageHash: signed.envelopeHash, signature: signed.signature, carried });
   if (!verdict.ok || verdict.checks.envelopeIntegrity.status !== 'verified' || verdict.checks.signatureValid !== true) {
     reportVerdict(io, 'view', verdict);

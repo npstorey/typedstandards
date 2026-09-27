@@ -13,7 +13,7 @@ export type ParseArgs = (config: {
 }) => { values: Record<string, string | boolean | Array<string | boolean> | undefined> };
 
 export interface Io {
-  /** The environment. The CLI reads one variable from it, in `sign` and `withdraw` only. */
+  /** The environment. The CLI reads one variable from it, in `sign`, `withdraw` and `attest` only. */
   env: Readonly<Record<string, string | undefined>>;
   /** A file's bytes; `-` is standard input. Throws when the file cannot be read. */
   readFile(path: string): Uint8Array;

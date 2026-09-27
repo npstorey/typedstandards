@@ -31,24 +31,19 @@ export interface SignValues {
 }
 
 /**
- * The file's bytes as `output`: inline UTF-8 text under raw-bytes/v1, or, when a
- * URL is given, a BlobRef to them under the input's own rule. produce-core 0.7.0
- * computes a raw-bytes/v1 content hash only over an inline string ("raw-bytes/v1
- * content hash over a package alone requires an inline string output"), so a
- * referenced file is covered by the rule that fingerprints the envelope, which
- * carries the BlobRef and with it the file's SHA-256.
+ * The file's bytes as `output`: inline UTF-8 text, or, when a URL is given, a
+ * BlobRef to them whose `ref` is their SHA-256. Inline, the rule is raw-bytes/v1.
+ * By reference, a v0.1 input may name raw-bytes/v1 or leave the rule unnamed, and
+ * it then defaults to raw-bytes/v1 too: produce-core sets `contentHash.sha256` to
+ * the hex of `output.ref` (spec §8.2; typedstandards#113 G0 D8), the file's
+ * SHA-256 either way. An input naming another rule keeps it, and a legacy input
+ * (no `type`) carries no rule.
  */
 function outputFromFile(io: Io, values: SignValues, input: JsonObject): { output: string | BlobRef; bytes: Uint8Array; inline: boolean } {
   const path = values['output-file'] as string;
   const url = values['output-url'];
   const rule = input['contentCanonicalization'];
   if (url !== undefined) {
-    if (rule === RAW_BYTES_CANONICALIZATION) {
-      throw usageError(
-        `a file signed by reference with --output-url cannot use ${RAW_BYTES_CANONICALIZATION}: produce-core computes that rule only over inline text. ` +
-          'Omit contentCanonicalization, or sign the file inline without --output-url',
-      );
-    }
     const bytes = readBytes(io, path, '--output-file');
     return {
       output: { ref: `blob:sha256:${sha256Hex(bytes)}`, url, contentType: values['content-type'] ?? 'application/octet-stream', size: bytes.length },
@@ -106,7 +101,11 @@ export async function signCommand(values: SignValues, io: Io): Promise<JsonObjec
       signingKeyId: input['signingKeyId'] ?? identifier,
       ...(isObject(signer) && !('identifier' in signer) ? { signer: { ...signer, identifier } } : {}),
       ...(fromFile ? { output: fromFile.output } : {}),
-      ...(fromFile?.inline ? { contentCanonicalization: RAW_BYTES_CANONICALIZATION } : {}),
+      // A file's bytes are signed under raw-bytes/v1 unless the input names a rule;
+      // outputFromFile has refused any other rule for a file signed inline.
+      ...(fromFile && typeof input['type'] === 'string' && input['contentCanonicalization'] === undefined
+        ? { contentCanonicalization: RAW_BYTES_CANONICALIZATION }
+        : {}),
     } as unknown as EnvelopeInput;
     let built: ReturnType<typeof buildEnvelope>;
     try {

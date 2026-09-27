@@ -22,6 +22,30 @@ refer to the Typed Standards specification §9.2 verification sequence.
   `publisher_key_unbound`, an event naming the record's signer under a key not bound to it
   (attention, printed on stderr, exit 0). The tiers are copied from typedstandards.org's
   `ATTESTATION_AUTHORIZATION_SIGNALS`.
+- **`attest --input <file|->` (typedstandards#113, G0 D10 as corrected)** signs an
+  `attestation/supersedes/v1`, `revises/v1`, `corroborates/v1` or `contradicts/v1` from one JSON
+  object: `type`, `targetNodeId`, `signer` and the type's §8.12.1 payload (`successorNodeId`; or
+  `scope` and an optional `reasoning`, a string or an object). Each type takes only its own fields,
+  and any other key exits 2 naming it; `withdraws` stays `withdraw`'s, and `endorses` is refused
+  (G0 D1). It fills `packageId`, `createdAt`, `signingKeyId` and `signer.identifier` as `withdraw`
+  does, and verifies the node with verify-core's `checkAttestationNode` before printing
+  `{node, nodeId, signature}`: integrity and the signature must hold, and a `did:key` identifier the
+  seed does not derive exits 1 with nothing on stdout. A reading other than `authorized` prints on
+  stderr at its tier and exits 0.
+- **`view --attestation <file>...`** carries any lifecycle node (`withdraws`, `reinstates`,
+  `supersedes`, `revises`) into `lifecycleAttestations`. `--withdrawal` stays as an alias, and both
+  may be given together. A `corroborates` or `contradicts` node given to either exits 2 (G0 D6).
+- **`sign` signs `vcsRef` (G0 D7)** on an input with a `type`: `repoUrl` and `commitSha` required,
+  non-empty strings; `path` and `ref` optional strings; any other key exits 2 naming it. A `vcsRef`
+  on an input with no `type` exits 2. This replaces 0.1.0's refusal of `vcsRef` by name.
+- **`sign --output-file --output-url` under `raw-bytes/v1` (G0 D8).** A file signed by reference on
+  an input with a `type` may name `raw-bytes/v1`, which 0.1.0 refused; `contentHash.sha256` is then
+  the hex of the BlobRef's `ref`, the file's SHA-256. An input naming another rule keeps it.
+- **Behaviour change from 0.1.0: the rule a file signed by reference defaults to.** In 0.1.0, a
+  typed input signed with `--output-file --output-url` and no `contentCanonicalization` was signed
+  under `legacy-json/v1`, produce-core's default. In 0.2.0 it defaults to `raw-bytes/v1`, as a file
+  signed inline does, so the same input and file produce a different envelope and envelope hash.
+  An input with no `type` is unchanged: it is signed on the legacy chain, which carries no rule.
 
 ## 0.1.0 — 2026-09-26
 

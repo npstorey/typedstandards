@@ -1,6 +1,6 @@
 # @typedstandards/cli
 
-Sign, withdraw, build a commitment view for, and verify
+Sign, withdraw, attest to, build a commitment view for, and verify
 [Typed Standards](https://typedstandards.org) records from the command line. It is a
 thin program over the two reference cores, [`@typedstandards/produce-core`](https://www.npmjs.com/package/@typedstandards/produce-core)
 and [`@typedstandards/verify-core`](https://www.npmjs.com/package/@typedstandards/verify-core):
@@ -23,7 +23,7 @@ npx @typedstandards/cli <command>           # or without installing
 
 ## The signing key
 
-`sign` and `withdraw` read the signing seed from one environment variable:
+`sign`, `withdraw` and `attest` read the signing seed from one environment variable:
 
 ```
 TYPEDSTANDARDS_SIGNING_SEED_B64   the standard base64 of a 32-byte Ed25519 seed (44 characters, ending in "=")
@@ -76,10 +76,14 @@ tests. The record's output comes from one of three places:
   `contentHash.sha256`;
 - **`--output-file <path> --output-url <url>`**, a BlobRef to the file's bytes
   (`ref` is their SHA-256, `size` their length, `contentType` from `--content-type`,
-  default `application/octet-stream`). The file is covered under the input's rule
-  (produce-core's default is `legacy-json/v1`), which fingerprints the envelope and so
-  the BlobRef. produce-core 0.7.0 computes `raw-bytes/v1` only over inline text, so
-  `raw-bytes/v1` with a reference is refused.
+  default `application/octet-stream`). The file need not be text. On an input with a
+  `type`, the rule is `raw-bytes/v1` unless the input names another: the record's
+  `contentHash.sha256` is the hex of the BlobRef's `ref`, the file's SHA-256, as when
+  it is signed inline. `verify --blob <path>` then checks the file's bytes against the
+  reference. An input naming another rule keeps it, and an input with no `type` is
+  signed on the legacy chain, which carries no rule. This default is a change from
+  0.1.0, which signed a typed input by reference with no rule named under
+  `legacy-json/v1`.
 
 The CLI fills these fields only when the input omits them:
 
@@ -99,10 +103,22 @@ A key that produce-core would drop is refused, not signed around: an unknown key
 the top level, or in `queries[]`, `cost` or `skillMetadata`, exits 2 and names the
 key. `extensions` are opaque and signed as given.
 
-**`vcsRef` is not supported yet.** produce-core 0.7.0's envelope input has no
-`vcsRef` field, so `sign` refuses it by name. It arrives with a produce-core minor.
-Do not carry it inside `extensions` meanwhile: the same fact would then be signed in
-two shapes.
+**`vcsRef`** names the source revision the record was produced from, and is signed
+as given at the envelope's top level:
+
+```json
+"vcsRef": {
+  "repoUrl": "https://git.example.com/example/analysis",
+  "commitSha": "0123456789abcdef0123456789abcdef01234567",
+  "path": "notebooks/analysis.ipynb",
+  "ref": "refs/heads/main"
+}
+```
+
+`repoUrl` and `commitSha` are required non-empty strings; `path` and `ref` are
+optional strings; any other key exits 2 and names it. `vcsRef` is signed on v0.1
+envelopes only, so an input with no `type` that carries it exits 2. The signature
+covers the assertion, not that the revision exists.
 
 `sign` verifies its own result offline with verify-core before printing
 `{package, envelopeHash, signature}`. If that verification fails, it exits 1 and
@@ -121,14 +137,58 @@ when absent. For the withdrawal to change the record's status, `signer.identifie
 must be the record's own. Prints `{node, nodeId, signature}`, the shape `view`
 carries. A correction is a withdrawal plus a new record.
 
-Other attestation sub-types (`corroborates`, `contradicts`, `endorses`, `supersedes`,
-`revises`) are a follow-on, once produce-core emits them. This version signs
-withdrawals only.
+`attest` signs the other lifecycle and claim-to-claim sub-types.
+
+### `attest`
+
+```sh
+typedstandards attest --input <file|->
+```
+
+Signs an `attestation/supersedes/v1`, `attestation/revises/v1`,
+`attestation/corroborates/v1` or `attestation/contradicts/v1` on the same key path.
+The input is one JSON object naming `type`, `targetNodeId` (the record's envelope
+hash), `signer` and that type's payload (spec §8.12.1):
+
+| `type` | Payload | Authorization rule |
+|---|---|---|
+| `attestation/supersedes/v1` | `successorNodeId`, the new record's envelope hash | publisher-only; the record reads `superseded` |
+| `attestation/revises/v1` | `successorNodeId`, this revision's envelope hash | publisher-only; the status does not change |
+| `attestation/corroborates/v1` | `scope`, a non-empty string; `reasoning`, optional, a string or an object | any signer with a bound key |
+| `attestation/contradicts/v1` | `scope`; `reasoning`, optional | any signer with a bound key |
+
+For example:
+
+```json
+{
+  "type": "attestation/supersedes/v1",
+  "targetNodeId": "<the old record's envelope hash>",
+  "successorNodeId": "<the new record's envelope hash>",
+  "signer": { "bindingTier": "pseudonymous", "displayName": "Example signer" }
+}
+```
+
+It may also name `packageId`, `createdAt` and `signingKeyId`, filled as for `sign`
+when absent. Each type takes only its own fields: any other key exits 2 and names it.
+`withdraws` is `withdraw`'s. `endorses` is not signed: it stays reserved until the
+specification defines its role check. `reinstates` is not signed by this version.
+
+`attest` verifies the node offline with verify-core's `checkAttestationNode` before
+printing `{node, nodeId, signature}`, the shape `view` carries. The node's integrity
+and signature must hold, and a `did:key` signer identifier must be the seed's own:
+one naming another key exits 1 with nothing on stdout. Any other identifier prints.
+A publisher-only node is checked with the seed's key as the record's; an
+any-with-binding node is checked with no trust registry, so a non-`did:key`
+identifier reads `key_unbound` (attention), printed on stderr, exit 0: a verifier binds
+it only through a registry fetched from its declared URL. A `supersedes` moves the
+record's status only when `signer.identifier` is the record's own and a verifier can
+bind the signing key to it: by derivation for a `did:key`, and otherwise through the
+record's own signing key or a registry fetched from its declared URL.
 
 ### `view`
 
 ```sh
-typedstandards view --signed <file> --visibility <state> [--withdrawal <file>]...
+typedstandards view --signed <file> --visibility <state> [--attestation <file>]... [--withdrawal <file>]...
                     [--trust-registry-url <url>] [--package-url <url>] [--title <text>]
 ```
 
@@ -137,9 +197,14 @@ and prints it with the signed package inline. Every signed claim in the view is 
 from the package; the flags supply only what a host decides. `--visibility` is
 required and never defaulted. For a self-certifying signer (a `did:key` at
 `bindingTier` `pseudonymous`) the view omits `trustRegistryUrl`; any other signer
-needs `--trust-registry-url`. Each `--withdrawal` must target this record. The view's
-`lifecycle` is what verify-core's `verifyLifecycleChain` reads from the withdrawals.
-`view` builds no view of a record that does not verify.
+needs `--trust-registry-url`. `--attestation` carries a lifecycle attestation that
+`withdraw` or `attest` printed (`withdraws`, `reinstates`, `supersedes` or `revises`)
+into the view's `lifecycleAttestations`; `--withdrawal` is an alias, and both may be
+given. Each must target this record. A `corroborates` or `contradicts` node exits 2:
+this version carries no claim-to-claim node in a view. The view's `lifecycle` is what
+verify-core's `verifyLifecycleChain` reads from the carried nodes: `active`,
+`withdrawn`, or `superseded` with the successor's envelope hash. `view` builds no view
+of a record that does not verify.
 
 ### `verify`
 
@@ -150,7 +215,7 @@ typedstandards verify --input <file|-> [--blob <file>]... [--json]
 Runs verify-core's checks offline over what `sign` or `view` printed, and prints
 `{ok, nodeId, failures}`. `--json` adds `checks` (verify-core's full result, every
 check's fields) and `lifecycle` (the lifecycle resolution from the carried
-withdrawals). `--blob` supplies a referenced file's bytes. Files are matched to the
+lifecycle attestations). `--blob` supplies a referenced file's bytes. Files are matched to the
 record's BlobRefs by SHA-256; when exactly one file and one reference are left over,
 they are paired, so a changed file reads as a mismatch.
 
@@ -186,7 +251,7 @@ is `lifecycle.status`.
 | Code | Meaning |
 |---|---|
 | 0 | ok |
-| 1 | verification failed: `sign`'s or `withdraw`'s own result, `view`'s input, or `verify`'s record |
+| 1 | verification failed: `sign`'s, `withdraw`'s or `attest`'s own result, `view`'s input, or `verify`'s record |
 | 2 | usage or input error |
 | 3 | the signing seed's variable is missing or malformed |
 | 4 | internal error |

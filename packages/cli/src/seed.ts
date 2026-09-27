@@ -21,7 +21,7 @@ function toBase64(bytes: Uint8Array): string {
 export function readSeed(env: Readonly<Record<string, string | undefined>>): Uint8Array {
   const value = env[SEED_VARIABLE];
   if (value === undefined || value.trim() === '') {
-    throw new CliError(EXIT.seed, `${SEED_VARIABLE} is not set; sign and withdraw read the signing seed from it`);
+    throw new CliError(EXIT.seed, `${SEED_VARIABLE} is not set; sign, withdraw and attest read the signing seed from it`);
   }
   const text = value.trim();
   const malformed = new CliError(
