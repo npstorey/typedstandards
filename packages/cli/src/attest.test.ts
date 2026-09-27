@@ -46,9 +46,9 @@ interface Printed {
   signature: { signature: string; publicKey: string; algorithm?: string; kid?: string };
 }
 
-/** Run `attest` in process on one input, with the seed given (or none). */
-async function attest(input: unknown, seedB64: string | undefined = newSeed().b64) {
-  const io = memoryIo({ 'attest.json': JSON.stringify(input) }, seedB64 === undefined ? {} : { [SEED_VARIABLE]: seedB64 });
+/** Run `attest` in process on one input, with the seed given, or none for null. */
+async function attest(input: unknown, seedB64: string | null = newSeed().b64) {
+  const io = memoryIo({ 'attest.json': JSON.stringify(input) }, seedB64 === null ? {} : { [SEED_VARIABLE]: seedB64 });
   const code = await run(['attest', '--input', 'attest.json'], io);
   return { code, out: io.out.join(''), err: io.err.join('') };
 }
@@ -162,7 +162,7 @@ test('attest refuses, exit 2, naming it: a missing required field, an unknown ke
 
 test('attest reads the seed only from its variable: missing or malformed exits 3 naming the variable, nothing on stdout, the value never echoed', async () => {
   const input = { type: SUPERSEDES, targetNodeId: TARGET, successorNodeId: SUCCESSOR, signer: SIGNER };
-  const missing = await attest(input, undefined);
+  const missing = await attest(input, null);
   assert.equal(missing.code, EXIT.seed, missing.err);
   assert.equal(missing.out, '');
   assert.match(missing.err, new RegExp(SEED_VARIABLE));

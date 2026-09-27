@@ -7,6 +7,10 @@
 // checked against produce-core's input types at compile time, in both directions.
 
 import {
+  ATTESTATION_CONTRADICTS,
+  ATTESTATION_CORROBORATES,
+  ATTESTATION_REVISES,
+  ATTESTATION_SUPERSEDES,
   ATTESTATION_WITHDRAWS,
   isBlobRef,
   type AttestationInput,
@@ -14,11 +18,12 @@ import {
   type EnvelopeInput,
   type EnvelopeQuery,
   type SkillMetadata,
+  type VcsRef,
 } from '@typedstandards/produce-core';
 import { usageError } from './errors.ts';
 import type { Io } from './io.ts';
 
-type Kind = 'string' | 'number' | 'boolean' | 'object' | 'array' | 'string|BlobRef';
+type Kind = 'string' | 'number' | 'boolean' | 'object' | 'array' | 'string|BlobRef' | 'string|object';
 
 const ENVELOPE_FIELDS = {
   packageId: 'string',
@@ -38,7 +43,6 @@ const ENVELOPE_FIELDS = {
   producerProfile: 'string',
   type: 'string',
   signer: 'object',
-  // Named here because EnvelopeInput has it; checkEnvelopeInput refuses it by name first.
   vcsRef: 'object',
   contentCanonicalization: 'string',
   provenance: 'object',
@@ -72,6 +76,14 @@ const SKILL_METADATA_FIELDS = {
   skillText: 'string|BlobRef',
 } as const satisfies Record<keyof SkillMetadata, Kind>;
 
+// hub ADR-0016's shape (typedstandards#113 G0 D7).
+const VCS_REF_FIELDS = {
+  repoUrl: 'string',
+  commitSha: 'string',
+  path: 'string',
+  ref: 'string',
+} as const satisfies Record<keyof VcsRef, Kind>;
+
 const WITHDRAW_FIELDS = {
   packageId: 'string',
   createdAt: 'string',
@@ -82,6 +94,33 @@ const WITHDRAW_FIELDS = {
   reason: 'string',
   effectiveAt: 'string',
 } as const satisfies Partial<Record<keyof AttestationInput, Kind>>;
+
+// `attest` (typedstandards#113 G0 D10 as corrected): the fields every sub-type
+// takes, and each sub-type's §8.12.1 payload, with its required fields.
+const ATTEST_COMMON_FIELDS = {
+  packageId: 'string',
+  createdAt: 'string',
+  signingKeyId: 'string',
+  type: 'string',
+  targetNodeId: 'string',
+  signer: 'object',
+} as const satisfies Partial<Record<keyof AttestationInput, Kind>>;
+
+const SUCCESSOR_PAYLOAD = { fields: { successorNodeId: 'string' }, required: ['successorNodeId'] } as const;
+const CLAIM_PAYLOAD = { fields: { scope: 'string', reasoning: 'string|object' }, required: ['scope'] } as const;
+
+/** The sub-types `attest` signs, and each one's payload (spec §8.12.1). */
+export const ATTEST_PAYLOADS = {
+  [ATTESTATION_SUPERSEDES]: SUCCESSOR_PAYLOAD,
+  [ATTESTATION_REVISES]: SUCCESSOR_PAYLOAD,
+  [ATTESTATION_CORROBORATES]: CLAIM_PAYLOAD,
+  [ATTESTATION_CONTRADICTS]: CLAIM_PAYLOAD,
+} as const satisfies Record<string, { fields: Partial<Record<keyof AttestationInput, Kind>>; required: readonly (keyof AttestationInput)[] }>;
+
+export type AttestType = keyof typeof ATTEST_PAYLOADS;
+
+// Reserved until the spec defines its role check (typedstandards#113 G0 D1).
+const ATTESTATION_ENDORSES = 'attestation/endorses/v1';
 
 // A JSON object: not null, not an array.
 export type JsonObject = Record<string, unknown>;
@@ -104,6 +143,8 @@ function hasKind(value: unknown, kind: Kind): boolean {
       return Array.isArray(value);
     case 'string|BlobRef':
       return typeof value === 'string' || isBlobRef(value);
+    case 'string|object':
+      return typeof value === 'string' || isObject(value);
   }
 }
 
@@ -114,6 +155,7 @@ const KIND_WORDS: Record<Kind, string> = {
   object: 'an object',
   array: 'an array',
   'string|BlobRef': 'a string or a BlobRef',
+  'string|object': 'a string or an object',
 };
 
 /** Refuse a key the table does not name, a value of the wrong kind (null included), and a missing required key. */
@@ -148,12 +190,6 @@ function checkSigner(signer: JsonObject, where: string): void {
 /** Check an envelope input; `outputFromFile` when `--output-file` supplies `output`. */
 export function checkEnvelopeInput(value: unknown, outputFromFile: boolean): JsonObject {
   if (!isObject(value)) throw usageError('the input must be a JSON object: the envelope input produce-core\'s buildEnvelope takes');
-  if ('vcsRef' in value) {
-    throw usageError(
-      'vcsRef is not supported yet: produce-core 0.7.0 has no vcsRef field, so it would not be signed. ' +
-        'It arrives with a produce-core minor (typedstandards#109); do not carry it in extensions meanwhile',
-    );
-  }
   const required = ['prompt', 'promptVisibility', 'queries', 'dataSources', 'cost', 'skillMetadata', 'trace'];
   checkFields(value, ENVELOPE_FIELDS, outputFromFile ? required : [...required, 'output'], '', 'the envelope input');
   if (outputFromFile && 'output' in value) {
@@ -172,7 +208,27 @@ export function checkEnvelopeInput(value: unknown, outputFromFile: boolean): Jso
   checkFields(value['cost'] as JsonObject, COST_FIELDS, ['model'], 'cost.', 'cost');
   checkFields(value['skillMetadata'] as JsonObject, SKILL_METADATA_FIELDS, [], 'skillMetadata.', 'skillMetadata');
   if ('signer' in value) checkSigner(value['signer'] as JsonObject, '');
+  if ('vcsRef' in value) checkVcsRef(value);
   return value;
+}
+
+/**
+ * `vcsRef` (typedstandards#113 G0 D7): hub ADR-0016's shape, signed verbatim on a
+ * v0.1 envelope. produce-core refuses it on a legacy input; the CLI says so first,
+ * by the rule's name.
+ */
+function checkVcsRef(value: JsonObject): void {
+  if (!('type' in value)) {
+    throw usageError(
+      'vcsRef is signed on v0.1 envelopes only, and the input has no type, so it would be signed on the legacy chain ' +
+        '(spec §8.2, hub ADR-0016). Give a type, or omit vcsRef',
+    );
+  }
+  const vcsRef = value['vcsRef'] as JsonObject;
+  checkFields(vcsRef, VCS_REF_FIELDS, ['repoUrl', 'commitSha'], 'vcsRef.', 'vcsRef');
+  for (const key of ['repoUrl', 'commitSha']) {
+    if ((vcsRef[key] as string).trim() === '') throw usageError(`vcsRef.${key} must not be empty`);
+  }
 }
 
 /** Check a withdrawal input: the fields of an attestation/withdraws/v1 produce-core takes. */
@@ -188,6 +244,38 @@ export function checkWithdrawInput(value: unknown): JsonObject {
   if ((value['reason'] as string).trim() === '') throw usageError('reason must not be empty');
   checkSigner(value['signer'] as JsonObject, '');
   return value;
+}
+
+const HEX_64 = /^[0-9a-f]{64}$/;
+
+/**
+ * Check an `attest` input (typedstandards#113 G0 D10 as corrected): `type`, one of
+ * `ATTEST_PAYLOADS`; `targetNodeId` and `signer`, checked as `withdraw` checks them;
+ * that type's §8.12.1 payload; and `packageId`, `createdAt` and `signingKeyId`,
+ * optional. A key not in the type's list is refused by name.
+ */
+export function checkAttestInput(value: unknown): JsonObject & { type: AttestType } {
+  const types = Object.keys(ATTEST_PAYLOADS).join(', ');
+  if (!isObject(value)) throw usageError(`the input must be a JSON object naming type (${types}), targetNodeId, signer and that type's payload`);
+  if (!('type' in value)) throw usageError(`type is required: one of ${types}`);
+  const type = value['type'];
+  if (typeof type !== 'string') throw usageError('type must be a string');
+  if (type === ATTESTATION_WITHDRAWS) throw usageError(`${ATTESTATION_WITHDRAWS} is signed by withdraw, not attest`);
+  if (type === ATTESTATION_ENDORSES) {
+    throw usageError(`${ATTESTATION_ENDORSES} stays reserved until the spec defines its role check (typedstandards#113 G0 D1); attest does not sign it`);
+  }
+  if (!Object.hasOwn(ATTEST_PAYLOADS, type)) throw usageError(`type ${type} is not one attest signs: one of ${types}`);
+  const payload = ATTEST_PAYLOADS[type as AttestType];
+  checkFields(value, { ...ATTEST_COMMON_FIELDS, ...payload.fields }, ['targetNodeId', 'signer', ...payload.required], '', type);
+  if (!HEX_64.test(value['targetNodeId'] as string)) {
+    throw usageError('targetNodeId must be a record\'s envelope hash: 64 lowercase hex characters');
+  }
+  if ('successorNodeId' in value && !HEX_64.test(value['successorNodeId'] as string)) {
+    throw usageError('successorNodeId must be the successor record\'s envelope hash: 64 lowercase hex characters');
+  }
+  if ('scope' in value && (value['scope'] as string).trim() === '') throw usageError('scope must not be empty');
+  checkSigner(value['signer'] as JsonObject, '');
+  return value as JsonObject & { type: AttestType };
 }
 
 /** A file's bytes, or a usage error naming the flag. */

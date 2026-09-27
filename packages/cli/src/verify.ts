@@ -124,10 +124,10 @@ export function checkSignedDocument(value: unknown, flag: string): { package: Js
   };
 }
 
-/** `withdraw`'s output: `{node, nodeId, signature}`. */
+/** `withdraw`'s and `attest`'s output: `{node, nodeId, signature}`. */
 export function checkCarriedNode(value: unknown, where: string): CarriedNode {
-  if (!isObject(value)) throw usageError(`${where} must be what withdraw prints: {node, nodeId, signature}`);
-  exactKeys(value, ['node', 'nodeId', 'signature'], `${where}, which withdraw prints`);
+  if (!isObject(value)) throw usageError(`${where} must be what withdraw or attest prints: {node, nodeId, signature}`);
+  exactKeys(value, ['node', 'nodeId', 'signature'], `${where}, which withdraw and attest print`);
   if (!isObject(value['node'])) throw usageError(`${where}: node must be an object`);
   if (typeof value['nodeId'] !== 'string') throw usageError(`${where}: nodeId must be a string`);
   checkSignature(value['signature'], `${where}: signature`);
