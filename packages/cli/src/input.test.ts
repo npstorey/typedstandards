@@ -19,8 +19,8 @@ async function sign(input: unknown, files: Record<string, string | Uint8Array> =
 }
 
 test('PREMISE: produce-core drops an unknown key from what it signs, with no error', () => {
-  const { pkg } = buildEnvelope({ ...base, vcsRef: { commitSha: 'abc' } } as unknown as EnvelopeInput);
-  assert.ok(!('vcsRef' in pkg));
+  const { pkg } = buildEnvelope({ ...base, notAField: { commitSha: 'abc' } } as unknown as EnvelopeInput);
+  assert.ok(!('notAField' in pkg));
   const { pkg: q } = buildEnvelope({ ...base, queries: [{ ...(base['queries'] as object[])[0], extra: 1 }] } as unknown as EnvelopeInput);
   assert.ok(!('extra' in (q.queries[0] as object)));
 });

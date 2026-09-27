@@ -23,6 +23,10 @@
 import {
   ATTESTATION_WITHDRAWS,
   ATTESTATION_REINSTATES,
+  ATTESTATION_SUPERSEDES,
+  ATTESTATION_REVISES,
+  ATTESTATION_CORROBORATES,
+  ATTESTATION_CONTRADICTS,
   LIFECYCLE_ATTESTATION_TYPES,
   LEGACY_JSON_CANONICALIZATION,
   computeContentHashSha256,
@@ -34,6 +38,10 @@ import {
 export {
   ATTESTATION_WITHDRAWS,
   ATTESTATION_REINSTATES,
+  ATTESTATION_SUPERSEDES,
+  ATTESTATION_REVISES,
+  ATTESTATION_CORROBORATES,
+  ATTESTATION_CONTRADICTS,
   LIFECYCLE_ATTESTATION_TYPES,
   type LifecycleAttestationType,
 };
@@ -56,9 +64,18 @@ export const ATTESTATION_EVALUATES = 'attestation/evaluates/v1';
  *  publication pair, and the adversarial evaluation. */
 export type EmittableAttestationType =
   | LifecycleAttestationType
+  | typeof ATTESTATION_SUPERSEDES
+  | typeof ATTESTATION_REVISES
+  | typeof ATTESTATION_CORROBORATES
+  | typeof ATTESTATION_CONTRADICTS
   | typeof ATTESTATION_PUBLISHES
   | typeof ATTESTATION_LOCATED_AT
   | typeof ATTESTATION_EVALUATES;
+
+/** `corroborates` / `contradicts` payload: the optional `reasoning` (spec
+ *  §8.12.1). The spec gives it no type; §8.12.2 puts a variance methodology and
+ *  a result delta in it, so it is a string or a JSON object, emitted verbatim. */
+export type AttestationReasoning = string | { [key: string]: unknown };
 
 /** `evaluates` payload: methodology declaration (required content). */
 export interface EvaluationMethodology {
@@ -132,6 +149,12 @@ export interface AttestationNode {
   scoringRubric?: string;
   /** `evaluates`: structured results. */
   results?: EvaluationResults;
+  /** `supersedes`: the successor node (new); `revises`: this revision. */
+  successorNodeId?: string;
+  /** `corroborates` / `contradicts`: what of the target the attestation covers. */
+  scope?: string;
+  /** `corroborates` / `contradicts`: why (optional). */
+  reasoning?: AttestationReasoning;
 }
 
 export interface AttestationInput {
@@ -156,6 +179,9 @@ export interface AttestationInput {
   methodology?: EvaluationMethodology;
   scoringRubric?: string;
   results?: EvaluationResults;
+  successorNodeId?: string;
+  scope?: string;
+  reasoning?: AttestationReasoning;
 }
 
 /**

@@ -106,6 +106,23 @@ export interface SkillMetadata {
 }
 
 /**
+ * The version-control reference of a content node (hub ADR-0016 §B; spec
+ * §8.1.1): the source revision the analysis was generated from. `repoUrl` and
+ * `commitSha` are required when `vcsRef` is present; `path` and `ref` are
+ * optional. The signature attests the assertion, not that the revision exists.
+ */
+export interface VcsRef {
+  /** Repository URL. */
+  repoUrl: string;
+  /** The full, immutable revision object id. */
+  commitSha: string;
+  /** Path to the source artifact within the repository. */
+  path?: string;
+  /** Branch or tag name: a mutable pointer, informative only. */
+  ref?: string;
+}
+
+/**
  * Input to `buildEnvelope` — the format-shaped package input. Every value is
  * caller-supplied data; none is derived, defaulted from an environment, or
  * read from a clock inside the core.
@@ -152,6 +169,10 @@ export interface EnvelopeInput {
   type?: string;
   /** Envelope-side identity claim (spec §8.1.1, §8.5). Emitted verbatim. */
   signer?: SignerIdentity;
+  /** Version-control reference (hub ADR-0016 §B; spec §8.1.1). Emitted
+   *  verbatim, on v0.1 envelopes only: a legacy input (no `type`) carrying it
+   *  throws. */
+  vcsRef?: VcsRef;
   /** Content-canonicalization rule URI (spec §8.2). Caller-selected; defaults
    *  to legacy-json/v1. Emitted only on v0.1 envelopes. */
   contentCanonicalization?: string;
@@ -197,6 +218,9 @@ export interface RecordPackage {
    *  signature envelope; verifiers cross-check the two via the trust
    *  registry. */
   signer?: SignerIdentity;
+  /** Version-control reference (hub ADR-0016 §B; spec §8.1.1). v0.1 packages
+   *  only; covered by the envelope hash. */
+  vcsRef?: VcsRef;
   /** Content-canonicalization rule URI (spec §8.1.1, §8.2). Emitted on v0.1
    *  packages; absent on pre-v0.1 packages. */
   contentCanonicalization?: string;

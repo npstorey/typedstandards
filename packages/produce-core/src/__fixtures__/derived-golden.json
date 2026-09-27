@@ -1,0 +1,207 @@
+{
+  "_meta": {
+    "description": "Derived golden cases (typedstandards#113 G0 D11). No reference implementation emits these sub-types, vcsRef, or raw-bytes/v1 over a BlobRef, so nothing can be captured. Each case takes one captured case of reference-golden.json as its base, changes only what `change` lists, and states the specification row it follows. Its expected bytes were written by hand from that row, not produced by produce-core or by verify-core's canonicalizer.",
+    "derivation": [
+      "1. The RFC 8785 canonical string of each base case (withdraws, v01-default) was written by hand: keys sorted by UTF-16 code unit, no whitespace, fields the input leaves undefined omitted. baseCanonical below holds both; their SHA-256 values equal the captured contentHashSha256 and nodeId / envelopeHash of reference-golden.json, which the test asserts.",
+      "2. Each derived string is its base string with the change written in by hand at its sorted position: the sub-type URI and the payload fields of the SPEC 8.12.1 row (withdraws' reason and effectiveAt removed); the vcsRef object of the ADR-0016 B table, which sorts last; the raw-bytes/v1 URI and the BlobRef object of legacy-blobref-output as output.",
+      "3. jcsWithContentHash is jcsWithoutContentHash with the member contentHash:{sha256:<hex>} inserted after contentCanonicalization, the first key. For legacy-json/v1 the hex is SHA-256 of jcsWithoutContentHash; for raw-bytes/v1 over a BlobRef it is the hex part of output.ref, which is SHA-256 of contentBytesUtf8.",
+      "4. contentHashSha256, nodeId and envelopeHash were computed with SHA-256 over those strings. The test recomputes every one with node:crypto alone."
+    ],
+    "baseFixture": "reference-golden.json",
+    "baseFixtureSha256": "d2bcfc2bc017b07502b3b00c3aa16de402df134128a374b4582650b79fb501c1",
+    "specification": "hub docs/architecture/typed-standards-specification.md at 78354f262a4fd534f453cf5e3f3c1257289ae153 (SPEC); hub docs/adr/0016-vcs-native-lifecycle-mapping.md at the same commit (ADR-0016)",
+    "baseCanonical": [
+      {
+        "baseCase": "withdraws",
+        "jcsWithoutContentHash": "{\"contentCanonicalization\":\"https://typedstandards.org/canonicalization/legacy-json/v1\",\"effectiveAt\":\"2026-01-02T03:04:05.000Z\",\"metadata\":{\"createdAt\":\"2026-01-02T03:04:05.000Z\",\"packageId\":\"11111111-2222-4333-8444-555555555555\",\"schemaVersion\":\"0.1.0\",\"signingKeyId\":\"adopter:test-key-1\"},\"reason\":\"data error in source dataset\",\"signer\":{\"bindingTier\":\"platform\",\"displayName\":\"Civic AI Tools Platform\",\"identifier\":\"platform:civic-ai-tools\"},\"targetNodeId\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"type\":\"attestation/withdraws/v1\"}",
+        "jcsWithContentHash": "{\"contentCanonicalization\":\"https://typedstandards.org/canonicalization/legacy-json/v1\",\"contentHash\":{\"sha256\":\"699ab6ba38161b7229e2c8f2dc372612a19c021c44e775da6545d7c8e4c74f62\"},\"effectiveAt\":\"2026-01-02T03:04:05.000Z\",\"metadata\":{\"createdAt\":\"2026-01-02T03:04:05.000Z\",\"packageId\":\"11111111-2222-4333-8444-555555555555\",\"schemaVersion\":\"0.1.0\",\"signingKeyId\":\"adopter:test-key-1\"},\"reason\":\"data error in source dataset\",\"signer\":{\"bindingTier\":\"platform\",\"displayName\":\"Civic AI Tools Platform\",\"identifier\":\"platform:civic-ai-tools\"},\"targetNodeId\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"type\":\"attestation/withdraws/v1\"}"
+      },
+      {
+        "baseCase": "v01-default",
+        "jcsWithoutContentHash": "{\"contentCanonicalization\":\"https://typedstandards.org/canonicalization/legacy-json/v1\",\"cost\":{\"completionTokens\":20,\"model\":\"openai/gpt-4o\",\"promptTokens\":100,\"totalTokens\":120},\"dataSources\":[{\"accessTimestamp\":\"2026-01-02T03:04:05.000Z\",\"catalogType\":\"socrata\",\"datasetId\":\"erm2-nwe9\",\"datasetUrl\":\"https://data.cityofnewyork.us/d/erm2-nwe9\",\"portalUrl\":\"https://data.cityofnewyork.us\",\"sourceId\":\"socrata\"}],\"metadata\":{\"createdAt\":\"2026-01-02T03:04:05.000Z\",\"packageId\":\"11111111-2222-4333-8444-555555555555\",\"schemaVersion\":\"0.1.0\",\"signingKeyId\":\"adopter:test-key-1\"},\"output\":\"Around 400,000.\",\"prompt\":{\"hash\":\"3e7a528652636c5c2f9f9dab2eb23881f15dcdfae1fb446fba1389b15b9e43c0\",\"text\":\"How many 311 noise complaints last year?\",\"visibility\":\"full_text\"},\"provenance\":{\"@context\":{\"civic\":\"https://civicaitools.org/ns/evidence/\",\"dcterms\":\"http://purl.org/dc/terms/\",\"prov\":\"http://www.w3.org/ns/prov#\",\"xsd\":\"http://www.w3.org/2001/XMLSchema#\"},\"@graph\":[{\"@id\":\"urn:civic-evidence:11111111-2222-4333-8444-555555555555:prompt:3e7a528652636c5c2f9f9dab2eb23881f15dcdfae1fb446fba1389b15b9e43c0\",\"@type\":\"prov:Entity\",\"civic:contentHash\":\"sha256:3e7a528652636c5c2f9f9dab2eb23881f15dcdfae1fb446fba1389b15b9e43c0\",\"dcterms:description\":\"User query prompt\",\"prov:value\":\"How many 311 noise complaints last year?\"},{\"@id\":\"urn:civic-evidence:11111111-2222-4333-8444-555555555555:output:97166bfed6ba462fd890e9f5cde53e4a359efad8a92286705f959c69e157f7d2\",\"@type\":\"prov:Entity\",\"civic:contentHash\":\"sha256:97166bfed6ba462fd890e9f5cde53e4a359efad8a92286705f959c69e157f7d2\",\"dcterms:description\":\"AI-generated analysis output\"},{\"@id\":\"urn:civic-evidence:model:openai-gpt-4o\",\"@type\":[\"prov:Agent\",\"prov:SoftwareAgent\"],\"dcterms:description\":\"Large language model via OpenRouter\",\"dcterms:title\":\"openai/gpt-4o\"},{\"@id\":\"urn:civic-evidence:platform:civic-ai-tools\",\"@type\":[\"prov:Agent\",\"prov:SoftwareAgent\"],\"civic:url\":\"https://civicaitools.org\",\"dcterms:title\":\"Civic AI Tools\"}]},\"queries\":[{\"arguments\":{\"dataset_id\":\"erm2-nwe9\",\"portal\":\"data.cityofnewyork.us\",\"select\":\"count(*)\",\"type\":\"query\"},\"datasetId\":\"erm2-nwe9\",\"operationType\":\"query\",\"portal\":\"data.cityofnewyork.us\",\"resultColumns\":1,\"resultRows\":1,\"tool\":\"get_data\"}],\"skillMetadata\":{},\"trace\":{\"resourceSpans\":[]},\"type\":\"content/analysis/v1\"}",
+        "jcsWithContentHash": "{\"contentCanonicalization\":\"https://typedstandards.org/canonicalization/legacy-json/v1\",\"contentHash\":{\"sha256\":\"a05b6afed2ee33b20e2fdcf09993760c758c8b35b01ab349f04d8d50aab8ad4f\"},\"cost\":{\"completionTokens\":20,\"model\":\"openai/gpt-4o\",\"promptTokens\":100,\"totalTokens\":120},\"dataSources\":[{\"accessTimestamp\":\"2026-01-02T03:04:05.000Z\",\"catalogType\":\"socrata\",\"datasetId\":\"erm2-nwe9\",\"datasetUrl\":\"https://data.cityofnewyork.us/d/erm2-nwe9\",\"portalUrl\":\"https://data.cityofnewyork.us\",\"sourceId\":\"socrata\"}],\"metadata\":{\"createdAt\":\"2026-01-02T03:04:05.000Z\",\"packageId\":\"11111111-2222-4333-8444-555555555555\",\"schemaVersion\":\"0.1.0\",\"signingKeyId\":\"adopter:test-key-1\"},\"output\":\"Around 400,000.\",\"prompt\":{\"hash\":\"3e7a528652636c5c2f9f9dab2eb23881f15dcdfae1fb446fba1389b15b9e43c0\",\"text\":\"How many 311 noise complaints last year?\",\"visibility\":\"full_text\"},\"provenance\":{\"@context\":{\"civic\":\"https://civicaitools.org/ns/evidence/\",\"dcterms\":\"http://purl.org/dc/terms/\",\"prov\":\"http://www.w3.org/ns/prov#\",\"xsd\":\"http://www.w3.org/2001/XMLSchema#\"},\"@graph\":[{\"@id\":\"urn:civic-evidence:11111111-2222-4333-8444-555555555555:prompt:3e7a528652636c5c2f9f9dab2eb23881f15dcdfae1fb446fba1389b15b9e43c0\",\"@type\":\"prov:Entity\",\"civic:contentHash\":\"sha256:3e7a528652636c5c2f9f9dab2eb23881f15dcdfae1fb446fba1389b15b9e43c0\",\"dcterms:description\":\"User query prompt\",\"prov:value\":\"How many 311 noise complaints last year?\"},{\"@id\":\"urn:civic-evidence:11111111-2222-4333-8444-555555555555:output:97166bfed6ba462fd890e9f5cde53e4a359efad8a92286705f959c69e157f7d2\",\"@type\":\"prov:Entity\",\"civic:contentHash\":\"sha256:97166bfed6ba462fd890e9f5cde53e4a359efad8a92286705f959c69e157f7d2\",\"dcterms:description\":\"AI-generated analysis output\"},{\"@id\":\"urn:civic-evidence:model:openai-gpt-4o\",\"@type\":[\"prov:Agent\",\"prov:SoftwareAgent\"],\"dcterms:description\":\"Large language model via OpenRouter\",\"dcterms:title\":\"openai/gpt-4o\"},{\"@id\":\"urn:civic-evidence:platform:civic-ai-tools\",\"@type\":[\"prov:Agent\",\"prov:SoftwareAgent\"],\"civic:url\":\"https://civicaitools.org\",\"dcterms:title\":\"Civic AI Tools\"}]},\"queries\":[{\"arguments\":{\"dataset_id\":\"erm2-nwe9\",\"portal\":\"data.cityofnewyork.us\",\"select\":\"count(*)\",\"type\":\"query\"},\"datasetId\":\"erm2-nwe9\",\"operationType\":\"query\",\"portal\":\"data.cityofnewyork.us\",\"resultColumns\":1,\"resultRows\":1,\"tool\":\"get_data\"}],\"skillMetadata\":{},\"trace\":{\"resourceSpans\":[]},\"type\":\"content/analysis/v1\"}"
+      }
+    ]
+  },
+  "derivedCases": [
+    {
+      "name": "supersedes",
+      "kind": "attestation",
+      "baseCase": "withdraws",
+      "specRow": "SPEC 8.12.1 (SPEC:1420), attestation/supersedes/v1: targetNodeId (old), successorNodeId (new)",
+      "change": {
+        "set": {
+          "type": "attestation/supersedes/v1",
+          "successorNodeId": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "remove": [
+          "reason"
+        ]
+      },
+      "expected": {
+        "jcsWithoutContentHash": "{\"contentCanonicalization\":\"https://typedstandards.org/canonicalization/legacy-json/v1\",\"metadata\":{\"createdAt\":\"2026-01-02T03:04:05.000Z\",\"packageId\":\"11111111-2222-4333-8444-555555555555\",\"schemaVersion\":\"0.1.0\",\"signingKeyId\":\"adopter:test-key-1\"},\"signer\":{\"bindingTier\":\"platform\",\"displayName\":\"Civic AI Tools Platform\",\"identifier\":\"platform:civic-ai-tools\"},\"successorNodeId\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"targetNodeId\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"type\":\"attestation/supersedes/v1\"}",
+        "jcsWithContentHash": "{\"contentCanonicalization\":\"https://typedstandards.org/canonicalization/legacy-json/v1\",\"contentHash\":{\"sha256\":\"901f44234c028d5183fb0a036345fa147eb14c91f7c96799cdacdb714f5b2e35\"},\"metadata\":{\"createdAt\":\"2026-01-02T03:04:05.000Z\",\"packageId\":\"11111111-2222-4333-8444-555555555555\",\"schemaVersion\":\"0.1.0\",\"signingKeyId\":\"adopter:test-key-1\"},\"signer\":{\"bindingTier\":\"platform\",\"displayName\":\"Civic AI Tools Platform\",\"identifier\":\"platform:civic-ai-tools\"},\"successorNodeId\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"targetNodeId\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"type\":\"attestation/supersedes/v1\"}",
+        "contentHashSha256": "901f44234c028d5183fb0a036345fa147eb14c91f7c96799cdacdb714f5b2e35",
+        "nodeId": "805d2de0635aa108fa9b12d063cb8845ab693ae6b3cd39f4407e790e04c591e3"
+      }
+    },
+    {
+      "name": "revises",
+      "kind": "attestation",
+      "baseCase": "withdraws",
+      "specRow": "SPEC 8.12.1 (SPEC:1421), attestation/revises/v1: targetNodeId (prior revision), successorNodeId (this revision)",
+      "change": {
+        "set": {
+          "type": "attestation/revises/v1",
+          "successorNodeId": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+        },
+        "remove": [
+          "reason"
+        ]
+      },
+      "expected": {
+        "jcsWithoutContentHash": "{\"contentCanonicalization\":\"https://typedstandards.org/canonicalization/legacy-json/v1\",\"metadata\":{\"createdAt\":\"2026-01-02T03:04:05.000Z\",\"packageId\":\"11111111-2222-4333-8444-555555555555\",\"schemaVersion\":\"0.1.0\",\"signingKeyId\":\"adopter:test-key-1\"},\"signer\":{\"bindingTier\":\"platform\",\"displayName\":\"Civic AI Tools Platform\",\"identifier\":\"platform:civic-ai-tools\"},\"successorNodeId\":\"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\",\"targetNodeId\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"type\":\"attestation/revises/v1\"}",
+        "jcsWithContentHash": "{\"contentCanonicalization\":\"https://typedstandards.org/canonicalization/legacy-json/v1\",\"contentHash\":{\"sha256\":\"f9156e2c4fe1b309e2eda70849855f1ba851b48f4f488c59853bffdddbdc83fc\"},\"metadata\":{\"createdAt\":\"2026-01-02T03:04:05.000Z\",\"packageId\":\"11111111-2222-4333-8444-555555555555\",\"schemaVersion\":\"0.1.0\",\"signingKeyId\":\"adopter:test-key-1\"},\"signer\":{\"bindingTier\":\"platform\",\"displayName\":\"Civic AI Tools Platform\",\"identifier\":\"platform:civic-ai-tools\"},\"successorNodeId\":\"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\",\"targetNodeId\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"type\":\"attestation/revises/v1\"}",
+        "contentHashSha256": "f9156e2c4fe1b309e2eda70849855f1ba851b48f4f488c59853bffdddbdc83fc",
+        "nodeId": "47be847fba5d7a0e1a2f137d0d4940e3740aa6c1d85836438c8e12d357a128c4"
+      }
+    },
+    {
+      "name": "contradicts",
+      "kind": "attestation",
+      "baseCase": "withdraws",
+      "specRow": "SPEC 8.12.1 (SPEC:1425), attestation/contradicts/v1: targetNodeId, scope, reasoning (optional); reasoning given as a string",
+      "change": {
+        "set": {
+          "type": "attestation/contradicts/v1",
+          "scope": "the headline figure",
+          "reasoning": "a recount of the same rows gives a different figure"
+        },
+        "remove": [
+          "reason"
+        ]
+      },
+      "expected": {
+        "jcsWithoutContentHash": "{\"contentCanonicalization\":\"https://typedstandards.org/canonicalization/legacy-json/v1\",\"metadata\":{\"createdAt\":\"2026-01-02T03:04:05.000Z\",\"packageId\":\"11111111-2222-4333-8444-555555555555\",\"schemaVersion\":\"0.1.0\",\"signingKeyId\":\"adopter:test-key-1\"},\"reasoning\":\"a recount of the same rows gives a different figure\",\"scope\":\"the headline figure\",\"signer\":{\"bindingTier\":\"platform\",\"displayName\":\"Civic AI Tools Platform\",\"identifier\":\"platform:civic-ai-tools\"},\"targetNodeId\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"type\":\"attestation/contradicts/v1\"}",
+        "jcsWithContentHash": "{\"contentCanonicalization\":\"https://typedstandards.org/canonicalization/legacy-json/v1\",\"contentHash\":{\"sha256\":\"bf4fe72a6ffcd53e1167c4848fcb433d2d84ed637c583857d8028134ad7ac414\"},\"metadata\":{\"createdAt\":\"2026-01-02T03:04:05.000Z\",\"packageId\":\"11111111-2222-4333-8444-555555555555\",\"schemaVersion\":\"0.1.0\",\"signingKeyId\":\"adopter:test-key-1\"},\"reasoning\":\"a recount of the same rows gives a different figure\",\"scope\":\"the headline figure\",\"signer\":{\"bindingTier\":\"platform\",\"displayName\":\"Civic AI Tools Platform\",\"identifier\":\"platform:civic-ai-tools\"},\"targetNodeId\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"type\":\"attestation/contradicts/v1\"}",
+        "contentHashSha256": "bf4fe72a6ffcd53e1167c4848fcb433d2d84ed637c583857d8028134ad7ac414",
+        "nodeId": "5c716bdad07a234af0095f96860ef976fbf56d92884926a9c80b6b7303b90b1f"
+      }
+    },
+    {
+      "name": "corroborates",
+      "kind": "attestation",
+      "baseCase": "withdraws",
+      "specRow": "SPEC 8.12.1 (SPEC:1424), attestation/corroborates/v1: targetNodeId, scope, reasoning (optional); reasoning given as a JSON object, the variance methodology and result delta of SPEC 8.12.2",
+      "change": {
+        "set": {
+          "type": "attestation/corroborates/v1",
+          "scope": "the headline figure",
+          "reasoning": {
+            "methodology": "a repeat run of the same prompt",
+            "resultDelta": 0
+          }
+        },
+        "remove": [
+          "reason"
+        ]
+      },
+      "expected": {
+        "jcsWithoutContentHash": "{\"contentCanonicalization\":\"https://typedstandards.org/canonicalization/legacy-json/v1\",\"metadata\":{\"createdAt\":\"2026-01-02T03:04:05.000Z\",\"packageId\":\"11111111-2222-4333-8444-555555555555\",\"schemaVersion\":\"0.1.0\",\"signingKeyId\":\"adopter:test-key-1\"},\"reasoning\":{\"methodology\":\"a repeat run of the same prompt\",\"resultDelta\":0},\"scope\":\"the headline figure\",\"signer\":{\"bindingTier\":\"platform\",\"displayName\":\"Civic AI Tools Platform\",\"identifier\":\"platform:civic-ai-tools\"},\"targetNodeId\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"type\":\"attestation/corroborates/v1\"}",
+        "jcsWithContentHash": "{\"contentCanonicalization\":\"https://typedstandards.org/canonicalization/legacy-json/v1\",\"contentHash\":{\"sha256\":\"508a1b50523f3544ce84f2d868daafd52bb4cc1cb9accebe470d55756cf83cdf\"},\"metadata\":{\"createdAt\":\"2026-01-02T03:04:05.000Z\",\"packageId\":\"11111111-2222-4333-8444-555555555555\",\"schemaVersion\":\"0.1.0\",\"signingKeyId\":\"adopter:test-key-1\"},\"reasoning\":{\"methodology\":\"a repeat run of the same prompt\",\"resultDelta\":0},\"scope\":\"the headline figure\",\"signer\":{\"bindingTier\":\"platform\",\"displayName\":\"Civic AI Tools Platform\",\"identifier\":\"platform:civic-ai-tools\"},\"targetNodeId\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"type\":\"attestation/corroborates/v1\"}",
+        "contentHashSha256": "508a1b50523f3544ce84f2d868daafd52bb4cc1cb9accebe470d55756cf83cdf",
+        "nodeId": "cbc9a65a4e89a44862786f33070c7883f86879a44a643336d5637c32cb0bfaae"
+      }
+    },
+    {
+      "name": "corroborates-minimal",
+      "kind": "attestation",
+      "baseCase": "withdraws",
+      "specRow": "SPEC 8.12.1 (SPEC:1424), attestation/corroborates/v1: targetNodeId, scope; the optional reasoning omitted",
+      "change": {
+        "set": {
+          "type": "attestation/corroborates/v1",
+          "scope": "the headline figure"
+        },
+        "remove": [
+          "reason"
+        ]
+      },
+      "expected": {
+        "jcsWithoutContentHash": "{\"contentCanonicalization\":\"https://typedstandards.org/canonicalization/legacy-json/v1\",\"metadata\":{\"createdAt\":\"2026-01-02T03:04:05.000Z\",\"packageId\":\"11111111-2222-4333-8444-555555555555\",\"schemaVersion\":\"0.1.0\",\"signingKeyId\":\"adopter:test-key-1\"},\"scope\":\"the headline figure\",\"signer\":{\"bindingTier\":\"platform\",\"displayName\":\"Civic AI Tools Platform\",\"identifier\":\"platform:civic-ai-tools\"},\"targetNodeId\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"type\":\"attestation/corroborates/v1\"}",
+        "jcsWithContentHash": "{\"contentCanonicalization\":\"https://typedstandards.org/canonicalization/legacy-json/v1\",\"contentHash\":{\"sha256\":\"9171c5130c58f1e3b1e5a48a8e81c34ac75093e73e1b429ddc260b0424f1e24e\"},\"metadata\":{\"createdAt\":\"2026-01-02T03:04:05.000Z\",\"packageId\":\"11111111-2222-4333-8444-555555555555\",\"schemaVersion\":\"0.1.0\",\"signingKeyId\":\"adopter:test-key-1\"},\"scope\":\"the headline figure\",\"signer\":{\"bindingTier\":\"platform\",\"displayName\":\"Civic AI Tools Platform\",\"identifier\":\"platform:civic-ai-tools\"},\"targetNodeId\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"type\":\"attestation/corroborates/v1\"}",
+        "contentHashSha256": "9171c5130c58f1e3b1e5a48a8e81c34ac75093e73e1b429ddc260b0424f1e24e",
+        "nodeId": "6f2bf8c9e8addfbafc4b3988a4c65578ee63ca6e835b777e82130d0f7de631c7"
+      }
+    },
+    {
+      "name": "v01-vcsref",
+      "kind": "envelope",
+      "baseCase": "v01-default",
+      "specRow": "ADR-0016 B field-shape table and SPEC 8.1.1 vcsRef row (SPEC:445): repoUrl and commitSha required-if-present, path and ref optional; a top-level field covered by the envelope hash and, under legacy-json/v1, the content hash (SPEC:580)",
+      "change": {
+        "set": {
+          "vcsRef": {
+            "repoUrl": "https://git.example.com/analyses/example.git",
+            "commitSha": "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0",
+            "path": "notebooks/analysis.ipynb",
+            "ref": "main"
+          }
+        },
+        "remove": []
+      },
+      "expected": {
+        "jcsWithoutContentHash": "{\"contentCanonicalization\":\"https://typedstandards.org/canonicalization/legacy-json/v1\",\"cost\":{\"completionTokens\":20,\"model\":\"openai/gpt-4o\",\"promptTokens\":100,\"totalTokens\":120},\"dataSources\":[{\"accessTimestamp\":\"2026-01-02T03:04:05.000Z\",\"catalogType\":\"socrata\",\"datasetId\":\"erm2-nwe9\",\"datasetUrl\":\"https://data.cityofnewyork.us/d/erm2-nwe9\",\"portalUrl\":\"https://data.cityofnewyork.us\",\"sourceId\":\"socrata\"}],\"metadata\":{\"createdAt\":\"2026-01-02T03:04:05.000Z\",\"packageId\":\"11111111-2222-4333-8444-555555555555\",\"schemaVersion\":\"0.1.0\",\"signingKeyId\":\"adopter:test-key-1\"},\"output\":\"Around 400,000.\",\"prompt\":{\"hash\":\"3e7a528652636c5c2f9f9dab2eb23881f15dcdfae1fb446fba1389b15b9e43c0\",\"text\":\"How many 311 noise complaints last year?\",\"visibility\":\"full_text\"},\"provenance\":{\"@context\":{\"civic\":\"https://civicaitools.org/ns/evidence/\",\"dcterms\":\"http://purl.org/dc/terms/\",\"prov\":\"http://www.w3.org/ns/prov#\",\"xsd\":\"http://www.w3.org/2001/XMLSchema#\"},\"@graph\":[{\"@id\":\"urn:civic-evidence:11111111-2222-4333-8444-555555555555:prompt:3e7a528652636c5c2f9f9dab2eb23881f15dcdfae1fb446fba1389b15b9e43c0\",\"@type\":\"prov:Entity\",\"civic:contentHash\":\"sha256:3e7a528652636c5c2f9f9dab2eb23881f15dcdfae1fb446fba1389b15b9e43c0\",\"dcterms:description\":\"User query prompt\",\"prov:value\":\"How many 311 noise complaints last year?\"},{\"@id\":\"urn:civic-evidence:11111111-2222-4333-8444-555555555555:output:97166bfed6ba462fd890e9f5cde53e4a359efad8a92286705f959c69e157f7d2\",\"@type\":\"prov:Entity\",\"civic:contentHash\":\"sha256:97166bfed6ba462fd890e9f5cde53e4a359efad8a92286705f959c69e157f7d2\",\"dcterms:description\":\"AI-generated analysis output\"},{\"@id\":\"urn:civic-evidence:model:openai-gpt-4o\",\"@type\":[\"prov:Agent\",\"prov:SoftwareAgent\"],\"dcterms:description\":\"Large language model via OpenRouter\",\"dcterms:title\":\"openai/gpt-4o\"},{\"@id\":\"urn:civic-evidence:platform:civic-ai-tools\",\"@type\":[\"prov:Agent\",\"prov:SoftwareAgent\"],\"civic:url\":\"https://civicaitools.org\",\"dcterms:title\":\"Civic AI Tools\"}]},\"queries\":[{\"arguments\":{\"dataset_id\":\"erm2-nwe9\",\"portal\":\"data.cityofnewyork.us\",\"select\":\"count(*)\",\"type\":\"query\"},\"datasetId\":\"erm2-nwe9\",\"operationType\":\"query\",\"portal\":\"data.cityofnewyork.us\",\"resultColumns\":1,\"resultRows\":1,\"tool\":\"get_data\"}],\"skillMetadata\":{},\"trace\":{\"resourceSpans\":[]},\"type\":\"content/analysis/v1\",\"vcsRef\":{\"commitSha\":\"a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0\",\"path\":\"notebooks/analysis.ipynb\",\"ref\":\"main\",\"repoUrl\":\"https://git.example.com/analyses/example.git\"}}",
+        "jcsWithContentHash": "{\"contentCanonicalization\":\"https://typedstandards.org/canonicalization/legacy-json/v1\",\"contentHash\":{\"sha256\":\"626735b59cbc3101e4e7a9fa2d169169e0d4524ab6a537a1642ace6b9e1e00db\"},\"cost\":{\"completionTokens\":20,\"model\":\"openai/gpt-4o\",\"promptTokens\":100,\"totalTokens\":120},\"dataSources\":[{\"accessTimestamp\":\"2026-01-02T03:04:05.000Z\",\"catalogType\":\"socrata\",\"datasetId\":\"erm2-nwe9\",\"datasetUrl\":\"https://data.cityofnewyork.us/d/erm2-nwe9\",\"portalUrl\":\"https://data.cityofnewyork.us\",\"sourceId\":\"socrata\"}],\"metadata\":{\"createdAt\":\"2026-01-02T03:04:05.000Z\",\"packageId\":\"11111111-2222-4333-8444-555555555555\",\"schemaVersion\":\"0.1.0\",\"signingKeyId\":\"adopter:test-key-1\"},\"output\":\"Around 400,000.\",\"prompt\":{\"hash\":\"3e7a528652636c5c2f9f9dab2eb23881f15dcdfae1fb446fba1389b15b9e43c0\",\"text\":\"How many 311 noise complaints last year?\",\"visibility\":\"full_text\"},\"provenance\":{\"@context\":{\"civic\":\"https://civicaitools.org/ns/evidence/\",\"dcterms\":\"http://purl.org/dc/terms/\",\"prov\":\"http://www.w3.org/ns/prov#\",\"xsd\":\"http://www.w3.org/2001/XMLSchema#\"},\"@graph\":[{\"@id\":\"urn:civic-evidence:11111111-2222-4333-8444-555555555555:prompt:3e7a528652636c5c2f9f9dab2eb23881f15dcdfae1fb446fba1389b15b9e43c0\",\"@type\":\"prov:Entity\",\"civic:contentHash\":\"sha256:3e7a528652636c5c2f9f9dab2eb23881f15dcdfae1fb446fba1389b15b9e43c0\",\"dcterms:description\":\"User query prompt\",\"prov:value\":\"How many 311 noise complaints last year?\"},{\"@id\":\"urn:civic-evidence:11111111-2222-4333-8444-555555555555:output:97166bfed6ba462fd890e9f5cde53e4a359efad8a92286705f959c69e157f7d2\",\"@type\":\"prov:Entity\",\"civic:contentHash\":\"sha256:97166bfed6ba462fd890e9f5cde53e4a359efad8a92286705f959c69e157f7d2\",\"dcterms:description\":\"AI-generated analysis output\"},{\"@id\":\"urn:civic-evidence:model:openai-gpt-4o\",\"@type\":[\"prov:Agent\",\"prov:SoftwareAgent\"],\"dcterms:description\":\"Large language model via OpenRouter\",\"dcterms:title\":\"openai/gpt-4o\"},{\"@id\":\"urn:civic-evidence:platform:civic-ai-tools\",\"@type\":[\"prov:Agent\",\"prov:SoftwareAgent\"],\"civic:url\":\"https://civicaitools.org\",\"dcterms:title\":\"Civic AI Tools\"}]},\"queries\":[{\"arguments\":{\"dataset_id\":\"erm2-nwe9\",\"portal\":\"data.cityofnewyork.us\",\"select\":\"count(*)\",\"type\":\"query\"},\"datasetId\":\"erm2-nwe9\",\"operationType\":\"query\",\"portal\":\"data.cityofnewyork.us\",\"resultColumns\":1,\"resultRows\":1,\"tool\":\"get_data\"}],\"skillMetadata\":{},\"trace\":{\"resourceSpans\":[]},\"type\":\"content/analysis/v1\",\"vcsRef\":{\"commitSha\":\"a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0\",\"path\":\"notebooks/analysis.ipynb\",\"ref\":\"main\",\"repoUrl\":\"https://git.example.com/analyses/example.git\"}}",
+        "contentHashSha256": "626735b59cbc3101e4e7a9fa2d169169e0d4524ab6a537a1642ace6b9e1e00db",
+        "envelopeHash": "fa2ca25f43394e7e197d9d0f88112b8513685df2b59dff26436357012f974b40"
+      }
+    },
+    {
+      "name": "v01-vcsref-minimal",
+      "kind": "envelope",
+      "baseCase": "v01-default",
+      "specRow": "ADR-0016 B field-shape table and SPEC 8.1.1 vcsRef row (SPEC:445): the two required-if-present sub-fields only",
+      "change": {
+        "set": {
+          "vcsRef": {
+            "repoUrl": "https://git.example.com/analyses/example.git",
+            "commitSha": "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0"
+          }
+        },
+        "remove": []
+      },
+      "expected": {
+        "jcsWithoutContentHash": "{\"contentCanonicalization\":\"https://typedstandards.org/canonicalization/legacy-json/v1\",\"cost\":{\"completionTokens\":20,\"model\":\"openai/gpt-4o\",\"promptTokens\":100,\"totalTokens\":120},\"dataSources\":[{\"accessTimestamp\":\"2026-01-02T03:04:05.000Z\",\"catalogType\":\"socrata\",\"datasetId\":\"erm2-nwe9\",\"datasetUrl\":\"https://data.cityofnewyork.us/d/erm2-nwe9\",\"portalUrl\":\"https://data.cityofnewyork.us\",\"sourceId\":\"socrata\"}],\"metadata\":{\"createdAt\":\"2026-01-02T03:04:05.000Z\",\"packageId\":\"11111111-2222-4333-8444-555555555555\",\"schemaVersion\":\"0.1.0\",\"signingKeyId\":\"adopter:test-key-1\"},\"output\":\"Around 400,000.\",\"prompt\":{\"hash\":\"3e7a528652636c5c2f9f9dab2eb23881f15dcdfae1fb446fba1389b15b9e43c0\",\"text\":\"How many 311 noise complaints last year?\",\"visibility\":\"full_text\"},\"provenance\":{\"@context\":{\"civic\":\"https://civicaitools.org/ns/evidence/\",\"dcterms\":\"http://purl.org/dc/terms/\",\"prov\":\"http://www.w3.org/ns/prov#\",\"xsd\":\"http://www.w3.org/2001/XMLSchema#\"},\"@graph\":[{\"@id\":\"urn:civic-evidence:11111111-2222-4333-8444-555555555555:prompt:3e7a528652636c5c2f9f9dab2eb23881f15dcdfae1fb446fba1389b15b9e43c0\",\"@type\":\"prov:Entity\",\"civic:contentHash\":\"sha256:3e7a528652636c5c2f9f9dab2eb23881f15dcdfae1fb446fba1389b15b9e43c0\",\"dcterms:description\":\"User query prompt\",\"prov:value\":\"How many 311 noise complaints last year?\"},{\"@id\":\"urn:civic-evidence:11111111-2222-4333-8444-555555555555:output:97166bfed6ba462fd890e9f5cde53e4a359efad8a92286705f959c69e157f7d2\",\"@type\":\"prov:Entity\",\"civic:contentHash\":\"sha256:97166bfed6ba462fd890e9f5cde53e4a359efad8a92286705f959c69e157f7d2\",\"dcterms:description\":\"AI-generated analysis output\"},{\"@id\":\"urn:civic-evidence:model:openai-gpt-4o\",\"@type\":[\"prov:Agent\",\"prov:SoftwareAgent\"],\"dcterms:description\":\"Large language model via OpenRouter\",\"dcterms:title\":\"openai/gpt-4o\"},{\"@id\":\"urn:civic-evidence:platform:civic-ai-tools\",\"@type\":[\"prov:Agent\",\"prov:SoftwareAgent\"],\"civic:url\":\"https://civicaitools.org\",\"dcterms:title\":\"Civic AI Tools\"}]},\"queries\":[{\"arguments\":{\"dataset_id\":\"erm2-nwe9\",\"portal\":\"data.cityofnewyork.us\",\"select\":\"count(*)\",\"type\":\"query\"},\"datasetId\":\"erm2-nwe9\",\"operationType\":\"query\",\"portal\":\"data.cityofnewyork.us\",\"resultColumns\":1,\"resultRows\":1,\"tool\":\"get_data\"}],\"skillMetadata\":{},\"trace\":{\"resourceSpans\":[]},\"type\":\"content/analysis/v1\",\"vcsRef\":{\"commitSha\":\"a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0\",\"repoUrl\":\"https://git.example.com/analyses/example.git\"}}",
+        "jcsWithContentHash": "{\"contentCanonicalization\":\"https://typedstandards.org/canonicalization/legacy-json/v1\",\"contentHash\":{\"sha256\":\"5c3ff5c5db2dc6cd2a5a283ced395a9c97f6792008305dd8e31f53f7bfed2f57\"},\"cost\":{\"completionTokens\":20,\"model\":\"openai/gpt-4o\",\"promptTokens\":100,\"totalTokens\":120},\"dataSources\":[{\"accessTimestamp\":\"2026-01-02T03:04:05.000Z\",\"catalogType\":\"socrata\",\"datasetId\":\"erm2-nwe9\",\"datasetUrl\":\"https://data.cityofnewyork.us/d/erm2-nwe9\",\"portalUrl\":\"https://data.cityofnewyork.us\",\"sourceId\":\"socrata\"}],\"metadata\":{\"createdAt\":\"2026-01-02T03:04:05.000Z\",\"packageId\":\"11111111-2222-4333-8444-555555555555\",\"schemaVersion\":\"0.1.0\",\"signingKeyId\":\"adopter:test-key-1\"},\"output\":\"Around 400,000.\",\"prompt\":{\"hash\":\"3e7a528652636c5c2f9f9dab2eb23881f15dcdfae1fb446fba1389b15b9e43c0\",\"text\":\"How many 311 noise complaints last year?\",\"visibility\":\"full_text\"},\"provenance\":{\"@context\":{\"civic\":\"https://civicaitools.org/ns/evidence/\",\"dcterms\":\"http://purl.org/dc/terms/\",\"prov\":\"http://www.w3.org/ns/prov#\",\"xsd\":\"http://www.w3.org/2001/XMLSchema#\"},\"@graph\":[{\"@id\":\"urn:civic-evidence:11111111-2222-4333-8444-555555555555:prompt:3e7a528652636c5c2f9f9dab2eb23881f15dcdfae1fb446fba1389b15b9e43c0\",\"@type\":\"prov:Entity\",\"civic:contentHash\":\"sha256:3e7a528652636c5c2f9f9dab2eb23881f15dcdfae1fb446fba1389b15b9e43c0\",\"dcterms:description\":\"User query prompt\",\"prov:value\":\"How many 311 noise complaints last year?\"},{\"@id\":\"urn:civic-evidence:11111111-2222-4333-8444-555555555555:output:97166bfed6ba462fd890e9f5cde53e4a359efad8a92286705f959c69e157f7d2\",\"@type\":\"prov:Entity\",\"civic:contentHash\":\"sha256:97166bfed6ba462fd890e9f5cde53e4a359efad8a92286705f959c69e157f7d2\",\"dcterms:description\":\"AI-generated analysis output\"},{\"@id\":\"urn:civic-evidence:model:openai-gpt-4o\",\"@type\":[\"prov:Agent\",\"prov:SoftwareAgent\"],\"dcterms:description\":\"Large language model via OpenRouter\",\"dcterms:title\":\"openai/gpt-4o\"},{\"@id\":\"urn:civic-evidence:platform:civic-ai-tools\",\"@type\":[\"prov:Agent\",\"prov:SoftwareAgent\"],\"civic:url\":\"https://civicaitools.org\",\"dcterms:title\":\"Civic AI Tools\"}]},\"queries\":[{\"arguments\":{\"dataset_id\":\"erm2-nwe9\",\"portal\":\"data.cityofnewyork.us\",\"select\":\"count(*)\",\"type\":\"query\"},\"datasetId\":\"erm2-nwe9\",\"operationType\":\"query\",\"portal\":\"data.cityofnewyork.us\",\"resultColumns\":1,\"resultRows\":1,\"tool\":\"get_data\"}],\"skillMetadata\":{},\"trace\":{\"resourceSpans\":[]},\"type\":\"content/analysis/v1\",\"vcsRef\":{\"commitSha\":\"a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0\",\"repoUrl\":\"https://git.example.com/analyses/example.git\"}}",
+        "contentHashSha256": "5c3ff5c5db2dc6cd2a5a283ced395a9c97f6792008305dd8e31f53f7bfed2f57",
+        "envelopeHash": "021ba4033a32ef663eb368720c089231a853dbcfbda03d3c5dab3983b7d99ffd"
+      }
+    },
+    {
+      "name": "v01-raw-bytes-blobref",
+      "kind": "envelope",
+      "baseCase": "v01-default",
+      "specRow": "SPEC 8.2 raw-bytes/v1, BlobRef (SPEC:565): contentHash.sha256 MUST equal the hex part of output.ref; output is legacy-blobref-output's BlobRef",
+      "change": {
+        "set": {
+          "contentCanonicalization": "https://typedstandards.org/canonicalization/raw-bytes/v1",
+          "output": {
+            "ref": "blob:sha256:ed7002b439e9ac845f22357d822bac1444730fbdb6016d3ec9432297b9ec9f73",
+            "url": "https://example.public.blob.vercel-storage.com/evidence-refs/ed7002b439e9ac845f22357d822bac1444730fbdb6016d3ec9432297b9ec9f73.bin",
+            "contentType": "text/plain",
+            "size": 7
+          }
+        },
+        "remove": []
+      },
+      "expected": {
+        "jcsWithoutContentHash": "{\"contentCanonicalization\":\"https://typedstandards.org/canonicalization/raw-bytes/v1\",\"cost\":{\"completionTokens\":20,\"model\":\"openai/gpt-4o\",\"promptTokens\":100,\"totalTokens\":120},\"dataSources\":[{\"accessTimestamp\":\"2026-01-02T03:04:05.000Z\",\"catalogType\":\"socrata\",\"datasetId\":\"erm2-nwe9\",\"datasetUrl\":\"https://data.cityofnewyork.us/d/erm2-nwe9\",\"portalUrl\":\"https://data.cityofnewyork.us\",\"sourceId\":\"socrata\"}],\"metadata\":{\"createdAt\":\"2026-01-02T03:04:05.000Z\",\"packageId\":\"11111111-2222-4333-8444-555555555555\",\"schemaVersion\":\"0.1.0\",\"signingKeyId\":\"adopter:test-key-1\"},\"output\":{\"contentType\":\"text/plain\",\"ref\":\"blob:sha256:ed7002b439e9ac845f22357d822bac1444730fbdb6016d3ec9432297b9ec9f73\",\"size\":7,\"url\":\"https://example.public.blob.vercel-storage.com/evidence-refs/ed7002b439e9ac845f22357d822bac1444730fbdb6016d3ec9432297b9ec9f73.bin\"},\"prompt\":{\"hash\":\"3e7a528652636c5c2f9f9dab2eb23881f15dcdfae1fb446fba1389b15b9e43c0\",\"text\":\"How many 311 noise complaints last year?\",\"visibility\":\"full_text\"},\"provenance\":{\"@context\":{\"civic\":\"https://civicaitools.org/ns/evidence/\",\"dcterms\":\"http://purl.org/dc/terms/\",\"prov\":\"http://www.w3.org/ns/prov#\",\"xsd\":\"http://www.w3.org/2001/XMLSchema#\"},\"@graph\":[{\"@id\":\"urn:civic-evidence:11111111-2222-4333-8444-555555555555:prompt:3e7a528652636c5c2f9f9dab2eb23881f15dcdfae1fb446fba1389b15b9e43c0\",\"@type\":\"prov:Entity\",\"civic:contentHash\":\"sha256:3e7a528652636c5c2f9f9dab2eb23881f15dcdfae1fb446fba1389b15b9e43c0\",\"dcterms:description\":\"User query prompt\",\"prov:value\":\"How many 311 noise complaints last year?\"},{\"@id\":\"urn:civic-evidence:11111111-2222-4333-8444-555555555555:output:97166bfed6ba462fd890e9f5cde53e4a359efad8a92286705f959c69e157f7d2\",\"@type\":\"prov:Entity\",\"civic:contentHash\":\"sha256:97166bfed6ba462fd890e9f5cde53e4a359efad8a92286705f959c69e157f7d2\",\"dcterms:description\":\"AI-generated analysis output\"},{\"@id\":\"urn:civic-evidence:model:openai-gpt-4o\",\"@type\":[\"prov:Agent\",\"prov:SoftwareAgent\"],\"dcterms:description\":\"Large language model via OpenRouter\",\"dcterms:title\":\"openai/gpt-4o\"},{\"@id\":\"urn:civic-evidence:platform:civic-ai-tools\",\"@type\":[\"prov:Agent\",\"prov:SoftwareAgent\"],\"civic:url\":\"https://civicaitools.org\",\"dcterms:title\":\"Civic AI Tools\"}]},\"queries\":[{\"arguments\":{\"dataset_id\":\"erm2-nwe9\",\"portal\":\"data.cityofnewyork.us\",\"select\":\"count(*)\",\"type\":\"query\"},\"datasetId\":\"erm2-nwe9\",\"operationType\":\"query\",\"portal\":\"data.cityofnewyork.us\",\"resultColumns\":1,\"resultRows\":1,\"tool\":\"get_data\"}],\"skillMetadata\":{},\"trace\":{\"resourceSpans\":[]},\"type\":\"content/analysis/v1\"}",
+        "jcsWithContentHash": "{\"contentCanonicalization\":\"https://typedstandards.org/canonicalization/raw-bytes/v1\",\"contentHash\":{\"sha256\":\"ed7002b439e9ac845f22357d822bac1444730fbdb6016d3ec9432297b9ec9f73\"},\"cost\":{\"completionTokens\":20,\"model\":\"openai/gpt-4o\",\"promptTokens\":100,\"totalTokens\":120},\"dataSources\":[{\"accessTimestamp\":\"2026-01-02T03:04:05.000Z\",\"catalogType\":\"socrata\",\"datasetId\":\"erm2-nwe9\",\"datasetUrl\":\"https://data.cityofnewyork.us/d/erm2-nwe9\",\"portalUrl\":\"https://data.cityofnewyork.us\",\"sourceId\":\"socrata\"}],\"metadata\":{\"createdAt\":\"2026-01-02T03:04:05.000Z\",\"packageId\":\"11111111-2222-4333-8444-555555555555\",\"schemaVersion\":\"0.1.0\",\"signingKeyId\":\"adopter:test-key-1\"},\"output\":{\"contentType\":\"text/plain\",\"ref\":\"blob:sha256:ed7002b439e9ac845f22357d822bac1444730fbdb6016d3ec9432297b9ec9f73\",\"size\":7,\"url\":\"https://example.public.blob.vercel-storage.com/evidence-refs/ed7002b439e9ac845f22357d822bac1444730fbdb6016d3ec9432297b9ec9f73.bin\"},\"prompt\":{\"hash\":\"3e7a528652636c5c2f9f9dab2eb23881f15dcdfae1fb446fba1389b15b9e43c0\",\"text\":\"How many 311 noise complaints last year?\",\"visibility\":\"full_text\"},\"provenance\":{\"@context\":{\"civic\":\"https://civicaitools.org/ns/evidence/\",\"dcterms\":\"http://purl.org/dc/terms/\",\"prov\":\"http://www.w3.org/ns/prov#\",\"xsd\":\"http://www.w3.org/2001/XMLSchema#\"},\"@graph\":[{\"@id\":\"urn:civic-evidence:11111111-2222-4333-8444-555555555555:prompt:3e7a528652636c5c2f9f9dab2eb23881f15dcdfae1fb446fba1389b15b9e43c0\",\"@type\":\"prov:Entity\",\"civic:contentHash\":\"sha256:3e7a528652636c5c2f9f9dab2eb23881f15dcdfae1fb446fba1389b15b9e43c0\",\"dcterms:description\":\"User query prompt\",\"prov:value\":\"How many 311 noise complaints last year?\"},{\"@id\":\"urn:civic-evidence:11111111-2222-4333-8444-555555555555:output:97166bfed6ba462fd890e9f5cde53e4a359efad8a92286705f959c69e157f7d2\",\"@type\":\"prov:Entity\",\"civic:contentHash\":\"sha256:97166bfed6ba462fd890e9f5cde53e4a359efad8a92286705f959c69e157f7d2\",\"dcterms:description\":\"AI-generated analysis output\"},{\"@id\":\"urn:civic-evidence:model:openai-gpt-4o\",\"@type\":[\"prov:Agent\",\"prov:SoftwareAgent\"],\"dcterms:description\":\"Large language model via OpenRouter\",\"dcterms:title\":\"openai/gpt-4o\"},{\"@id\":\"urn:civic-evidence:platform:civic-ai-tools\",\"@type\":[\"prov:Agent\",\"prov:SoftwareAgent\"],\"civic:url\":\"https://civicaitools.org\",\"dcterms:title\":\"Civic AI Tools\"}]},\"queries\":[{\"arguments\":{\"dataset_id\":\"erm2-nwe9\",\"portal\":\"data.cityofnewyork.us\",\"select\":\"count(*)\",\"type\":\"query\"},\"datasetId\":\"erm2-nwe9\",\"operationType\":\"query\",\"portal\":\"data.cityofnewyork.us\",\"resultColumns\":1,\"resultRows\":1,\"tool\":\"get_data\"}],\"skillMetadata\":{},\"trace\":{\"resourceSpans\":[]},\"type\":\"content/analysis/v1\"}",
+        "contentBytesUtf8": "content",
+        "contentHashSha256": "ed7002b439e9ac845f22357d822bac1444730fbdb6016d3ec9432297b9ec9f73",
+        "envelopeHash": "43f765ef738558688345f2ef10a821aacf330cf25ad7c85c9e428220ff938006"
+      }
+    }
+  ]
+}
