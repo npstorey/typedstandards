@@ -26,6 +26,41 @@ in).
 - **On typedstandards.org** (the site's verifier; not part of this package's API): the carried lifecycle
   chain is resolved with the record's own signing key, and with the trust registry only when it was
   fetched from the record's declared URL.
+- **`superseded` is a lifecycle status (typedstandards#113, G0 D2).** `LIFECYCLE_STATUSES` is
+  `active`, `withdrawn`, `superseded`. `resolveLifecycleFromChain` reads the status from the latest
+  signer-matched node among `withdraws`, `reinstates` and `supersedes`: a `supersedes` reads
+  `superseded`; a `reinstates` reads `superseded` when a signer-matched `supersedes` precedes it and
+  `active` otherwise; a later `withdraws` reads `withdrawn`. `revises` is surfaced in `chain` and never
+  moves the status. `LifecycleResolution` gains `supersededAt` and `successorNodeId`, from the latest
+  counting `supersedes`. For a chain of `withdraws` and `reinstates` only, the output is unchanged.
+  `resolveLifecycleFromLegacyColumns` never derives `superseded`.
+  - `LifecycleAttestationView` gains optional `successorNodeId` and `namesTarget` (set by
+    `verifyLifecycleChain`: the node's `signer.identifier` equals the target's, bound or not).
+  - `CommitmentLifecycleState.status` widens to `'superseded'`, with optional `supersededAt` and
+    `successorNodeId`. `verifyRecord`'s STATE path still reads only the withdrawal columns.
+  - New constants `ATTESTATION_SUPERSEDES`, `ATTESTATION_REVISES`, `ATTESTATION_CORROBORATES`,
+    `ATTESTATION_CONTRADICTS`, and the lists `LIFECYCLE_STATUS_ATTESTATION_TYPES` (withdraws,
+    reinstates, supersedes) and `LIFECYCLE_CHAIN_ATTESTATION_TYPES` (those and revises).
+    `LifecycleAttestationType` and `LIFECYCLE_ATTESTATION_TYPES` stay `withdraws` and `reinstates`,
+    the sub-types produce-core emits.
+- **A per-node authorization check, `checkAttestationNode` (typedstandards#113, G0 D6 and D4).** For
+  `withdraws`, `reinstates`, `supersedes`, `revises`, `corroborates` and `contradicts`, in order:
+  integrity and signature; the key binding, by `verifyLifecycleChain`'s rule; then the sub-type's
+  authorization rule (spec §8.12.3). Publisher-only (the four lifecycle sub-types) runs when the
+  attested record's signer and signing key are supplied, and otherwise reads `not_checked`; a node
+  naming another signer reads `other_signer`, and one naming the record's signer under a key not bound
+  to it reads `publisher_key_unbound`. Any-with-binding (`corroborates`, `contradicts`) needs the key
+  bound to the node's own identifier (a `did:key` by derivation; any other identifier only by a
+  registry fetched from its declared URL) and a `signer.bindingTier` in `BINDING_TIERS`
+  (`pseudonymous`, `oauth`, `orcid`, `did-web`, `notarized`, `platform`). The result names each
+  required §8.12.1 payload field the node lacks, in `missingFields`; it moves no status. New exports:
+  `checkAttestationNode`, `ATTESTATION_AUTHORIZATION_RULES`, `ATTESTATION_REQUIRED_FIELDS`,
+  `ATTESTATION_AUTHORIZATION_STATUSES`, `BINDING_TIERS`, and the types
+  `AttestationAuthorizationRule`, `AttestationAuthorizationStatus`, `AttestationCheckContext`,
+  `AttestationCheck`.
+- **On typedstandards.org:** `superseded` reads `normal` ("Superseded by the publisher") and the #10
+  row names the successor. A carried lifecycle event that names the record's signer, under a key not
+  bound to it, adds one #10 line at `attention`; a third party's event adds nothing.
 
 ## 0.12.0 — 2026-09-24
 

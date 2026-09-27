@@ -67,6 +67,8 @@ export async function viewCommand(values: ViewValues, io: Io): Promise<JsonObjec
       ...(life.withdrawnReason ? { withdrawnReason: life.withdrawnReason } : {}),
       ...(life.reinstatedAt ? { reinstatedAt: life.reinstatedAt } : {}),
       ...(life.reinstatedReason ? { reinstatedReason: life.reinstatedReason } : {}),
+      ...(life.supersededAt ? { supersededAt: life.supersededAt } : {}),
+      ...(life.successorNodeId ? { successorNodeId: life.successorNodeId } : {}),
     };
   }
 

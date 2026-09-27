@@ -1,11 +1,11 @@
 // Lifecycle attestation checks (spec §9.2 check #10, §8.10) — browser-safe pure
 // logic.
 //
-// Lifecycle state (withdrawn / active) is derived from a chain of separately-
-// signed `attestation/*` nodes referencing the content node by `targetNodeId`,
-// each verified independently. Backwards-compat (§8.10.4): when no attestation
-// envelopes are present, the legacy `withdrawnAt` / `reinstatedAt` columns are
-// honored instead.
+// Lifecycle state (active / withdrawn / superseded) is derived from a chain of
+// separately-signed `attestation/*` nodes referencing the content node by
+// `targetNodeId`, each verified independently. Backwards-compat (§8.10.4): when
+// no attestation envelopes are present, the legacy `withdrawnAt` /
+// `reinstatedAt` columns are honored instead.
 //
 // This file holds only the PURE ordering / status-derivation / per-node
 // verification logic (factored from the server `verify.ts`). The DB + blob fetch
@@ -23,12 +23,19 @@ import { verifyKeyTrust } from './trust-registry.ts';
 import {
   ATTESTATION_WITHDRAWS,
   ATTESTATION_REINSTATES,
-  LIFECYCLE_ATTESTATION_TYPES,
+  ATTESTATION_SUPERSEDES,
+  ATTESTATION_REVISES,
+  ATTESTATION_CORROBORATES,
+  ATTESTATION_CONTRADICTS,
+  LIFECYCLE_STATUS_ATTESTATION_TYPES,
+  LIFECYCLE_CHAIN_ATTESTATION_TYPES,
 } from './attestation.ts';
 import type { SignerIdentity } from './types.ts';
 import type { TrustRegistry, TrustRegistryProvenance } from './trust-registry.ts';
 
-export const LIFECYCLE_STATUSES = ['active', 'withdrawn'] as const;
+/** Lifecycle status (spec §8.10.6). Only the attestation chain derives
+ *  `superseded`; the legacy columns (§8.10.4) know no supersession. */
+export const LIFECYCLE_STATUSES = ['active', 'withdrawn', 'superseded'] as const;
 export type LifecycleStatus = (typeof LIFECYCLE_STATUSES)[number];
 
 /** Which representation determined the lifecycle status. `none` = never
@@ -50,6 +57,8 @@ export interface LifecycleAttestationView {
   reason?: string;
   effectiveAt?: string;
   priorWithdrawalNodeId?: string;
+  /** `supersedes` / `revises`: the successor node's id. */
+  successorNodeId?: string;
   /** Ed25519ph signature over the recomputed nodeId; null when unsigned. */
   signatureValid: boolean | null;
   /** Recomputed envelope hash equals the stored nodeId (integrity). */
@@ -68,6 +77,9 @@ export interface LifecycleAttestationView {
    *  signer it names (see `verifyLifecycleChain`). Absent on views built
    *  elsewhere. */
   keyBound?: boolean;
+  /** Set by `verifyLifecycleChain`: the node's `signer.identifier` equals the
+   *  target's, whether or not its key is bound. Absent on views built elsewhere. */
+  namesTarget?: boolean;
 }
 
 export interface LifecycleResolution {
@@ -82,6 +94,10 @@ export interface LifecycleResolution {
   withdrawnReason?: string;
   reinstatedAt?: string;
   reinstatedReason?: string;
+  /** The latest counting `supersedes`: its envelope timestamp. */
+  supersededAt?: string;
+  /** The latest counting `supersedes`: its `successorNodeId`. */
+  successorNodeId?: string;
 }
 
 export interface AttestationVerifyResult {
@@ -130,24 +146,49 @@ function compareLifecycleOrder(
 
 /**
  * Check #10 (chain path) — derive lifecycle status from a set of verified
- * attestation views (spec §8.10.1, §8.10.3). The current status is the latest
- * signer-matched lifecycle attestation by envelope timestamp: `withdraws` →
- * withdrawn, `reinstates` → active. Non-signer-matched attestations are kept in
- * the surfaced chain for transparency but do NOT move the status (retention
- * asymmetry, §8.10.3).
+ * attestation views (spec §8.10.1, §8.10.3, §8.10.6; typedstandards#113 G0 D2).
+ *
+ * The chain holds the publisher-only lifecycle sub-types
+ * (`LIFECYCLE_CHAIN_ATTESTATION_TYPES`: withdraws, reinstates, supersedes,
+ * revises), ordered by envelope timestamp, ties by nodeId. The status is read
+ * from the latest signer-matched node among withdraws, reinstates and
+ * supersedes (`LIFECYCLE_STATUS_ATTESTATION_TYPES`):
+ *   - `withdraws` → withdrawn;
+ *   - `supersedes` → superseded;
+ *   - `reinstates` → superseded when a signer-matched `supersedes` precedes it in
+ *     chain order, active otherwise.
+ * `revises` is surfaced in the chain and never moves the status (§8.10.5: no
+ * deprecation signal). Non-signer-matched attestations are kept in the surfaced
+ * chain for transparency but do NOT move the status (retention asymmetry,
+ * §8.10.3). The latest signer-matched `supersedes` names the successor and the
+ * supersession time.
+ *
+ * For a chain of withdraws and reinstates only, the output is what it was before
+ * `superseded` existed.
  */
 export function resolveLifecycleFromChain(
   views: LifecycleAttestationView[],
 ): LifecycleResolution {
   const chain = views
-    .filter((v) => LIFECYCLE_ATTESTATION_TYPES.includes(v.type))
+    .filter((v) => LIFECYCLE_CHAIN_ATTESTATION_TYPES.includes(v.type))
     .slice()
     .sort(compareLifecycleOrder);
 
-  const signerMatched = chain.filter((v) => v.signerMatchesTarget);
+  const signerMatched = chain.filter(
+    (v) => v.signerMatchesTarget && LIFECYCLE_STATUS_ATTESTATION_TYPES.includes(v.type),
+  );
   const latest = signerMatched[signerMatched.length - 1];
-  const status: LifecycleStatus =
-    latest && latest.type === ATTESTATION_WITHDRAWS ? 'withdrawn' : 'active';
+  const latestSupersede = [...signerMatched]
+    .reverse()
+    .find((v) => v.type === ATTESTATION_SUPERSEDES);
+
+  let status: LifecycleStatus = 'active';
+  if (latest?.type === ATTESTATION_WITHDRAWS) status = 'withdrawn';
+  else if (latest?.type === ATTESTATION_SUPERSEDES) status = 'superseded';
+  // A reinstatement returns the node to where it stood before the withdrawal:
+  // superseded if a counting supersedes precedes it, which it does whenever one
+  // exists, since the reinstatement is the latest counting node.
+  else if (latest?.type === ATTESTATION_REINSTATES && latestSupersede) status = 'superseded';
 
   const latestWithdraw = [...signerMatched]
     .reverse()
@@ -172,6 +213,14 @@ export function resolveLifecycleFromChain(
           reinstatedReason: latestReinstate.reason,
         }
       : {}),
+    ...(latestSupersede
+      ? {
+          supersededAt: latestSupersede.createdAt,
+          ...(latestSupersede.successorNodeId
+            ? { successorNodeId: latestSupersede.successorNodeId }
+            : {}),
+        }
+      : {}),
   };
 }
 
@@ -179,7 +228,8 @@ export function resolveLifecycleFromChain(
  * Check #10 (legacy fallback) — derive lifecycle status from the pre-PR3
  * `withdrawnAt` / `reinstatedAt` columns (spec §8.10.4). Used when a content node
  * has no attestation envelopes. Withdrawn iff `withdrawnAt` is set and
- * `reinstatedAt` is not.
+ * `reinstatedAt` is not. It never derives `superseded`: the columns record no
+ * supersession.
  */
 export function resolveLifecycleFromLegacyColumns(columns: {
   withdrawnAt?: string | null;
@@ -298,10 +348,12 @@ function isKeyBound(
  *     `binding.registryProvenance` is `declared-url` and it lists the node's
  *     `(kid, publicKey)` under that identifier, read by the rules of checks #5 and
  *     #14. A registry carried in a bundle, or with no stated provenance, never binds.
+ * Each view records `namesTarget` (the identifiers are equal) beside `keyBound`, so a
+ * reader can tell a third party's node from one that names the publisher under a key
+ * not bound to it.
  * Surviving nodes go to `resolveLifecycleFromChain`, which applies the §8.10.3
  * retention asymmetry (a valid but non-signer-matched attestation is surfaced in the
- * chain yet does NOT move the publisher's status). That shared resolver is unchanged,
- * so the server route's output stays byte-identical.
+ * chain yet does NOT move the publisher's status).
  */
 export function verifyLifecycleChain(
   carried: CarriedLifecycleNode[],
@@ -326,6 +378,7 @@ export function verifyLifecycleChain(
       pickString(entry.signature?.kid),
       binding,
     );
+    const namesTarget = !!signer && signer.identifier === targetSignerIdentifier;
     views.push({
       nodeId: entry.nodeId,
       type: pickString(entry.node['type']) ?? '',
@@ -334,13 +387,179 @@ export function verifyLifecycleChain(
       reason: pickString(entry.node['reason']),
       effectiveAt: pickString(entry.node['effectiveAt']),
       priorWithdrawalNodeId: pickString(entry.node['priorWithdrawalNodeId']),
+      successorNodeId: pickString(entry.node['successorNodeId']),
       signatureValid: verdict.signatureValid,
       nodeIdMatches: verdict.nodeIdMatches,
       hasTimestamp: !!entry.hasTimestamp,
       hasRekor: !!entry.hasRekor,
-      signerMatchesTarget: !!signer && signer.identifier === targetSignerIdentifier && keyBound,
+      signerMatchesTarget: namesTarget && keyBound,
       keyBound,
+      namesTarget,
     });
   }
   return resolveLifecycleFromChain(views);
+}
+
+// ---------------------------------------------------------------------------
+// The per-node authorization check (spec §8.12.3; typedstandards#113 G0 D6 as
+// corrected, and D4)
+
+/** A sub-type's authorization rule (spec §8.12.1). */
+export type AttestationAuthorizationRule = 'publisher-only' | 'any-with-binding';
+
+/** The rule of each sub-type `checkAttestationNode` checks. `publishes`,
+ *  `locatedAt` and the specific-role-required sub-types have none here. */
+export const ATTESTATION_AUTHORIZATION_RULES: Readonly<Record<string, AttestationAuthorizationRule>> = Object.freeze({
+  [ATTESTATION_WITHDRAWS]: 'publisher-only',
+  [ATTESTATION_REINSTATES]: 'publisher-only',
+  [ATTESTATION_SUPERSEDES]: 'publisher-only',
+  [ATTESTATION_REVISES]: 'publisher-only',
+  [ATTESTATION_CORROBORATES]: 'any-with-binding',
+  [ATTESTATION_CONTRADICTS]: 'any-with-binding',
+});
+
+/** Each checked sub-type's required payload fields (spec §8.12.1), beyond the
+ *  structural primitive. Optional fields (`effectiveAt`, a reinstatement's
+ *  `reason`, `reasoning`) are not listed. */
+export const ATTESTATION_REQUIRED_FIELDS: Readonly<Record<string, readonly string[]>> = Object.freeze({
+  [ATTESTATION_WITHDRAWS]: ['targetNodeId', 'reason'],
+  [ATTESTATION_REINSTATES]: ['targetNodeId', 'priorWithdrawalNodeId'],
+  [ATTESTATION_SUPERSEDES]: ['targetNodeId', 'successorNodeId'],
+  [ATTESTATION_REVISES]: ['targetNodeId', 'successorNodeId'],
+  [ATTESTATION_CORROBORATES]: ['targetNodeId', 'scope'],
+  [ATTESTATION_CONTRADICTS]: ['targetNodeId', 'scope'],
+});
+
+/** The `signer.bindingTier` values an any-with-binding node may carry: the §8.5
+ *  graded identity ladder, and `platform` (spec §8.1.1). */
+export const BINDING_TIERS = ['pseudonymous', 'oauth', 'orcid', 'did-web', 'notarized', 'platform'] as const;
+
+/**
+ * What `checkAttestationNode` reads for a node, first failure first:
+ *   - `node_id_mismatch` — the recomputed envelope hash is not the stored nodeId;
+ *   - `signature_invalid` — the signature does not verify over it;
+ *   - `unsigned` — the node carries no signature, so nothing can be bound;
+ *   - `not_checked` — publisher-only with no attested record supplied, or a
+ *     sub-type this check has no rule for;
+ *   - `other_signer` — publisher-only: the node names a signer other than the
+ *     attested record's, a third party's event;
+ *   - `publisher_key_unbound` — publisher-only: the node names the attested
+ *     record's signer, but its signing key is not bound to that signer;
+ *   - `key_unbound` — any-with-binding: the signing key is not bound to the signer
+ *     the node names;
+ *   - `binding_tier_off_ladder` — any-with-binding: `signer.bindingTier` is not in
+ *     `BINDING_TIERS`;
+ *   - `authorized` — the sub-type's rule holds.
+ */
+export const ATTESTATION_AUTHORIZATION_STATUSES = [
+  'authorized',
+  'not_checked',
+  'other_signer',
+  'publisher_key_unbound',
+  'key_unbound',
+  'binding_tier_off_ladder',
+  'unsigned',
+  'signature_invalid',
+  'node_id_mismatch',
+] as const;
+export type AttestationAuthorizationStatus = (typeof ATTESTATION_AUTHORIZATION_STATUSES)[number];
+
+/** What a caller holds for `checkAttestationNode`. */
+export interface AttestationCheckContext {
+  /** The attested record: its `signer.identifier`, and the base64 SPKI
+   *  `publicKey` of its signature envelope. The publisher-only rule runs only
+   *  when this is supplied. */
+  target?: { signerIdentifier: string; publicKey: string };
+  /** A parsed trust registry that may bind the node's key to the identifier it
+   *  names. */
+  registry?: TrustRegistry;
+  /** Where `registry` came from. Only `declared-url` can bind a key; absent is
+   *  treated as `bundle`. */
+  registryProvenance?: TrustRegistryProvenance;
+}
+
+export interface AttestationCheck {
+  /** The recomputed envelope hash. */
+  nodeId: string;
+  type: string;
+  /** The sub-type's rule; null for a sub-type this check has none for. */
+  rule: AttestationAuthorizationRule | null;
+  nodeIdMatches: boolean;
+  signatureValid: boolean | null;
+  /** The signing key is bound to the signer the node names (see `status`). */
+  keyBound: boolean;
+  status: AttestationAuthorizationStatus;
+  /** Each required §8.12.1 payload field the node lacks (absent, null or the
+   *  empty string), by name. Reported only; it does not change `status`. */
+  missingFields: string[];
+}
+
+function isAbsent(v: unknown): boolean {
+  return v === undefined || v === null || v === '';
+}
+
+/**
+ * Check one `attestation/*` node on its own (spec §8.12.3), for `withdraws`,
+ * `reinstates`, `supersedes`, `revises`, `corroborates` and `contradicts`, in
+ * order:
+ *   1. integrity and signature, as `verifyAttestationNode` reads them;
+ *   2. the key binding, by the rule `verifyLifecycleChain` applies: a key-derived
+ *      identifier binds by derivation; any other identifier binds by a registry
+ *      fetched from its declared URL, and, for a publisher-only node only, by the
+ *      attested record's own signing key;
+ *   3. the sub-type's authorization rule:
+ *      - publisher-only (the four lifecycle sub-types) runs when `context.target`
+ *        is supplied, and otherwise reads `not_checked`. A node naming another
+ *        signer reads `other_signer`; one naming the target's signer under a key
+ *        not bound to it reads `publisher_key_unbound`;
+ *      - any-with-binding (`corroborates`, `contradicts`) needs the key bound and a
+ *        `signer.bindingTier` in `BINDING_TIERS`.
+ * It also names each required §8.12.1 payload field the node lacks. Pure; it moves
+ * no status: `resolveLifecycleFromChain` alone derives the lifecycle.
+ */
+export function checkAttestationNode(
+  carried: CarriedLifecycleNode,
+  context: AttestationCheckContext = {},
+): AttestationCheck {
+  const node = carried.node;
+  const type = pickString(node['type']) ?? '';
+  const rule = ATTESTATION_AUTHORIZATION_RULES[type] ?? null;
+  const verdict = verifyAttestationNode(node, carried.nodeId, carried.signature ?? null);
+  const missingFields = (ATTESTATION_REQUIRED_FIELDS[type] ?? []).filter((f) => isAbsent(node[f]));
+  const publicKey = carried.signature?.publicKey ?? '';
+  const signed = verdict.nodeIdMatches && verdict.signatureValid === true;
+  const keyBound =
+    signed &&
+    isKeyBound(node, publicKey, pickString(carried.signature?.kid), {
+      ...(rule === 'publisher-only' && context.target ? { targetPublicKey: context.target.publicKey } : {}),
+      ...(context.registry ? { registry: context.registry } : {}),
+      ...(context.registryProvenance ? { registryProvenance: context.registryProvenance } : {}),
+    });
+  const result = (status: AttestationAuthorizationStatus): AttestationCheck => ({
+    nodeId: verdict.nodeId,
+    type,
+    rule,
+    nodeIdMatches: verdict.nodeIdMatches,
+    signatureValid: verdict.signatureValid,
+    keyBound,
+    status,
+    missingFields,
+  });
+
+  if (!verdict.nodeIdMatches) return result('node_id_mismatch');
+  if (verdict.signatureValid === false) return result('signature_invalid');
+  if (verdict.signatureValid === null) return result('unsigned');
+  if (rule === null) return result('not_checked');
+
+  const signer = node['signer'] as SignerIdentity | undefined;
+  const identifier = signer && typeof signer === 'object' ? signer.identifier : undefined;
+  if (rule === 'publisher-only') {
+    if (!context.target) return result('not_checked');
+    if (identifier !== context.target.signerIdentifier) return result('other_signer');
+    return result(keyBound ? 'authorized' : 'publisher_key_unbound');
+  }
+  if (!keyBound) return result('key_unbound');
+  const tier = signer && typeof signer === 'object' ? signer.bindingTier : undefined;
+  if (!(BINDING_TIERS as readonly unknown[]).includes(tier)) return result('binding_tier_off_ladder');
+  return result('authorized');
 }

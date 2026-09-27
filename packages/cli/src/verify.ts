@@ -59,7 +59,10 @@ export async function verifyOffline(io: Io, record: RecordToVerify): Promise<Ver
     { package: record.package, packageHash: record.packageHash, signature: record.signature },
     { registry: undefined, fetch: offline.fetch, ...(lifecycleResolution ? { lifecycleResolution } : {}) },
   );
-  const readings = readingsOf(checks, record.carried, record.packageHash);
+  const readings = readingsOf(checks, record.carried, record.packageHash, {
+    signerIdentifier: signerId,
+    publicKey: record.signature.publicKey,
+  });
   const failures = readings.filter((r) => r.tier === 'alarm');
   return {
     ok: failures.length === 0,

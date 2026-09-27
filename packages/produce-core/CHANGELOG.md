@@ -3,6 +3,13 @@
 Factual record of what changed per published version. Check numbers (#1–#16)
 refer to the Typed Standards specification §9.2 verification sequence.
 
+## Unreleased
+
+- **`CommitmentLifecycle.status` widens to `'superseded'` (typedstandards#113, G0 D2)**, with optional
+  `supersededAt` and `successorNodeId`, matching verify-core's lifecycle statuses.
+  `buildCommitmentView` carries the value verbatim, as before. `EmittableAttestationType` does not
+  change: `supersedes` and the claim-to-claim sub-types are still not emitted.
+
 ## 0.7.0 — 2026-09-24
 
 The certificate-chain split in verify-core 0.12.0 (typedstandards#100). **A minor bump**, taken with
