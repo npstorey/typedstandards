@@ -23,9 +23,21 @@ in).
   material gets a status moved only by `did:key` signers. `LifecycleAttestationView` gains an optional
   `keyBound`, set by `verifyLifecycleChain`, and `CarriedLifecycleNode.signature` gains an optional
   `kid`. `resolveLifecycleFromChain` is unchanged.
+- **A carried lifecycle node that lacks a required payload field moves no status (typedstandards#113,
+  spec §8.12.3).** In `verifyLifecycleChain`, a node that lacks a field `ATTESTATION_REQUIRED_FIELDS`
+  lists for its sub-type (absent, null or the empty string: a `withdraws` with no `reason`, a
+  `reinstates` with no `priorWithdrawalNodeId`, a `supersedes` or `revises` with no
+  `successorNodeId`) stays in `chain` with `signerMatchesTarget` false, whoever signed it, and does not
+  move the status. `LifecycleAttestationView` gains an optional `missingFields`, set by
+  `verifyLifecycleChain` on every view: the fields the node lacks, by name, empty when it lacks none.
+  `resolveLifecycleFromChain` and `checkAttestationNode` are unchanged.
 - **On typedstandards.org** (the site's verifier; not part of this package's API): the carried lifecycle
   chain is resolved with the record's own signing key, and with the trust registry only when it was
-  fetched from the record's declared URL.
+  fetched from the record's declared URL. A carried lifecycle event that names the record's signer and
+  lacks a required payload field adds one #10 line at `attention`, whose detail names the field, and
+  the #10 row lists the event under the fields it lacks. A third party's event that lacks one reads as
+  any third-party event does and adds no line (the owner's correction at the P5-fix gate, per G0 D6 as
+  corrected).
 - **`superseded` is a lifecycle status (typedstandards#113, G0 D2).** `LIFECYCLE_STATUSES` is
   `active`, `withdrawn`, `superseded`. `resolveLifecycleFromChain` reads the status from the latest
   signer-matched node among `withdraws`, `reinstates` and `supersedes`: a `supersedes` reads
@@ -42,7 +54,8 @@ in).
     `ATTESTATION_CONTRADICTS`, and the lists `LIFECYCLE_STATUS_ATTESTATION_TYPES` (withdraws,
     reinstates, supersedes) and `LIFECYCLE_CHAIN_ATTESTATION_TYPES` (those and revises).
     `LifecycleAttestationType` and `LIFECYCLE_ATTESTATION_TYPES` stay `withdraws` and `reinstates`,
-    the sub-types produce-core emits.
+    the withdrawal/reinstatement pair. produce-core also emits `supersedes` and `revises`, so they are
+    not the set it emits, and no verify-core check reads them.
 - **A per-node authorization check, `checkAttestationNode` (typedstandards#113, G0 D6 and D4).** For
   `withdraws`, `reinstates`, `supersedes`, `revises`, `corroborates` and `contradicts`, in order:
   integrity and signature; the key binding, by `verifyLifecycleChain`'s rule; then the sub-type's

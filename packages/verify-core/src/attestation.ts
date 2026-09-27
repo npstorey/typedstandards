@@ -11,15 +11,19 @@ export const ATTESTATION_REVISES = 'attestation/revises/v1';
 export const ATTESTATION_CORROBORATES = 'attestation/corroborates/v1';
 export const ATTESTATION_CONTRADICTS = 'attestation/contradicts/v1';
 
-/** The lifecycle sub-types produce-core emits (its `EmittableAttestationType` is
- *  built from this union). It does not name every sub-type the verify side reads:
- *  see `LIFECYCLE_STATUS_ATTESTATION_TYPES` and `LIFECYCLE_CHAIN_ATTESTATION_TYPES`. */
+/** The withdrawal/reinstatement pair: the two lifecycle sub-types the legacy
+ *  `withdrawnAt` / `reinstatedAt` columns also record (spec §8.10.4). produce-core's
+ *  `EmittableAttestationType` includes this union beside the other sub-types it
+ *  emits, `supersedes` and `revises` among them, so it is not the set produce-core
+ *  emits. No verify-core check reads it: the lifecycle reads
+ *  `LIFECYCLE_STATUS_ATTESTATION_TYPES` and `LIFECYCLE_CHAIN_ATTESTATION_TYPES`. */
 export type LifecycleAttestationType =
   | typeof ATTESTATION_WITHDRAWS
   | typeof ATTESTATION_REINSTATES;
 
-/** The values of `LifecycleAttestationType`, the lifecycle sub-types produce-core
- *  emits. */
+/** The values of `LifecycleAttestationType`, the withdrawal/reinstatement pair. Not
+ *  the set produce-core emits, and not read by any verify-core check (see
+ *  `LifecycleAttestationType`). */
 export const LIFECYCLE_ATTESTATION_TYPES: readonly string[] = [
   ATTESTATION_WITHDRAWS,
   ATTESTATION_REINSTATES,

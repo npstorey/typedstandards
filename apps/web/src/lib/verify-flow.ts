@@ -76,6 +76,7 @@ import {
   LIFECYCLE_STATE_SIGNALS,
   LIFECYCLE_SOURCE_SIGNALS,
   ATTESTATION_AUTHORIZATION_SIGNALS,
+  LIFECYCLE_ATTESTATION_MISSING_FIELD_SIGNALS,
 } from './trust-signal.ts';
 import {
   BARE_ID_ANCHOR,
@@ -1455,6 +1456,13 @@ export function checkSignalsOf(
   if (unboundPublisherEvents(result).length > 0) {
     add('10', 'Lifecycle', ATTESTATION_AUTHORIZATION_SIGNALS.publisher_key_unbound);
   }
+  // One #10 line at attention when any carried event that names the publisher lacks
+  // a payload field the standard requires of its sub-type (§8.12.3; typedstandards#113,
+  // the P5 ruling on F1 as corrected at the P5-fix gate); its detail names the fields.
+  // Such an event does not change the status. A third party's adds none (G0 D6 as
+  // corrected).
+  const incomplete = eventsLackingFields(result);
+  if (incomplete.length > 0) add('10', 'Lifecycle', lifecycleMissingFieldSignal(incomplete));
   if (result.typeResolution) add('12', 'Node type', TYPE_RESOLUTION_SIGNALS[result.typeResolution.status]);
   // #14: a match against a registry the record supplied establishes nothing (#78); a
   // mismatch against it still alarms.
@@ -1485,6 +1493,59 @@ const TIER_RANK: Record<TrustSignalDescriptor['tier'], number> = { verified: 0, 
 function unboundPublisherEvents(result: VerifyResult): LifecycleResolution['chain'] {
   // Read defensively: a result assembled by hand may carry a lifecycle with no chain.
   return (result.lifecycle?.chain ?? []).filter((v) => v.namesTarget === true && v.keyBound === false);
+}
+
+/**
+ * The carried lifecycle events that name the record's signer and lack a payload
+ * field the standard requires of their sub-type (spec §8.12.1, §8.12.3;
+ * typedstandards#113, the P5 ruling on F1 as the owner corrected it at the P5-fix
+ * gate), bound key or not. Read from the `namesTarget` and `missingFields`
+ * `verifyLifecycleChain` records on each view; such an event stays in the chain and
+ * does not change the status. A third party's incomplete event is not one of them:
+ * it reads as any third-party event does (G0 D6 as corrected).
+ */
+function eventsLackingFields(result: VerifyResult): LifecycleResolution['chain'] {
+  // Read defensively: a result assembled by hand may carry a lifecycle with no chain.
+  return (result.lifecycle?.chain ?? []).filter((v) => v.namesTarget === true && (v.missingFields?.length ?? 0) > 0);
+}
+
+/** What each lifecycle sub-type is called in a reading. */
+const LIFECYCLE_EVENT_NOUN: Record<string, string> = {
+  'attestation/withdraws/v1': 'a withdrawal',
+  'attestation/reinstates/v1': 'a reinstatement',
+  'attestation/supersedes/v1': 'a supersession',
+  'attestation/revises/v1': 'a revision',
+};
+
+/** `a`, `a and b`, `a, b and c`: named plainly, as the other site details name fields. */
+function fieldList(fields: readonly string[]): string {
+  return fields.length > 1 ? `${fields.slice(0, -1).join(', ')} and ${fields[fields.length - 1]}` : fields[0] ?? '';
+}
+
+/**
+ * The #10 line for `events`, each naming the publisher and lacking a required
+ * payload field: the tier and label of LIFECYCLE_ATTESTATION_MISSING_FIELD_SIGNALS
+ * `names_publisher`, and a detail that names the fields and the sub-type that
+ * requires them. It states the fact; no event is accused.
+ */
+function lifecycleMissingFieldSignal(events: LifecycleResolution['chain']): TrustSignalDescriptor {
+  const seen = new Set<string>();
+  const phrases: string[] = [];
+  for (const v of events) {
+    const noun = LIFECYCLE_EVENT_NOUN[v.type] ?? `an event of type ${v.type}`;
+    const phrase = `lacks ${fieldList(v.missingFields ?? [])}, which the standard requires of ${noun}`;
+    if (!seen.has(phrase)) {
+      seen.add(phrase);
+      phrases.push(phrase);
+    }
+  }
+  const detail =
+    events.length === 1
+      ? `The event ${phrases[0]}, so it does not change the status.`
+      : phrases.length === 1
+        ? `${events.length} events each ${phrases[0].replace(/^lacks/, 'lack')}, so none of them changes the status.`
+        : `${events.length} events lack fields the standard requires, so none of them changes the status: one ${phrases.join('; one ')}.`;
+  return { ...LIFECYCLE_ATTESTATION_MISSING_FIELD_SIGNALS.names_publisher, detail };
 }
 
 /** Whether #8's Merkle inclusion and signed checkpoint both verified offline. */
@@ -1718,8 +1779,9 @@ export function buildCheckRows(
     );
   }
 
-  // #10 — lifecycle state, the successor when superseded, and the carried events
-  // that name the publisher under a key not bound to it.
+  // #10 — lifecycle state, the successor when superseded, and the carried events that
+  // name the publisher under a key not bound to it, or lack a required payload field
+  // (listed under the fields they lack).
   {
     const life = result.lifecycle;
     const source = LIFECYCLE_SOURCE_SIGNALS[life.source];
@@ -1732,6 +1794,9 @@ export function buildCheckRows(
     }
     for (const v of unboundPublisherEvents(result)) {
       math.push({ label: 'Key not bound to the publisher', value: truncMiddle(v.nodeId), mono: true, full: v.nodeId });
+    }
+    for (const v of eventsLackingFields(result)) {
+      math.push({ label: `Lacks ${(v.missingFields ?? []).join(', ')}`, value: truncMiddle(v.nodeId), mono: true, full: v.nodeId });
     }
     rows.push(checkRow('10', math));
   }

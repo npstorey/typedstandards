@@ -22,6 +22,17 @@ refer to the Typed Standards specification §9.2 verification sequence.
   `publisher_key_unbound`, an event naming the record's signer under a key not bound to it
   (attention, printed on stderr, exit 0). The tiers are copied from typedstandards.org's
   `ATTESTATION_AUTHORIZATION_SIGNALS`.
+- **A carried lifecycle node that lacks a required payload field moves no status (typedstandards#113,
+  spec §8.12.3).** `view` and `verify` resolve the chain with verify-core's `verifyLifecycleChain`, so a
+  `withdraws` with no `reason`, a `reinstates` with no `priorWithdrawalNodeId`, or a `supersedes` or
+  `revises` with no `successorNodeId` stays in the chain and does not move the record's status. Each
+  such field gets a reading naming it. On a node that names the record's signer it reads `attention`,
+  and `verify` (and `view`) prints it on stderr, for example
+  `#10 lifecycleAttestations[0].reason: missing_required_field (attention)`, and exits 0. On a third
+  party's node it reads `normal`, as any third-party event does, and nothing is printed (the owner's
+  correction at the P5-fix gate, per G0 D6 as corrected). The tiers are copied from
+  typedstandards.org's `LIFECYCLE_ATTESTATION_MISSING_FIELD_SIGNALS`. Each lifecycle view in
+  `verify --json`'s `lifecycle.chain` gains `missingFields`.
 - **`attest --input <file|->` (typedstandards#113, G0 D10 as corrected)** signs an
   `attestation/supersedes/v1`, `revises/v1`, `corroborates/v1` or `contradicts/v1` from one JSON
   object: `type`, `targetNodeId`, `signer` and the type's §8.12.1 payload (`successorNodeId`; or
