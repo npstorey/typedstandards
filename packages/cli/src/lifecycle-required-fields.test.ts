@@ -1,8 +1,12 @@
 // `verify` on a view carrying a lifecycle node that lacks a field the standard
 // requires of its sub-type (spec §8.12.1, §8.12.3; typedstandards#113, the P5 ruling
-// on F1): the node does not move the status, and each missing field reads
-// `attention` on stderr, per node, naming the field; the exit is 0. The tier is
-// copied from typedstandards.org's table, which readings.test.ts holds equal.
+// on F1, as the owner corrected it at the P5-fix gate): the node does not move the
+// status, and each missing field gets a reading, per node, naming the field:
+//   - on a node naming the record's signer, `attention`, printed on stderr; exit 0;
+//   - on a third party's node, `normal`, as any third-party event reads (G0 D6 as
+//     corrected), so nothing is printed.
+// The tiers are copied from typedstandards.org's table, which readings.test.ts holds
+// equal.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -11,13 +15,16 @@ import {
   computeContentHashSha256,
   computeEnvelopeHash,
   LEGACY_JSON_CANONICALIZATION,
+  verifyLifecycleChain,
+  verifyRecord,
 } from '@typedstandards/verify-core';
 import { SEED_VARIABLE, cli, golden, newSeed, scratch } from './harness.test.ts';
-import { SITE_TABLES, type CarriedNode } from './readings.ts';
+import { SITE_TABLES, readingsOf, type CarriedNode } from './readings.ts';
 
 const REGISTRY_URL = 'https://registry.example/.well-known/typed-publisher.json';
 const KID = 'example:lifecycle-key';
 const SUCCESSOR = 'e'.repeat(64);
+const THIRD_PARTY: SignerIdentity = { bindingTier: 'platform', identifier: 'platform:another-party', displayName: 'Another party' };
 
 /** A lifecycle node of `type` on `target`, naming `signer`, carrying exactly
  *  `payload`, signed by `seed`: the shape withdraw prints. */
@@ -36,8 +43,9 @@ function carriedNode(type: string, seed: Uint8Array, target: string, signer: Sig
 }
 
 /** Sign the golden platform-signer input with a fresh seed; view it carrying one
- *  node signed by the record's own key; verify the view. */
-function run(type: string, payload: Record<string, unknown>) {
+ *  node, signed by the record's own key and naming its signer, or with
+ *  `thirdParty` signed by another key and naming another signer; verify the view. */
+function run(type: string, payload: Record<string, unknown>, thirdParty = false) {
   const dir = scratch();
   try {
     const seed = newSeed();
@@ -46,7 +54,9 @@ function run(type: string, payload: Record<string, unknown>) {
     const s = cli(['sign', '--input', dir.write('platform.json', JSON.stringify(input))], { env });
     assert.equal(s.code, 0, s.err);
     const signed = s.json() as { envelopeHash: string; package: { signer: SignerIdentity } };
-    const carried = carriedNode(type, seed.bytes, signed.envelopeHash, signed.package.signer, payload);
+    const carried = thirdParty
+      ? carriedNode(type, newSeed().bytes, signed.envelopeHash, THIRD_PARTY, payload)
+      : carriedNode(type, seed.bytes, signed.envelopeHash, signed.package.signer, payload);
     const view = cli([
       'view', '--signed', dir.write('signed.json', s.out), '--visibility', 'public',
       '--trust-registry-url', REGISTRY_URL, '--attestation', dir.write('node.json', JSON.stringify(carried)),
@@ -88,7 +98,33 @@ test('verify: the same nodes with the field present print no such reading and mo
   assert.doesNotMatch(superseded.err, /missing_required_field/);
 });
 
-test('the tier is the one copied from the site\'s table, which readings.test.ts holds equal', () => {
+test('verify: a third party\'s withdraws with no reason prints no missing-field reading, exits 0, and moves no status', () => {
+  const { verify } = run('attestation/withdraws/v1', {}, true);
+  assert.equal(verify.code, 0, verify.err);
+  assert.equal(lifecycleOf(verify).status, 'active');
+  assert.doesNotMatch(verify.err, /missing_required_field/);
+});
+
+test('readingsOf: the missing field is named on both nodes, at attention for the publisher\'s and normal for a third party\'s', async () => {
+  const target = 'a'.repeat(64);
+  const seed = newSeed().bytes;
+  const publisher: SignerIdentity = { bindingTier: 'platform', identifier: 'platform:example-publisher', displayName: 'Example publisher' };
+  const { publicKey } = signEnvelopeHash(target, seed, KID);
+  const carried = [
+    carriedNode('attestation/withdraws/v1', seed, target, publisher, {}),
+    carriedNode('attestation/withdraws/v1', newSeed().bytes, target, THIRD_PARTY, {}),
+  ];
+  const lifecycleResolution = verifyLifecycleChain(carried, target, publisher.identifier, { targetPublicKey: publicKey });
+  const result = await verifyRecord({ package: null, packageHash: target }, { registry: undefined, lifecycleResolution });
+  const readings = readingsOf(result, carried, target, { signerIdentifier: publisher.identifier, publicKey })
+    .filter((r) => r.status === 'missing_required_field');
+  assert.deepEqual(readings, [
+    { check: '#10', field: 'lifecycleAttestations[0].reason', status: 'missing_required_field', tier: 'attention' },
+    { check: '#10', field: 'lifecycleAttestations[1].reason', status: 'missing_required_field', tier: 'normal' },
+  ]);
+});
+
+test('the tiers are the ones copied from the site\'s table, which readings.test.ts holds equal', () => {
   const tables = SITE_TABLES as Record<string, unknown>;
-  assert.equal(tables['LIFECYCLE_ATTESTATION_MISSING_FIELD'], 'attention');
+  assert.deepEqual(tables['LIFECYCLE_ATTESTATION_MISSING_FIELD_SIGNALS'], { names_publisher: 'attention', other_signer: 'normal' });
 });

@@ -5,7 +5,10 @@
 //   - it adds one #10 line at `attention` whose detail names the field, and the
 //     headline then reads not affirmed;
 //   - the #10 row lists the event under the field it lacks;
-//   - a carried chain with no such event adds nothing.
+//   - a carried chain with no such event adds nothing;
+//   - a third party's event that lacks a field reads as any third-party event does
+//     (G0 D6 as corrected): it adds no #10 line (the owner's correction at the
+//     P5-fix gate).
 //
 // Exercised through `verifyResolved` and `presentVerification`, the code the /verify
 // page runs, in Node: a record minted here is served from a stubbed URL with its
@@ -31,6 +34,7 @@ const REGISTRY_URL = 'https://registry-host.test/trust-registry.json';
 const COMMITMENT_URL = 'https://registry-host.test/api/records/p5-required-fields/commitment';
 const KID = 'test:record-key-2026';
 const SIGNER = { bindingTier: 'platform', identifier: 'urn:civic-record:platform:synthetic-publisher', displayName: 'Synthetic publisher' };
+const THIRD_PARTY = { bindingTier: 'platform', identifier: 'urn:civic-record:platform:another-party', displayName: 'Another party' };
 const SUCCESSOR = 'e'.repeat(64);
 
 interface Key {
@@ -54,6 +58,7 @@ function newKey(kid: string): Key {
 }
 
 const RECORD_KEY = newKey(KID);
+const OTHER_KEY = newKey('test:other-key');
 
 const PKG: Record<string, unknown> = {
   protocolVersion: '0.1.0',
@@ -75,19 +80,24 @@ interface Event {
   type: string;
   payload: Record<string, unknown>;
   createdAt?: string;
+  /** The signing key; the record's own unless given. */
+  by?: Key;
+  /** The signer the event names; the record's unless given. */
+  signer?: typeof SIGNER;
 }
 
-/** A lifecycle event naming the record's signer, signed by the record's own key. */
+/** A lifecycle event naming the record's signer and signed by the record's own key,
+ *  unless `by` and `signer` say otherwise. */
 function carried(e: Event) {
   const node: Record<string, unknown> = {
     type: e.type,
     targetNodeId: PACKAGE_HASH,
-    signer: SIGNER,
+    signer: e.signer ?? SIGNER,
     metadata: { createdAt: e.createdAt ?? '2026-09-10T00:00:00.000Z' },
     ...e.payload,
   };
   const nodeId = recomputePackageHash(node);
-  return { node, nodeId, signature: RECORD_KEY.sign(nodeId) };
+  return { node, nodeId, signature: (e.by ?? RECORD_KEY).sign(nodeId) };
 }
 
 function commitmentWith(events: Event[]): Commitment {
@@ -144,7 +154,8 @@ test('a withdrawal with no reason, signed by the record\'s key, does not move th
     'the state line, then one attention line',
   );
   const line = p.tenSignals[1].signal;
-  assert.match(line.detail ?? '', /lacks `reason`/);
+  assert.match(line.detail ?? '', /lacks reason,/);
+  assert.doesNotMatch(line.detail ?? '', /`/, 'fields are named plainly, as the other site details name them');
   assert.match(line.detail ?? '', /withdrawal/);
   assert.match(line.detail ?? '', /does not change the status/);
   assert.equal(rowOf(p.rows, '10').signal.tier, 'attention', 'the #10 row reads the line the headline reads');
@@ -167,7 +178,7 @@ test('a supersession with no successor does not move the status and names succes
   const p = await page(commitmentWith([SUPERSESSION_NO_SUCCESSOR]));
   assert.equal(p.result.lifecycle.status, 'active');
   assert.deepEqual(p.tenSignals.map((c) => c.signal.tier), ['normal', 'attention']);
-  assert.match(p.tenSignals[1].signal.detail ?? '', /lacks `successorNodeId`/);
+  assert.match(p.tenSignals[1].signal.detail ?? '', /lacks successorNodeId,/);
   assert.match(p.tenSignals[1].signal.detail ?? '', /supersession/);
   assert.equal(p.verdict.headline, 'Verified, with caveats');
 });
@@ -177,8 +188,8 @@ test('two events lacking fields still add one line, and it names both fields', a
     commitmentWith([WITHDRAWAL_NO_REASON, { ...SUPERSESSION_NO_SUCCESSOR, createdAt: '2026-09-11T00:00:00.000Z' }]),
   );
   assert.deepEqual(p.tenSignals.map((c) => c.signal.tier), ['normal', 'attention']);
-  assert.match(p.tenSignals[1].signal.detail ?? '', /`reason`/);
-  assert.match(p.tenSignals[1].signal.detail ?? '', /`successorNodeId`/);
+  assert.match(p.tenSignals[1].signal.detail ?? '', /\breason\b/);
+  assert.match(p.tenSignals[1].signal.detail ?? '', /\bsuccessorNodeId\b/);
 });
 
 test('control: a carried chain with no such event adds nothing', async () => {
@@ -186,4 +197,32 @@ test('control: a carried chain with no such event adds nothing', async () => {
   assert.equal(p.result.lifecycle.status, 'withdrawn');
   assert.deepEqual(p.tenSignals.map((c) => c.signal.tier), ['normal']);
   assert.equal(p.verdict.headline, 'Verified');
+});
+
+test('a third party\'s withdrawal with no reason reads as any third-party event does: no #10 line, and the record reads Verified', async () => {
+  const p = await page(commitmentWith([{ ...WITHDRAWAL_NO_REASON, by: OTHER_KEY, signer: THIRD_PARTY }]));
+  assert.equal(p.result.lifecycle.status, 'active');
+  assert.equal(p.result.lifecycle.chain.length, 1, 'it stays in the chain');
+  assert.deepEqual(p.tenSignals.map((c) => c.signal.tier), ['normal'], 'the state line only');
+  assert.equal(rowOf(p.rows, '10').signal.tier, 'normal');
+  assert.equal(p.verdict.headline, 'Verified');
+});
+
+test('a third party\'s incomplete event beside a publisher\'s incomplete one: the line names only the publisher\'s', async () => {
+  const p = await page(
+    commitmentWith([
+      { ...WITHDRAWAL_NO_REASON, by: OTHER_KEY, signer: THIRD_PARTY },
+      { ...SUPERSESSION_NO_SUCCESSOR, createdAt: '2026-09-11T00:00:00.000Z' },
+    ]),
+  );
+  assert.deepEqual(p.tenSignals.map((c) => c.signal.tier), ['normal', 'attention']);
+  assert.match(p.tenSignals[1].signal.detail ?? '', /^The event lacks successorNodeId,/);
+  assert.doesNotMatch(p.tenSignals[1].signal.detail ?? '', /\breason\b/);
+});
+
+test('a publisher\'s revision with no successor reads attention too', async () => {
+  const p = await page(commitmentWith([{ type: 'attestation/revises/v1', payload: {} }]));
+  assert.equal(p.result.lifecycle.status, 'active');
+  assert.deepEqual(p.tenSignals.map((c) => c.signal.tier), ['normal', 'attention']);
+  assert.match(p.tenSignals[1].signal.detail ?? '', /lacks successorNodeId, which the standard requires of a revision/);
 });
