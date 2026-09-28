@@ -90,5 +90,8 @@ guard's patterns unilaterally. Shapes: [`.claude/rules/fixtures.md`](.claude/rul
   is the orchestrator's call on evidence-pass in gated sprints, the owner's otherwise.
 - `npm publish` is always an owner-only decision; a session ends at branch/PR (or
   merged-and-tagged in a sprint), never at published.
+- The owner publishes with `node scripts/publish.mjs --merged <merge SHA>` (#113), from a
+  detached worktree at the release PR's merge commit: `--dry-run` first, `--readback-only`
+  after a publish the registry has not shown yet.
 - CHANGELOGs are factual per-version records; a new export is a minor bump. Bump with
   `npm version --workspace <name>`.
