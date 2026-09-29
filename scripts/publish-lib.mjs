@@ -24,11 +24,16 @@ export function registryHeaders() {
   return { accept: 'application/json', 'cache-control': 'no-cache' };
 }
 
+const isObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
+
 /**
- * Read a package document from the registry, bypassing caches. Both of the
- * script's registry reads, the pre-publish "already on npm?" read and the
- * post-publish wait, go through here. Returns null on a 404 (the name was never
- * published, or not yet visible); throws on any other non-OK answer.
+ * Read a package document from the registry, bypassing caches. Every registry
+ * read the script makes goes through here: the read before the CHANGELOG check
+ * (#125 D13), the per-package "already on npm?" read, and the post-publish
+ * wait. Returns null on a 404 (the name was never published, or not yet
+ * visible). Fails closed on anything else: a network error, a non-OK answer, a
+ * body that is not JSON, or a JSON body that is not a package document (an
+ * object with a `versions` object) each throw.
  */
 export async function fetchRegistryDocument(name, { fetchImpl = globalThis.fetch, now = Date.now, timeoutMs = 30_000 } = {}) {
   const res = await fetchImpl(registryUrl(name, now()), {
@@ -37,18 +42,40 @@ export async function fetchRegistryDocument(name, { fetchImpl = globalThis.fetch
   });
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(`the registry answered ${res.status} for ${name}`);
-  return res.json();
+  let body;
+  try {
+    body = await res.json();
+  } catch (e) {
+    throw new Error(`the registry's answer for ${name} is not JSON: ${e.message}`);
+  }
+  if (!isObject(body) || !isObject(body.versions)) throw new Error(`the registry's document for ${name} is malformed: it has no "versions" object`);
+  return body;
+}
+
+/** Whether a registry document (null for a 404) lists `version`. */
+export function versionOnRegistry(doc, version) {
+  const versions = doc?.versions;
+  return isObject(versions) && Object.hasOwn(versions, version) && Boolean(versions[version]);
 }
 
 /**
- * The packages whose CHANGELOG heading the run checks, from the registry
- * documents read before the check (#125 D13). Stub: every package, the check's
- * scope before D13; the fix commit narrows it.
+ * The packages whose CHANGELOG heading the run checks (#125 D13): each one whose
+ * version the registry does not show. A version already on npm is read back, not
+ * published, so its heading keeps its own release date. `docs` maps each name to
+ * the registry document read before the check, null for a 404. The scope is
+ * never guessed: a package with no document entry, or no version in `manifests`,
+ * throws.
+ * @param {{ name: string }[]} packages in publish order; the result keeps it
+ * @param {Record<string, { version?: string }>} manifests name → package.json
+ * @param {Record<string, object | null>} docs name → registry document, or null
  */
 export function headingCheckPackages(packages, manifests, docs) {
-  void manifests;
-  void docs;
-  return [...packages];
+  return packages.filter((pkg) => {
+    const version = manifests[pkg.name]?.version;
+    if (typeof version !== 'string' || version === '') throw new Error(`${pkg.name} has no version in package.json`);
+    if (!Object.hasOwn(docs, pkg.name) || docs[pkg.name] === undefined) throw new Error(`the registry was not read for ${pkg.name}`);
+    return !versionOnRegistry(docs[pkg.name], version);
+  });
 }
 
 /** The local calendar date, YYYY-MM-DD, as the CHANGELOG headings write it. */

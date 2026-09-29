@@ -1,8 +1,9 @@
 #!/usr/bin/env node
-// Publish the three packages, in order: @typedstandards/verify-core, then
-// @typedstandards/produce-core, then @typedstandards/cli (typedstandards#113 G0
-// D12; replaces packages/cli/scripts/publish.mjs). The owner runs it from a
-// detached worktree at the release PR's merge commit:
+// Publish the packages PACKAGES lists (scripts/publish-lib.mjs), in its order:
+// @typedstandards/verify-core, then @typedstandards/produce-core, then
+// @typedstandards/cli (typedstandards#113 G0 D12; replaces
+// packages/cli/scripts/publish.mjs). The owner runs it from a detached worktree
+// at the release PR's merge commit:
 //
 //   node scripts/publish.mjs --merged <sha> --dry-run
 //   node scripts/publish.mjs --merged <sha>
@@ -14,8 +15,14 @@
 // It publishes nothing, and prints one line naming the failed check, when:
 //   - the working tree is not clean;
 //   - --merged is not a full 40-hex SHA, or HEAD is not that commit;
-//   - a package's CHANGELOG's first `## ` heading is not `## <version> — <today>`,
-//     today being the local date;
+//   - a registry read fails (#125 D13). The registry is read for every listed
+//     package before any CHANGELOG is checked, and the read fails closed: a 404
+//     counts as not on npm, while a network error, any other non-OK answer, or a
+//     body that is not a package document stops the run;
+//   - for each listed package whose version that read does not show, its
+//     CHANGELOG's first `## ` heading is not `## <version> — <today>`, today being
+//     the local date. A version already on npm is exempt: it is read back below,
+//     never published again, so its heading keeps its own release date;
 //   - an in-repo range on a published package does not admit the version being
 //     published (under 0.x a caret range excludes the next minor): produce-core →
 //     verify-core; cli → produce-core, verify-core; apps/web → verify-core, and its
@@ -25,9 +32,11 @@
 //     dist first) or a package's tests fail;
 //   - `npm pack --dry-run --json` for a package lists a file outside its `files`.
 //
-// Then, per package and strictly in order, it reads the registry. A version
-// already on npm is not published again: it is read back and the run moves on,
-// so a re-run after a partial publish completes the rest. Otherwise it publishes
+// Then, per package and strictly in order, it reads the registry again. A
+// version already on npm is not published again: it is read back and the run
+// moves on, so a re-run after a partial publish completes the rest. A version the
+// first read showed on npm and this read does not stops the run: its heading was
+// not checked, so it is not published. Otherwise it publishes
 // (`npm publish`, `--dry-run` appended under --dry-run) and waits for the
 // registry, about five minutes with backoff, before the next package starts. It
 // reads back the version, the dependency ranges (equal to package.json's), the
@@ -37,8 +46,9 @@
 //
 // If the wait ends first, the package was sent and is not yet visible: it exits
 // 2 and says to re-run with --readback-only, never to publish again.
-// --readback-only publishes nothing: it checks the tree and HEAD, installs and
-// clean-builds (for the local pack's integrity), and reads all three back.
+// --readback-only publishes nothing and checks no CHANGELOG: it checks the tree
+// and HEAD, installs and clean-builds (for the local pack's integrity), and reads
+// every listed package back.
 //
 // Last, it runs the published cli's `verify` from a clean temporary directory on
 // packages/cli/scripts/fixtures/published-verify.bundle.json (under --dry-run,
@@ -59,6 +69,7 @@ import {
   expectedHeading,
   fetchRegistryDocument,
   filesOutside,
+  headingCheckPackages,
   inRepoRanges,
   isFullSha,
   localDate,
@@ -67,6 +78,7 @@ import {
   rangeProblems,
   readBackProblems,
   stripDot,
+  versionOnRegistry,
   waitDelays,
 } from './publish-lib.mjs';
 
@@ -148,10 +160,12 @@ function checkTreeAndHead(merged) {
   console.log(`HEAD is ${head}`);
 }
 
-function checkChangelogs(manifests) {
+/** The CHANGELOG headings of `packages`: the listed packages whose version the registry does not show (#125 D13). */
+function checkChangelogs(manifests, packages) {
   const today = localDate();
-  step(`the CHANGELOGs (today is ${today})`);
-  for (const pkg of PACKAGES) {
+  step(`the CHANGELOGs of the versions not on npm (today is ${today})`);
+  if (packages.length === 0) console.log('none: every listed version is on npm');
+  for (const pkg of packages) {
     const { version } = manifests[pkg.name];
     const problem = changelogHeadingProblem(readFileSync(join(ROOT, pkg.dir, 'CHANGELOG.md'), 'utf8'), version, today);
     if (problem) stop('the CHANGELOG heading', `${pkg.dir}/CHANGELOG.md: ${problem}`);
@@ -297,11 +311,31 @@ async function main() {
     installBuildTest({ test: false });
     for (const pkg of PACKAGES) await readBack(pkg, manifests[pkg.name], waitSeconds);
     await publishedVerify(manifests['@typedstandards/cli']);
-    console.log('\nread back only: all three are on npm as package.json and the local packs, and the published verify passes.');
+    console.log(`\nread back only: all ${PACKAGES.length} listed packages are on npm as package.json and the local packs, and the published verify passes.`);
     return;
   }
 
-  checkChangelogs(manifests);
+  // The registry first, failing closed (#125 D13): a heading is checked only for
+  // a version the registry does not show.
+  step('the registry, before the CHANGELOGs');
+  const docs = {};
+  for (const pkg of PACKAGES) {
+    const { version } = manifests[pkg.name];
+    const doc = await registryDocument(pkg.name, 'the registry');
+    docs[pkg.name] = doc;
+    console.log(
+      versionOnRegistry(doc, version)
+        ? `${pkg.name}@${version} is on npm: read back below; its CHANGELOG heading is not checked`
+        : `${pkg.name}@${version} is not on npm${doc === null ? ' (404)' : ''}: its CHANGELOG heading is checked`,
+    );
+  }
+  let unpublished;
+  try {
+    unpublished = headingCheckPackages(PACKAGES, manifests, docs);
+  } catch (e) {
+    stop('the registry', e.message);
+  }
+  checkChangelogs(manifests, unpublished);
   checkRanges(manifests);
 
   step('npm whoami');
@@ -317,11 +351,14 @@ async function main() {
     const manifest = manifests[pkg.name];
     step(`the registry: ${pkg.name}@${manifest.version}`);
     const doc = await registryDocument(pkg.name, 'the registry');
-    if (doc?.versions?.[manifest.version]) {
+    if (versionOnRegistry(doc, manifest.version)) {
       console.log(`${pkg.name}@${manifest.version} is already on npm: not publishing it again; reading it back`);
       await readBack(pkg, manifest, waitSeconds);
       if (pkg.name === '@typedstandards/cli') cliOnNpm = true;
       continue;
+    }
+    if (!unpublished.some((p) => p.name === pkg.name)) {
+      stop('the registry', `${pkg.name}@${manifest.version} was on npm at the first read and is not now; its CHANGELOG heading was not checked, so it is not published`);
     }
     console.log(doc === null ? `${pkg.name} answers 404: not on npm yet, or not yet visible` : `${pkg.name} is on npm; ${manifest.version} is not`);
     if (dryRun) {
@@ -343,7 +380,7 @@ async function main() {
   if (cliOnNpm) await publishedVerify(manifests[cli.name]);
   else localVerify(cli, manifests[cli.name]);
 
-  console.log(dryRun ? '\ndry run: nothing was published.' : '\nall three are on npm, read back, and the published verify passes on the fixture.');
+  console.log(dryRun ? '\ndry run: nothing was published.' : `\nall ${PACKAGES.length} listed packages are on npm, read back, and the published verify passes on the fixture.`);
 }
 
 await main();
