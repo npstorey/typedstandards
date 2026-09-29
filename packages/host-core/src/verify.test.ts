@@ -21,15 +21,19 @@ import { EXPECTED, FIXTURE, host, loadDir, text } from './harness.test.ts';
 
 const GOLDEN = readFileSync(join(FIXTURE, 'verify-output.txt'), 'utf8');
 
-/** Flip one letter of `core`'s signed output, the low bit, in a copy of the served files. */
+/**
+ * Flip the low bit of one byte of `core`'s signed output, in a copy of the served
+ * files: the first ASCII letter of the output string that is not part of an escape,
+ * so the bundle stays JSON and only the signed bytes change.
+ */
 function withFlippedSignedByte(served: Map<string, Uint8Array>): Map<string, Uint8Array> {
   const path = 'bundles/core.bundle.json';
-  const bytes = new Uint8Array(served.get(path)!);
-  const s = text(bytes);
-  let at = s.indexOf('"output": "') + '"output": "'.length;
-  while (!/[A-Za-z]/.test(s[at])) at += 1;
+  const bytes = Buffer.from(served.get(path)!);
+  let at = bytes.indexOf('"output": "') + '"output": "'.length;
+  const letter = (b: number): boolean => (b >= 0x41 && b <= 0x5a) || (b >= 0x61 && b <= 0x7a);
+  while (!letter(bytes[at]) || bytes[at - 1] === 0x5c) at += 1;
   bytes[at] ^= 0x01;
-  return new Map([...served, [path, bytes]]);
+  return new Map([...served, [path, new Uint8Array(bytes)]]);
 }
 
 test('verify (bin): the fixture prints the committed golden and exits 0', () => {
@@ -57,7 +61,7 @@ test('verify: one flipped byte of a signed output fails that record and the run'
   assert.equal(report.ok, false);
   const line = report.lines.find((l) => l.endsWith(' core') || l.includes(' core: '));
   assert.ok(line, `no line for core in:\n${report.lines.join('\n')}`);
-  assert.match(line, /^ {2}FAIL {2}active {5} core: .*#1 envelopeIntegrity altered/);
+  assert.match(line, /^ {2}FAIL {2}active {5}core: .*#1 envelopeIntegrity altered/);
   assert.equal(report.totals.failed, 1);
   assert.equal(report.lines.at(-1), 'result: FAILED (records)');
 });
@@ -70,7 +74,7 @@ test('verify (bin): one flipped byte of a signed output exits non-zero with a fa
     writeFileSync(join(dir, 'bundles', 'core.bundle.json'), flipped.get('bundles/core.bundle.json')!);
     const r = host(['verify', '--out', dir]);
     assert.equal(r.code, 1);
-    assert.match(r.out, /^ {2}FAIL {2}active {5} core: /m);
+    assert.match(r.out, /^ {2}FAIL {2}active {5}core: /m);
     assert.match(r.out, /\nresult: FAILED \(records\)\n$/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
@@ -111,5 +115,5 @@ test('verify: an altered carried attestation fails its record', async () => {
   const report = await verifyServed(new Map([...served, [path, new TextEncoder().encode(altered)]]));
   assert.equal(report.ok, false);
   const line = report.lines.find((l) => l.includes(' map/header'));
-  assert.match(line ?? '', /^ {2}FAIL {2}active {5} map\/header: /);
+  assert.match(line ?? '', /^ {2}FAIL {2}active {5}map\/header: /);
 });
