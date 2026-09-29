@@ -40,6 +40,17 @@ export async function fetchRegistryDocument(name, { fetchImpl = globalThis.fetch
   return res.json();
 }
 
+/**
+ * The packages whose CHANGELOG heading the run checks, from the registry
+ * documents read before the check (#125 D13). Stub: every package, the check's
+ * scope before D13; the fix commit narrows it.
+ */
+export function headingCheckPackages(packages, manifests, docs) {
+  void manifests;
+  void docs;
+  return [...packages];
+}
+
 /** The local calendar date, YYYY-MM-DD, as the CHANGELOG headings write it. */
 export function localDate(d = new Date()) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
