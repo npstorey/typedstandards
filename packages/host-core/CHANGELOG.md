@@ -3,7 +3,7 @@
 Factual record of what changed per published version. Check numbers (#1–#16)
 refer to the Typed Standards specification §9.2 verification sequence.
 
-## Unreleased
+## 0.1.0 — 2026-09-29
 
 The first version (typedstandards#125, HOST CORE P1): a static-host library and the
 `typedstandards-host` bin over `@typedstandards/produce-core` `^0.8.0` and
