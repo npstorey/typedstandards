@@ -3,7 +3,7 @@
 Factual record of what changed per published version. Check numbers (#1–#16)
 refer to the Typed Standards specification §9.2 verification sequence.
 
-## Unreleased
+## 0.1.1 — 2026-09-29
 
 A patch (typedstandards#125, HOST CORE P3 fix, finding F1): `buildHost` no longer
 writes an index that its own `parseIndex` refuses. No new export.

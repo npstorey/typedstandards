@@ -1,6 +1,6 @@
 {
   "name": "@typedstandards/host-core",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Serve signed Typed Standards records from a static host: build the bundles, the key registry and a versioned index from what the CLI's sign and withdraw print, check and verify what is served, print verifier links, and apply a display policy. Holds no key.",
   "license": "MIT",
   "author": "Nathan Storey",
