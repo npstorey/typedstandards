@@ -268,6 +268,11 @@ export const NODE_ENTRIES = {
     files: ['packages/cli/node/main.ts'],
     builtins: ['node:fs', 'node:process', 'node:util'],
   },
+  // typedstandards#125 G0 D3 + D11: host-core's `typedstandards-host` bin.
+  'packages/host-core/tsconfig.node.json': {
+    files: ['packages/host-core/node/main.ts'],
+    builtins: ['node:fs', 'node:path', 'node:process', 'node:util'],
+  },
 };
 
 const isNodeEntry = (config) => Object.hasOwn(NODE_ENTRIES, rel(config));
