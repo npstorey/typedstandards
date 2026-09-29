@@ -19,3 +19,4 @@ Nothing in the capture runs host-core. Per file:
 | `expected/.well-known/typed-publisher.json` | `docs/.well-known/typed-publisher.json`, byte for byte. |
 | `expected/records.json` | The index v1 the build must write: `docs/records.json` reshaped by the capture, with `version: 1` first, the example-only `file`, `role`, `edgeId` and `step` moved under `extensions`, and every other field unchanged. |
 | `example-records.json` | `docs/records.json`, byte for byte, for the record-by-record comparison of every field outside `extensions`. |
+| `verify-output.txt` | What `typedstandards-host verify --out expected` must print, written from `expected/records.json`'s names and statuses in the specified format before `verify` was implemented. It names no Node or core version. |
