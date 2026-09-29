@@ -2,7 +2,9 @@
 // config leaves it out of dist/ and tsconfig.test.json type-checks it with Node's
 // types.
 
-import { readdirSync, readFileSync } from 'node:fs';
+import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -31,3 +33,10 @@ export function loadDir(dir: string): Map<string, Uint8Array> {
 export const readJson = (path: string): unknown => JSON.parse(readFileSync(path, 'utf8'));
 
 export const text = (bytes: Uint8Array | undefined): string => (bytes === undefined ? '<absent>' : new TextDecoder().decode(bytes));
+
+/** Run the built bin in a child process with an empty environment. */
+export function host(args: string[], cwd?: string): { code: number | null; out: string; err: string } {
+  assert.ok(existsSync(BIN), `${BIN} is missing: run \`npm run build --workspace @typedstandards/host-core\` first`);
+  const r = spawnSync(process.execPath, [BIN, ...args], { encoding: 'utf8', env: {}, ...(cwd ? { cwd } : {}) });
+  return { code: r.status, out: r.stdout, err: r.stderr };
+}

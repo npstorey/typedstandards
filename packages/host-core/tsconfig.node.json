@@ -1,0 +1,28 @@
+{
+  // Build config for host-core's one Node entry, `node/main.ts` (typedstandards#125
+  // G0 D3 + D11). With the CLI's, it is one of the two configs in a published
+  // package that load Node's types, and scripts/type-check-universe.test.mjs pins
+  // it: its program may hold `node/main.ts` alone, which may import only `node:fs`,
+  // `node:path`, `node:process`, `node:util` and the package's own `#cli` (the pure
+  // build, through the `imports` map in package.json). Build after tsconfig.json:
+  // `#cli` resolves to `dist/cli.d.ts`.
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+
+    "declaration": false,
+    "sourceMap": false,
+    "outDir": "dist/bin",
+    "rootDir": "node",
+
+    "strict": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "forceConsistentCasingInFileNames": true,
+
+    "types": ["node"]
+  },
+  "include": ["node/**/*.ts"]
+}

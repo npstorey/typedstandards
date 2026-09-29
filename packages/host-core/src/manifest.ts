@@ -56,7 +56,7 @@ const relativePath = (v: unknown): v is string => typeof v === 'string' && v !==
 /** Validate a parsed `host.json`. Refuses anything it does not define. */
 export function parseManifest(value: unknown, where = 'host.json'): HostManifest {
   if (!isObject(value)) throw new HostError(`${where} must be a JSON object`);
-  exactKeys(value, ['$comment', 'origin', 'visibility', 'registry', 'index', 'records'], ['origin', 'visibility', 'registry', 'index', 'records'], where);
+  exactKeys(value, ['$comment', 'origin', 'visibility', 'registry', 'index', 'records'], ['origin', 'registry', 'index', 'records'], where);
   const { origin, visibility, registry, index, records } = value;
   if (typeof origin !== 'string' || !ORIGIN.test(origin)) {
     throw new HostError(`${where}: origin must be an https:// origin with no trailing /, query or fragment (a path prefix is allowed)`);
