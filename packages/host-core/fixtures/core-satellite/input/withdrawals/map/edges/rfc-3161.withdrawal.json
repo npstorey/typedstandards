@@ -1,0 +1,30 @@
+{
+  "node": {
+    "metadata": {
+      "schemaVersion": "0.1.0",
+      "packageId": "21cf25ff-9713-44b4-9a6b-dcab42574b99",
+      "createdAt": "2026-09-24T01:52:29.348Z",
+      "signingKeyId": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH"
+    },
+    "type": "attestation/withdraws/v1",
+    "signer": {
+      "bindingTier": "pseudonymous",
+      "identifier": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "displayName": "typedstandards-core-satellite-example (self-certifying example key)"
+    },
+    "targetNodeId": "9a064095b691fec1a0942513a0f5d4f1395037ff1bfff77fc9103cc6fb1b32e2",
+    "contentCanonicalization": "https://typedstandards.org/canonicalization/legacy-json/v1",
+    "reason": "Its basis said records carry RFC 3161 timestamp tokens; the pinned specification says a package SHOULD carry one (§8.3.2). Restated as map/edges/rfc-3161-2.yaml.",
+    "effectiveAt": "2026-09-24T01:52:29.348Z",
+    "contentHash": {
+      "sha256": "cd9ac13aae17d0b32676c2131ff37b09dcf6987e2a11637b4d05732019abbe29"
+    }
+  },
+  "nodeId": "e190a37268754671506986f0a15c237bf2b0618ed7fd5d9e956ccc205ff1c66e",
+  "signature": {
+    "signature": "cJPcLto6uJd5yR5oSVpIgBGgEy5RdTdyYb20j8j6irJ0qrKHbSJnEAXPPA+/Ps9vuBLzG5XKPACpUxIUEFEjAQ==",
+    "publicKey": "MCowBQYDK2VwAyEA+BmmxJyxU0vnC2LLuSu0xcr1wwevoOLpcCFjnbnTUYQ=",
+    "algorithm": "Ed25519ph",
+    "kid": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH"
+  }
+}

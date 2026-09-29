@@ -1,0 +1,30 @@
+{
+  "node": {
+    "metadata": {
+      "schemaVersion": "0.1.0",
+      "packageId": "6ac0718e-b35e-40de-b775-971a765bc738",
+      "createdAt": "2026-09-24T01:52:29.817Z",
+      "signingKeyId": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH"
+    },
+    "type": "attestation/withdraws/v1",
+    "signer": {
+      "bindingTier": "pseudonymous",
+      "identifier": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "displayName": "typedstandards-core-satellite-example (self-certifying example key)"
+    },
+    "targetNodeId": "2387896720878bc91cfea139aeae778cc015abe5bf73f4e1eea4cd8b6a3572f6",
+    "contentCanonicalization": "https://typedstandards.org/canonicalization/legacy-json/v1",
+    "reason": "Its basis called the assertion atomic, which the pinned guidelines do not, and said consuming one as the other is not built, where the pinned specification calls consuming Typed Standards claims as nanopublications \"a plausible bridge but requires a separate effort\". Restated as map/edges/nanopublications-2.yaml.",
+    "effectiveAt": "2026-09-24T01:52:29.817Z",
+    "contentHash": {
+      "sha256": "a779246d8f870ae53c1c76f1655eef5d51bd031dfefd0a64ef2d7206d1889825"
+    }
+  },
+  "nodeId": "e8584130b00c5a2e464f2da0a0d97475d06b986bb961b13322d93d418d4ad3ca",
+  "signature": {
+    "signature": "fv7jcF3/TtQK9KPz3UU0x6S4YzSSo+puP+2XGqPKPORPYSZ5iXTRPtDzcDolp0MuJhJ8oUmCq44de5NAsu5uBA==",
+    "publicKey": "MCowBQYDK2VwAyEA+BmmxJyxU0vnC2LLuSu0xcr1wwevoOLpcCFjnbnTUYQ=",
+    "algorithm": "Ed25519ph",
+    "kid": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH"
+  }
+}

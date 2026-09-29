@@ -1,0 +1,30 @@
+{
+  "node": {
+    "metadata": {
+      "schemaVersion": "0.1.0",
+      "packageId": "ff6bb648-d883-4168-8ccf-23f8373e2c81",
+      "createdAt": "2026-09-24T01:52:29.579Z",
+      "signingKeyId": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH"
+    },
+    "type": "attestation/withdraws/v1",
+    "signer": {
+      "bindingTier": "pseudonymous",
+      "identifier": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "displayName": "typedstandards-core-satellite-example (self-certifying example key)"
+    },
+    "targetNodeId": "b6c5b3100494dccc52097c5f78724dd8fb4efb3f409d8cd2eb889282040e982c",
+    "contentCanonicalization": "https://typedstandards.org/canonicalization/legacy-json/v1",
+    "reason": "Its basis counted this example's records as two; it was signed as one of 37. Restated as map/edges/did-key-2.yaml.",
+    "effectiveAt": "2026-09-24T01:52:29.579Z",
+    "contentHash": {
+      "sha256": "bc7f0ddc1409825f81c1d1067c7c31a103ca0c38a00787141efdcda0f33763a0"
+    }
+  },
+  "nodeId": "d73ad47c95e78513903db2befa456123a7cb4337a296c567333643e11696a647",
+  "signature": {
+    "signature": "lwqoeLXQisEFTgeClhPUhyng02Kpay76en0pApvXpvxwfwCiuNRLv2JXe3ROEgdSxI9YjixQuSJpIQh9hmh9Dw==",
+    "publicKey": "MCowBQYDK2VwAyEA+BmmxJyxU0vnC2LLuSu0xcr1wwevoOLpcCFjnbnTUYQ=",
+    "algorithm": "Ed25519ph",
+    "kid": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH"
+  }
+}

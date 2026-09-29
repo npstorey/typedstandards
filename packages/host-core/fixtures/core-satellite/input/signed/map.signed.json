@@ -1,0 +1,839 @@
+{
+  "package": {
+    "metadata": {
+      "schemaVersion": "0.1.0",
+      "packageId": "159d80d3-d898-4fff-a44d-2b26401a8dd0",
+      "createdAt": "2026-09-22T19:25:30.536Z",
+      "signingKeyId": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "captureMethod": "script-run"
+    },
+    "producerProfile": "scripted-recomputation/core-satellite-example",
+    "type": "content/analysis/v1",
+    "signer": {
+      "bindingTier": "pseudonymous",
+      "identifier": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "displayName": "typedstandards-core-satellite-example (self-certifying example key)"
+    },
+    "contentCanonicalization": "https://typedstandards.org/canonicalization/raw-bytes/v1",
+    "prompt": {
+      "hash": "0e2d651632a61005538a00dc19f86626e5255fe08f0762ab2c7ed33d23a5c31e",
+      "visibility": "full_text",
+      "text": "Package the file map.yaml, the map of Typed Standards relations to public projects in three rings, with no orbits edge, as the output of a scripted-recomputation record under raw-bytes/v1. corpus/pin.mjs wrote the file from corpus/sources.json, corpus/manifest.json; this program read it from disk."
+    },
+    "queries": [
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md",
+          "sha256": "0e3b54b39e6877a076c495b82afd7295aefac09c70054c02e9832147037ff3f5",
+          "bytes": 294146,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:25Z",
+          "licence": "CC BY 4.0, as the document states (§3)"
+        },
+        "datasetId": "ts-spec"
+      },
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://www.w3.org/TR/2013/REC-prov-o-20130430/",
+          "sha256": "6b96671ab84faf12ce3f041aca12c3f93a6df2ed242348810743179a68e69555",
+          "bytes": 464179,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:27Z",
+          "licence": "W3C document use rules, as the document's copyright line states"
+        },
+        "datasetId": "w3c-prov-o"
+      },
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://raw.githubusercontent.com/in-toto/attestation/df02077bf97218a8860a5c534eff1f1381f56984/spec/v1/digest_set.md",
+          "sha256": "0b1889fdea7f6d623b41555632aedf04ee4398cf02a32002060608c75ebb038e",
+          "bytes": 8873,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:27Z",
+          "licence": "Apache-2.0 (repository LICENSE notice)"
+        },
+        "datasetId": "in-toto-attestation"
+      },
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://raw.githubusercontent.com/sigstore/rekor/a36bd716fd0d81c314092718f37b53dc26b2af38/pkg/types/hashedrekord/v0.0.1/hashedrekord_v0_0_1_schema.json",
+          "sha256": "b8ecdc597ddb7e3289ae41e28fc3983ea25f248f531314a68dcc2361f3edada4",
+          "bytes": 2373,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:27Z",
+          "licence": "Apache-2.0 (repository LICENSE)"
+        },
+        "datasetId": "sigstore-rekor-hashedrekord"
+      },
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://www.rfc-editor.org/rfc/rfc3161.txt",
+          "sha256": "39fd17644ff2d654bc83814a78b1c5b5e7517f496741f34ead5064943eb98240",
+          "bytes": 54585,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:27Z",
+          "licence": "The Internet Society Full Copyright Statement (2001), in the document"
+        },
+        "datasetId": "rfc-3161"
+      },
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://www.rfc-editor.org/rfc/rfc8785.txt",
+          "sha256": "63d52294eb0e3f0014174288186d388b4ddbf2c67d1ce8af1d9726eb0c3ab240",
+          "bytes": 41879,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:27Z",
+          "licence": "IETF Trust Legal Provisions (BCP 78), as the document states"
+        },
+        "datasetId": "rfc-8785"
+      },
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://www.rfc-editor.org/rfc/rfc8032.txt",
+          "sha256": "ed63657ff389301282b169b0abde9b5dd2c7e4d524fdfa5da6ff3094fc93c4c3",
+          "bytes": 103210,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:28Z",
+          "licence": "IETF Trust Legal Provisions (BCP 78), as the document states"
+        },
+        "datasetId": "rfc-8032"
+      },
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://raw.githubusercontent.com/w3c-ccg/did-key-spec/2cc490c38c5aacf58497a87fc0cf8794668bf716/index.html",
+          "sha256": "e014a146acb0dcdafbdfee01226061d778da3ee72e8a048a7d53754c79675764",
+          "bytes": 49713,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:28Z",
+          "licence": "W3C Software and Document License (LICENSE.md)"
+        },
+        "datasetId": "did-key"
+      },
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://raw.githubusercontent.com/DiscourseGraphs/schemas/19403e9e28d505dbce6cd2af5868eb27af6e3e36/owl/dg_core.ttl",
+          "sha256": "0e41bd5223785716146fac882667a56afdb14e705380c41704174a55f82a8982",
+          "bytes": 2806,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:28Z",
+          "licence": "CC0-1.0 (repository LICENSE)"
+        },
+        "datasetId": "discourse-graphs"
+      },
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://raw.githubusercontent.com/c2pa-org/specifications/6998a277b4519fc652550686861f0b97a64e5c19/build/site/specifications/2.3/specs/C2PA_Specification.html",
+          "sha256": "0d2a8936068caa60cbb5ad8f04d8c83dccf700d3f9d97fb9b589f862438a37d1",
+          "bytes": 970234,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:28Z",
+          "licence": "CC BY 4.0 except where noted (repository LICENSE and the document)"
+        },
+        "datasetId": "c2pa"
+      },
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://www.w3.org/TR/2025/REC-vc-data-model-2.0-20250515/",
+          "sha256": "a9196a3d0b6601356c4e127bad24f8c7f2c17f6ed22e41b35755a910104156f8",
+          "bytes": 1023165,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:28Z",
+          "licence": "W3C Software and Document License, as the document's copyright block states"
+        },
+        "datasetId": "w3c-vc-2"
+      },
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://www.rfc-editor.org/rfc/rfc9943.txt",
+          "sha256": "204aea020731e1306e8ffe0aaae5c9559a7a8edf24bd089ae79d6a6d6c7676f1",
+          "bytes": 76117,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:29Z",
+          "licence": "IETF Trust Legal Provisions (BCP 78), as the document states"
+        },
+        "datasetId": "ietf-scitt-arch"
+      },
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://raw.githubusercontent.com/slsa-framework/slsa/19e4e2f005f871270c4f555fc47afecfb37f3efe/docs/spec/v1.2/build-provenance.md",
+          "sha256": "182ab5cf823c374874136371466ba43f99f0a9ba87a8046757d26a2ed74854a0",
+          "bytes": 25746,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:29Z",
+          "licence": "Community Specification License 1.0 (LICENSE.md)"
+        },
+        "datasetId": "slsa-provenance"
+      },
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://raw.githubusercontent.com/Nanopublication/Guidelines/8388dd90795b264f4b01c64d0f7218babcae4871/index.html",
+          "sha256": "f3ee522113a4372604d61ff2cae25ee307cedbcc5ab1094a3e86c5ebff56dbbb",
+          "bytes": 18495,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:29Z",
+          "licence": "Creative Commons ShareAlike Attribution 3.0, as the document states (the repository has no LICENSE file)"
+        },
+        "datasetId": "nanopub-guidelines"
+      },
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://raw.githubusercontent.com/LFDT-ProofOfControl/ov-poc-standard/22c7b625be459f5eee7dd8690afd080b5141b8c6/0.1/en/0x01-Frontispiece.md",
+          "sha256": "28323b575b63255c6636c62ef748fb694455f86d56fa81bf28b6fc31c20b3eb5",
+          "bytes": 3503,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:29Z",
+          "licence": "Apache-2.0 (LICENSE.md, which changed from CC BY 4.0 in the commit of 2026-09-19)"
+        },
+        "datasetId": "proof-of-control"
+      },
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://raw.githubusercontent.com/proof-of-insight/spec/6f390d76a3a660d3863fd7341062bdfdc3ec29f2/versions/v0.7.0.md",
+          "sha256": "e6a63102bf7830b982e7740afdb4610e74a908ad3434e8b64122dcbbd636b2b0",
+          "bytes": 172469,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:29Z",
+          "licence": "CC BY 4.0 for the specification text (§0 and LICENSE)"
+        },
+        "datasetId": "proof-of-insight"
+      },
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://raw.githubusercontent.com/projnanda/agentfacts-format/89e938c08a7166341201568055c0a3b6852d26e4/agentfacts_schema.json",
+          "sha256": "34495d046d6c579209296c8a4ffcd32b7ff2624733d63eda6ada8df8dbef1745",
+          "bytes": 7583,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:29Z",
+          "licence": "MIT, as one line of README.md states (the repository has no LICENSE file)"
+        },
+        "datasetId": "nanda-agentfacts"
+      },
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://raw.githubusercontent.com/modelcontextprotocol/modelcontextprotocol/109bbfe75d43c93a23ee17aa2b6dcdf05d21b338/seps/3094-granular-citations-and-fragment-addressing.md",
+          "sha256": "ebc6d82df5d14ada988d90506029be251674a272184ef0f958d4ab54f0a80715",
+          "bytes": 40062,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:29Z",
+          "licence": "not stated in the file; the repository LICENSE assigns Apache-2.0 to specification contributions"
+        },
+        "datasetId": "mcp-sep-3094"
+      },
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://raw.githubusercontent.com/bluesky-social/atproto-website/7a6cdd6c7b48d2aa8d93293827374e0c4fdbb305/src/app/%5Blocale%5D/specs/lexicon/en.mdx",
+          "sha256": "3c893eb2eb94c50c12ad491d9b75f3965af49d8328be5140bea628126969be55",
+          "bytes": 35613,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:30Z",
+          "licence": "CC BY 4.0 for documentation text and specifications (README)"
+        },
+        "datasetId": "atproto-lexicon"
+      },
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://raw.githubusercontent.com/GoogleCloudPlatform/knowledge-catalog/22efaa5402775a7c4d4c37f89e41258daaf3cb65/okf/SPEC.md",
+          "sha256": "26aa5da029278939f914e578107242d9607d4f2dc5fe153272b82f9ed1030101",
+          "bytes": 37748,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:30Z",
+          "licence": "Apache-2.0 (okf/LICENSE.md)"
+        },
+        "datasetId": "google-okf"
+      },
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://www.w3.org/TR/2024/REC-vocab-dcat-3-20240822/",
+          "sha256": "068b43f7814525ea784b7d565ada8de2b4538f5377517c4f0ec9b162a34dedfb",
+          "bytes": 664822,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:30Z",
+          "licence": "W3C Software and Document License, as the document's copyright line states"
+        },
+        "datasetId": "w3c-dcat-3"
+      },
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://raw.githubusercontent.com/ResearchObject/ro-crate/22fbd7e098ccd2839c80967e363a2201528a2efe/docs/_specification/1.3/structure.md",
+          "sha256": "e63fe86d1a098d01ab9ea71af4f0f8742ab9fbcd29fe8afc7b55837c0e5d96e9",
+          "bytes": 18282,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:30Z",
+          "licence": "Apache-2.0 (repository LICENSE)"
+        },
+        "datasetId": "ro-crate"
+      },
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://raw.githubusercontent.com/ResearchObject/workflow-run-crate/3c5b530c3d2784169e461d3273855a6b3a57246e/docs/profiles/0.6/workflow_run_crate/index.md",
+          "sha256": "204a5af0f2823899503fe150d53feccb2a04b2f5f9988d9f605d2b4d269cb597",
+          "bytes": 17132,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:30Z",
+          "licence": "Apache-2.0 (the document's License header)"
+        },
+        "datasetId": "workflow-run-crate"
+      },
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://raw.githubusercontent.com/MIRA-science/schema/f42c5966629cbc90ca09464b52d55c82c4f21116/mira.yaml",
+          "sha256": "21eafff5ac0bd7ad5ef9edcd867491824a4ff833b4af1096cb4cdb4298eaae0a",
+          "bytes": 5637,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:30Z",
+          "licence": "Apache-2.0 (repository LICENSE)"
+        },
+        "datasetId": "mira-schema"
+      },
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://raw.githubusercontent.com/npstorey/civic-ai-tools-website/109eecb809a53bd36cc3468c79d243457570a49d/README.md",
+          "sha256": "ba16dd52cf07fe369bf6359d22bfe36bae345614179fd14d5e814ac481cde89f",
+          "bytes": 9092,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:26Z",
+          "licence": "MIT (repository LICENSE)"
+        },
+        "datasetId": "civicaitools-website"
+      },
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://raw.githubusercontent.com/npstorey/socrata-mcp-server/5b18c979b37465999d686785074973a340207555/README.md",
+          "sha256": "7e4a5242bf2d8f2439ef0963b9afb823fbfced25bcc7bad59375c5dca618ae02",
+          "bytes": 7975,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:26Z",
+          "licence": "MIT (repository LICENSE, two copyright lines)"
+        },
+        "datasetId": "socrata-mcp-server"
+      },
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://raw.githubusercontent.com/npstorey/typedstandards/b0bf0a447ba35991ca2a211fa71983e1ba9ac78e/README.md",
+          "sha256": "c0a1894c4089a615d685b420d632f50b9edfadd963a58fda9c7b9e025a086f9c",
+          "bytes": 7358,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:25Z",
+          "licence": "MIT (repository LICENSE)"
+        },
+        "datasetId": "typedstandards-repo"
+      },
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://raw.githubusercontent.com/npstorey/typedstandards-eval-run-example/9031a94eebe0d800e52eab6fd4e01c7e788603a6/README.md",
+          "sha256": "3e405213b53a67e9ebffa7e1f332b34ddbbd3c894d6b1c556c8ca25109930529",
+          "bytes": 9271,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:27Z",
+          "licence": "MIT for code, CC BY 4.0 for text (README)"
+        },
+        "datasetId": "eval-run-example"
+      },
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://raw.githubusercontent.com/dathere/qsv/7c43b6bc77b22556220328eef22f29b9fac6d24b/README.md",
+          "sha256": "1541ba978efb0231096072c945df32e282dda499fb6a919bee13a987c3efb639",
+          "bytes": 81584,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:30Z",
+          "licence": "MIT (COPYING and Cargo.toml at the tag)"
+        },
+        "datasetId": "qsv"
+      },
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://raw.githubusercontent.com/dathere/Verikan/8e5e85fdda9829d142358c51f9b5db797333ed47/README.md",
+          "sha256": "28e521a2d04351228578376487b4354e3ef39e9c2f46c2072d59eadee66dfe0b",
+          "bytes": 14073,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:31Z",
+          "licence": "MIT (repository LICENSE)"
+        },
+        "datasetId": "verikan"
+      },
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://raw.githubusercontent.com/okfn/mcp-server/38f65642325067feb3c0354f046a19b80520d526/README.md",
+          "sha256": "b0937703f25c094df17c2f1f98389a98da9074c458c579936bf5c9ede0a326b8",
+          "bytes": 10358,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:31Z",
+          "licence": "not stated"
+        },
+        "datasetId": "okfn-ckan-mcp"
+      },
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://raw.githubusercontent.com/humane-intelligence/hi-oss-ai-red-teaming/046a45d5a37339133c4b3f527276bbf9fb2b61bc/README.md",
+          "sha256": "0b0343ea53fce2f3655b9bde927340c2852c95f1efbca9d9298d54f525ccffde",
+          "bytes": 6470,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:31Z",
+          "licence": "Apache-2.0 (repository LICENSE)"
+        },
+        "datasetId": "humane-intelligence-red-teaming"
+      },
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://raw.githubusercontent.com/strands-agents/harness-sdk/45c2ffd3333cdb67c1dd9f4f208639ce3b89aa19/strands-py/README.md",
+          "sha256": "a5f8050bf77d175f9208e80d163e0f5ca337a50332fec05523e202c43f2742c3",
+          "bytes": 12531,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:31Z",
+          "licence": "Apache-2.0 (LICENSE.APACHE)"
+        },
+        "datasetId": "strands-agents-python"
+      },
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://raw.githubusercontent.com/microsoft/agent-framework/0c9944cc9f577d51277ac7c55dbc388b60a577af/README.md",
+          "sha256": "4a628aa224c014ff326587cc543a4991e483e11723a226f6fcdb22664224c58a",
+          "bytes": 13336,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:31Z",
+          "licence": "MIT (repository LICENSE)"
+        },
+        "datasetId": "microsoft-agent-framework"
+      },
+      {
+        "tool": "corpus/pin.mjs",
+        "operationType": "script-run",
+        "arguments": {
+          "command": "node corpus/pin.mjs",
+          "scriptSha256": "b1a04ee486324c401541c979c6fa7e74b958759c7b5a141bb45295217742e4d7",
+          "inputs": [
+            {
+              "path": "corpus/sources.json",
+              "sha256": "72337b854d073159d8d67c5ab16f2cc52c70e6d74649cb1d59b0d1378b20edbe"
+            },
+            {
+              "path": "corpus/manifest.json",
+              "sha256": "2c23dafb122ed6dd7f1acb5f82296ccce65079417a29a898589aa9fcbba77980"
+            }
+          ],
+          "unpinned": [
+            {
+              "key": "mila-mozilla-foundation-layer",
+              "location": "https://mila.quebec/en/news/mila-and-mozilla-announce-new-initiative-to-build-trustworthy-open-source-ai-for-everyone",
+              "sha256": null,
+              "reason": "Only announcement pages exist, from Mila and from Mozilla, both dated 2026-09-17. No repository, specification or release is published, and an announcement page is not immutable."
+            }
+          ],
+          "output": {
+            "path": "map.yaml",
+            "sha256": "38945eb4cb3ac6528f77647e082778fa8d0ebc9afb66c8cc25508127ba8d155c",
+            "bytes": 44720
+          }
+        }
+      },
+      {
+        "tool": "package/build.mjs",
+        "operationType": "package-file",
+        "arguments": {
+          "command": "node package/build.mjs assemble",
+          "scriptSha256": "ceb66b69cc13fde3527c7ac94adb3fa5b467206f166350d79a3fd9d1a9baf1a7",
+          "inputFile": "map.yaml",
+          "inputSha256": "38945eb4cb3ac6528f77647e082778fa8d0ebc9afb66c8cc25508127ba8d155c"
+        }
+      }
+    ],
+    "dataSources": [
+      {
+        "sourceId": "ts-spec",
+        "catalogType": "github-raw-at-sha",
+        "portalUrl": "https://raw.githubusercontent.com",
+        "datasetId": "ts-spec",
+        "datasetUrl": "https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md",
+        "accessTimestamp": "2026-09-22T19:20:25Z"
+      },
+      {
+        "sourceId": "w3c-prov-o",
+        "catalogType": "w3c-dated-tr",
+        "portalUrl": "https://www.w3.org",
+        "datasetId": "w3c-prov-o",
+        "datasetUrl": "https://www.w3.org/TR/2013/REC-prov-o-20130430/",
+        "accessTimestamp": "2026-09-22T19:20:27Z"
+      },
+      {
+        "sourceId": "in-toto-attestation",
+        "catalogType": "github-raw-at-sha",
+        "portalUrl": "https://raw.githubusercontent.com",
+        "datasetId": "in-toto-attestation",
+        "datasetUrl": "https://raw.githubusercontent.com/in-toto/attestation/df02077bf97218a8860a5c534eff1f1381f56984/spec/v1/digest_set.md",
+        "accessTimestamp": "2026-09-22T19:20:27Z"
+      },
+      {
+        "sourceId": "sigstore-rekor-hashedrekord",
+        "catalogType": "github-raw-at-sha",
+        "portalUrl": "https://raw.githubusercontent.com",
+        "datasetId": "sigstore-rekor-hashedrekord",
+        "datasetUrl": "https://raw.githubusercontent.com/sigstore/rekor/a36bd716fd0d81c314092718f37b53dc26b2af38/pkg/types/hashedrekord/v0.0.1/hashedrekord_v0_0_1_schema.json",
+        "accessTimestamp": "2026-09-22T19:20:27Z"
+      },
+      {
+        "sourceId": "rfc-3161",
+        "catalogType": "rfc-editor-txt",
+        "portalUrl": "https://www.rfc-editor.org",
+        "datasetId": "rfc-3161",
+        "datasetUrl": "https://www.rfc-editor.org/rfc/rfc3161.txt",
+        "accessTimestamp": "2026-09-22T19:20:27Z"
+      },
+      {
+        "sourceId": "rfc-8785",
+        "catalogType": "rfc-editor-txt",
+        "portalUrl": "https://www.rfc-editor.org",
+        "datasetId": "rfc-8785",
+        "datasetUrl": "https://www.rfc-editor.org/rfc/rfc8785.txt",
+        "accessTimestamp": "2026-09-22T19:20:27Z"
+      },
+      {
+        "sourceId": "rfc-8032",
+        "catalogType": "rfc-editor-txt",
+        "portalUrl": "https://www.rfc-editor.org",
+        "datasetId": "rfc-8032",
+        "datasetUrl": "https://www.rfc-editor.org/rfc/rfc8032.txt",
+        "accessTimestamp": "2026-09-22T19:20:28Z"
+      },
+      {
+        "sourceId": "did-key",
+        "catalogType": "github-raw-at-sha",
+        "portalUrl": "https://raw.githubusercontent.com",
+        "datasetId": "did-key",
+        "datasetUrl": "https://raw.githubusercontent.com/w3c-ccg/did-key-spec/2cc490c38c5aacf58497a87fc0cf8794668bf716/index.html",
+        "accessTimestamp": "2026-09-22T19:20:28Z"
+      },
+      {
+        "sourceId": "discourse-graphs",
+        "catalogType": "github-raw-at-sha",
+        "portalUrl": "https://raw.githubusercontent.com",
+        "datasetId": "discourse-graphs",
+        "datasetUrl": "https://raw.githubusercontent.com/DiscourseGraphs/schemas/19403e9e28d505dbce6cd2af5868eb27af6e3e36/owl/dg_core.ttl",
+        "accessTimestamp": "2026-09-22T19:20:28Z"
+      },
+      {
+        "sourceId": "c2pa",
+        "catalogType": "github-raw-at-sha",
+        "portalUrl": "https://raw.githubusercontent.com",
+        "datasetId": "c2pa",
+        "datasetUrl": "https://raw.githubusercontent.com/c2pa-org/specifications/6998a277b4519fc652550686861f0b97a64e5c19/build/site/specifications/2.3/specs/C2PA_Specification.html",
+        "accessTimestamp": "2026-09-22T19:20:28Z"
+      },
+      {
+        "sourceId": "w3c-vc-2",
+        "catalogType": "w3c-dated-tr",
+        "portalUrl": "https://www.w3.org",
+        "datasetId": "w3c-vc-2",
+        "datasetUrl": "https://www.w3.org/TR/2025/REC-vc-data-model-2.0-20250515/",
+        "accessTimestamp": "2026-09-22T19:20:28Z"
+      },
+      {
+        "sourceId": "ietf-scitt-arch",
+        "catalogType": "rfc-editor-txt",
+        "portalUrl": "https://www.rfc-editor.org",
+        "datasetId": "ietf-scitt-arch",
+        "datasetUrl": "https://www.rfc-editor.org/rfc/rfc9943.txt",
+        "accessTimestamp": "2026-09-22T19:20:29Z"
+      },
+      {
+        "sourceId": "slsa-provenance",
+        "catalogType": "github-raw-at-sha",
+        "portalUrl": "https://raw.githubusercontent.com",
+        "datasetId": "slsa-provenance",
+        "datasetUrl": "https://raw.githubusercontent.com/slsa-framework/slsa/19e4e2f005f871270c4f555fc47afecfb37f3efe/docs/spec/v1.2/build-provenance.md",
+        "accessTimestamp": "2026-09-22T19:20:29Z"
+      },
+      {
+        "sourceId": "nanopub-guidelines",
+        "catalogType": "github-raw-at-sha",
+        "portalUrl": "https://raw.githubusercontent.com",
+        "datasetId": "nanopub-guidelines",
+        "datasetUrl": "https://raw.githubusercontent.com/Nanopublication/Guidelines/8388dd90795b264f4b01c64d0f7218babcae4871/index.html",
+        "accessTimestamp": "2026-09-22T19:20:29Z"
+      },
+      {
+        "sourceId": "proof-of-control",
+        "catalogType": "github-raw-at-sha",
+        "portalUrl": "https://raw.githubusercontent.com",
+        "datasetId": "proof-of-control",
+        "datasetUrl": "https://raw.githubusercontent.com/LFDT-ProofOfControl/ov-poc-standard/22c7b625be459f5eee7dd8690afd080b5141b8c6/0.1/en/0x01-Frontispiece.md",
+        "accessTimestamp": "2026-09-22T19:20:29Z"
+      },
+      {
+        "sourceId": "proof-of-insight",
+        "catalogType": "github-raw-at-sha",
+        "portalUrl": "https://raw.githubusercontent.com",
+        "datasetId": "proof-of-insight",
+        "datasetUrl": "https://raw.githubusercontent.com/proof-of-insight/spec/6f390d76a3a660d3863fd7341062bdfdc3ec29f2/versions/v0.7.0.md",
+        "accessTimestamp": "2026-09-22T19:20:29Z"
+      },
+      {
+        "sourceId": "nanda-agentfacts",
+        "catalogType": "github-raw-at-sha",
+        "portalUrl": "https://raw.githubusercontent.com",
+        "datasetId": "nanda-agentfacts",
+        "datasetUrl": "https://raw.githubusercontent.com/projnanda/agentfacts-format/89e938c08a7166341201568055c0a3b6852d26e4/agentfacts_schema.json",
+        "accessTimestamp": "2026-09-22T19:20:29Z"
+      },
+      {
+        "sourceId": "mcp-sep-3094",
+        "catalogType": "github-raw-at-sha",
+        "portalUrl": "https://raw.githubusercontent.com",
+        "datasetId": "mcp-sep-3094",
+        "datasetUrl": "https://raw.githubusercontent.com/modelcontextprotocol/modelcontextprotocol/109bbfe75d43c93a23ee17aa2b6dcdf05d21b338/seps/3094-granular-citations-and-fragment-addressing.md",
+        "accessTimestamp": "2026-09-22T19:20:29Z"
+      },
+      {
+        "sourceId": "atproto-lexicon",
+        "catalogType": "github-raw-at-sha",
+        "portalUrl": "https://raw.githubusercontent.com",
+        "datasetId": "atproto-lexicon",
+        "datasetUrl": "https://raw.githubusercontent.com/bluesky-social/atproto-website/7a6cdd6c7b48d2aa8d93293827374e0c4fdbb305/src/app/%5Blocale%5D/specs/lexicon/en.mdx",
+        "accessTimestamp": "2026-09-22T19:20:30Z"
+      },
+      {
+        "sourceId": "google-okf",
+        "catalogType": "github-raw-at-sha",
+        "portalUrl": "https://raw.githubusercontent.com",
+        "datasetId": "google-okf",
+        "datasetUrl": "https://raw.githubusercontent.com/GoogleCloudPlatform/knowledge-catalog/22efaa5402775a7c4d4c37f89e41258daaf3cb65/okf/SPEC.md",
+        "accessTimestamp": "2026-09-22T19:20:30Z"
+      },
+      {
+        "sourceId": "w3c-dcat-3",
+        "catalogType": "w3c-dated-tr",
+        "portalUrl": "https://www.w3.org",
+        "datasetId": "w3c-dcat-3",
+        "datasetUrl": "https://www.w3.org/TR/2024/REC-vocab-dcat-3-20240822/",
+        "accessTimestamp": "2026-09-22T19:20:30Z"
+      },
+      {
+        "sourceId": "ro-crate",
+        "catalogType": "github-raw-at-sha",
+        "portalUrl": "https://raw.githubusercontent.com",
+        "datasetId": "ro-crate",
+        "datasetUrl": "https://raw.githubusercontent.com/ResearchObject/ro-crate/22fbd7e098ccd2839c80967e363a2201528a2efe/docs/_specification/1.3/structure.md",
+        "accessTimestamp": "2026-09-22T19:20:30Z"
+      },
+      {
+        "sourceId": "workflow-run-crate",
+        "catalogType": "github-raw-at-sha",
+        "portalUrl": "https://raw.githubusercontent.com",
+        "datasetId": "workflow-run-crate",
+        "datasetUrl": "https://raw.githubusercontent.com/ResearchObject/workflow-run-crate/3c5b530c3d2784169e461d3273855a6b3a57246e/docs/profiles/0.6/workflow_run_crate/index.md",
+        "accessTimestamp": "2026-09-22T19:20:30Z"
+      },
+      {
+        "sourceId": "mira-schema",
+        "catalogType": "github-raw-at-sha",
+        "portalUrl": "https://raw.githubusercontent.com",
+        "datasetId": "mira-schema",
+        "datasetUrl": "https://raw.githubusercontent.com/MIRA-science/schema/f42c5966629cbc90ca09464b52d55c82c4f21116/mira.yaml",
+        "accessTimestamp": "2026-09-22T19:20:30Z"
+      },
+      {
+        "sourceId": "civicaitools-website",
+        "catalogType": "github-raw-at-sha",
+        "portalUrl": "https://raw.githubusercontent.com",
+        "datasetId": "civicaitools-website",
+        "datasetUrl": "https://raw.githubusercontent.com/npstorey/civic-ai-tools-website/109eecb809a53bd36cc3468c79d243457570a49d/README.md",
+        "accessTimestamp": "2026-09-22T19:20:26Z"
+      },
+      {
+        "sourceId": "socrata-mcp-server",
+        "catalogType": "github-raw-at-sha",
+        "portalUrl": "https://raw.githubusercontent.com",
+        "datasetId": "socrata-mcp-server",
+        "datasetUrl": "https://raw.githubusercontent.com/npstorey/socrata-mcp-server/5b18c979b37465999d686785074973a340207555/README.md",
+        "accessTimestamp": "2026-09-22T19:20:26Z"
+      },
+      {
+        "sourceId": "typedstandards-repo",
+        "catalogType": "github-raw-at-sha",
+        "portalUrl": "https://raw.githubusercontent.com",
+        "datasetId": "typedstandards-repo",
+        "datasetUrl": "https://raw.githubusercontent.com/npstorey/typedstandards/b0bf0a447ba35991ca2a211fa71983e1ba9ac78e/README.md",
+        "accessTimestamp": "2026-09-22T19:20:25Z"
+      },
+      {
+        "sourceId": "eval-run-example",
+        "catalogType": "github-raw-at-sha",
+        "portalUrl": "https://raw.githubusercontent.com",
+        "datasetId": "eval-run-example",
+        "datasetUrl": "https://raw.githubusercontent.com/npstorey/typedstandards-eval-run-example/9031a94eebe0d800e52eab6fd4e01c7e788603a6/README.md",
+        "accessTimestamp": "2026-09-22T19:20:27Z"
+      },
+      {
+        "sourceId": "qsv",
+        "catalogType": "github-raw-at-sha",
+        "portalUrl": "https://raw.githubusercontent.com",
+        "datasetId": "qsv",
+        "datasetUrl": "https://raw.githubusercontent.com/dathere/qsv/7c43b6bc77b22556220328eef22f29b9fac6d24b/README.md",
+        "accessTimestamp": "2026-09-22T19:20:30Z"
+      },
+      {
+        "sourceId": "verikan",
+        "catalogType": "github-raw-at-sha",
+        "portalUrl": "https://raw.githubusercontent.com",
+        "datasetId": "verikan",
+        "datasetUrl": "https://raw.githubusercontent.com/dathere/Verikan/8e5e85fdda9829d142358c51f9b5db797333ed47/README.md",
+        "accessTimestamp": "2026-09-22T19:20:31Z"
+      },
+      {
+        "sourceId": "okfn-ckan-mcp",
+        "catalogType": "github-raw-at-sha",
+        "portalUrl": "https://raw.githubusercontent.com",
+        "datasetId": "okfn-ckan-mcp",
+        "datasetUrl": "https://raw.githubusercontent.com/okfn/mcp-server/38f65642325067feb3c0354f046a19b80520d526/README.md",
+        "accessTimestamp": "2026-09-22T19:20:31Z"
+      },
+      {
+        "sourceId": "humane-intelligence-red-teaming",
+        "catalogType": "github-raw-at-sha",
+        "portalUrl": "https://raw.githubusercontent.com",
+        "datasetId": "humane-intelligence-red-teaming",
+        "datasetUrl": "https://raw.githubusercontent.com/humane-intelligence/hi-oss-ai-red-teaming/046a45d5a37339133c4b3f527276bbf9fb2b61bc/README.md",
+        "accessTimestamp": "2026-09-22T19:20:31Z"
+      },
+      {
+        "sourceId": "strands-agents-python",
+        "catalogType": "github-raw-at-sha",
+        "portalUrl": "https://raw.githubusercontent.com",
+        "datasetId": "strands-agents-python",
+        "datasetUrl": "https://raw.githubusercontent.com/strands-agents/harness-sdk/45c2ffd3333cdb67c1dd9f4f208639ce3b89aa19/strands-py/README.md",
+        "accessTimestamp": "2026-09-22T19:20:31Z"
+      },
+      {
+        "sourceId": "microsoft-agent-framework",
+        "catalogType": "github-raw-at-sha",
+        "portalUrl": "https://raw.githubusercontent.com",
+        "datasetId": "microsoft-agent-framework",
+        "datasetUrl": "https://raw.githubusercontent.com/microsoft/agent-framework/0c9944cc9f577d51277ac7c55dbc388b60a577af/README.md",
+        "accessTimestamp": "2026-09-22T19:20:31Z"
+      }
+    ],
+    "cost": {
+      "model": "none"
+    },
+    "skillMetadata": {},
+    "output": "# map.yaml: Typed Standards' technical relations to public projects, in three rings.\n# After this comment, one header document, then one YAML document per edge. Outside x-typedstandards,\n# each edge uses only the field names the SciOS core-and-satellite examples show for an edge\n# (id, createdAt, subject, object). Every other field is under x-typedstandards.\n# Written by corpus/pin.mjs from corpus/sources.json and corpus/manifest.json. This file's exact bytes\n# are the output of one signed Typed Standards record in package/.\n---\nx-typedstandards:\n  map: \"Typed Standards: relations to public projects\"\n  domain: analysis-provenance\n  subject: typedstandards.org\n  createdAt: \"2026-09-22\"\n  writtenFrom:\n    sources: corpus/sources.json\n    manifest: corpus/manifest.json\n    manifestSha256: 2c23dafb122ed6dd7f1acb5f82296ccce65079417a29a898589aa9fcbba77980\n  edgeTypes: The published schema shows one edge type, orbits, from a satellite to a core. This map has no orbits edge. No core record exists in this domain to be the object of one, and the model says a core is never a satellite. Each edge names its relation in x-typedstandards.relation, because the published schema has no edge type for any of these relations.\n  relations:\n    builds-on: The subject implements, or normatively uses, the object's published specification or code.\n    complements: The two address different layers or artifact classes of one job and can be used together. Neither depends on the other.\n    could-emit: The subject's own public text states an intent to produce Typed Standards records, cited by URL and date.\n    adjacent: A related problem space. Neither depends on the other, and there is no public statement of an intent to emit or evaluate Typed Standards records.\n  rings:\n    1: Standards the specification builds on.\n    2: Adjacent standards, drafts and proposals.\n    3: Implementations, possible emitters, and agent runtimes.\n  refs: Each ref is either a file at a 40-character commit SHA, a dated W3C TR URL, an rfc-editor.org text URL, or a published npm release tarball. A ref gives both the location and the SHA-256 of the bytes that location served when it was fetched. Where a project has no immutable location, the ref gives the location, a null sha256, and the reason in x-typedstandards.pin.\n  dropped:\n    - name: DSSE (Dead Simple Signing Envelope)\n      seed: Ring 1, listed with in-toto\n      reason: \"Typed Standards uses neither the DSSE envelope nor its pre-authentication encoding. It signs an Ed25519ph signature over the envelope-hash hex string (specification §8.3.1). The specification does name DSSE: its adjacent-standards table lists in-toto / DSSE (§5.5), and Appendix C lists DSSE as a candidate envelope-serialization profile for in-toto-native consumers. Nothing is built on it. The in-toto entry covers the conventions the specification does use.\"\n---\nid: typedstandards.org/map/w3c-prov-o\ncreatedAt: \"2026-09-22\"\nsubject:\n  id: typedstandards.org\n  ref:\n    location: https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md\n    sha256: 0e3b54b39e6877a076c495b82afd7295aefac09c70054c02e9832147037ff3f5\nobject:\n  id: w3.org/TR/prov-o\n  ref:\n    location: https://www.w3.org/TR/2013/REC-prov-o-20130430/\n    sha256: 6b96671ab84faf12ce3f041aca12c3f93a6df2ed242348810743179a68e69555\nx-typedstandards:\n  relation: builds-on\n  basis: \"Every record's provenance graph is PROV-O JSON-LD, and the envelope does not redefine derivation, attribution or generation (specification §5.5, §8.1.4).\"\n  ring: 1\n  name: W3C PROV-O\n  publisher: W3C\n  pin:\n    fetchedAt: \"2026-09-22T19:20:27Z\"\n    bytes: 464179\n    httpStatus: 200\n    basis: W3C Recommendation, 30 April 2013\n    licence: W3C document use rules, as the document's copyright line states\n  curation: { seed: kept }\n---\nid: typedstandards.org/map/in-toto-attestation\ncreatedAt: \"2026-09-22\"\nsubject:\n  id: typedstandards.org\n  ref:\n    location: https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md\n    sha256: 0e3b54b39e6877a076c495b82afd7295aefac09c70054c02e9832147037ff3f5\nobject:\n  id: github.com/in-toto/attestation\n  ref:\n    location: https://raw.githubusercontent.com/in-toto/attestation/df02077bf97218a8860a5c534eff1f1381f56984/spec/v1/digest_set.md\n    sha256: 0b1889fdea7f6d623b41555632aedf04ee4398cf02a32002060608c75ebb038e\nx-typedstandards:\n  relation: builds-on\n  basis: \"The contentHash field uses the in-toto DigestSet convention (algorithm name to hex digest), and the type URIs follow the pattern of in-toto's predicateType (specification §5.5).\"\n  ring: 1\n  name: in-toto Attestation Framework (DigestSet)\n  publisher: in-toto project\n  pin:\n    fetchedAt: \"2026-09-22T19:20:27Z\"\n    bytes: 8873\n    httpStatus: 200\n    basis: tag v1.2.0, the latest release (2026-03-18)\n    licence: Apache-2.0 (repository LICENSE notice)\n  curation: { seed: kept, reason: \"Kept for in-toto. DSSE, listed beside it, is dropped (see the header).\" }\n---\nid: typedstandards.org/map/sigstore-rekor\ncreatedAt: \"2026-09-22\"\nsubject:\n  id: typedstandards.org\n  ref:\n    location: https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md\n    sha256: 0e3b54b39e6877a076c495b82afd7295aefac09c70054c02e9832147037ff3f5\nobject:\n  id: github.com/sigstore/rekor\n  ref:\n    location: https://raw.githubusercontent.com/sigstore/rekor/a36bd716fd0d81c314092718f37b53dc26b2af38/pkg/types/hashedrekord/v0.0.1/hashedrekord_v0_0_1_schema.json\n    sha256: b8ecdc597ddb7e3289ae41e28fc3983ea25f248f531314a68dcc2361f3edada4\nx-typedstandards:\n  relation: builds-on\n  basis: \"Records submit hashedrekord entries, and verify-core checks Merkle inclusion against a pinned Rekor log key (specification §8.3.2, §9.2 check #8). This example's records carry no Rekor entry.\"\n  ring: 1\n  name: Sigstore Rekor (hashedrekord)\n  publisher: Sigstore\n  pin:\n    fetchedAt: \"2026-09-22T19:20:27Z\"\n    bytes: 2373\n    httpStatus: 200\n    basis: tag v1.5.4, the latest release (2026-08-20)\n    licence: Apache-2.0 (repository LICENSE)\n  curation: { seed: kept }\n---\nid: typedstandards.org/map/rfc-3161\ncreatedAt: \"2026-09-22\"\nsubject:\n  id: typedstandards.org\n  ref:\n    location: https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md\n    sha256: 0e3b54b39e6877a076c495b82afd7295aefac09c70054c02e9832147037ff3f5\nobject:\n  id: rfc-editor.org/rfc/rfc3161\n  ref:\n    location: https://www.rfc-editor.org/rfc/rfc3161.txt\n    sha256: 39fd17644ff2d654bc83814a78b1c5b5e7517f496741f34ead5064943eb98240\nx-typedstandards:\n  relation: builds-on\n  basis: \"Records carry RFC 3161 timestamp tokens, which verify-core checks against pinned TSA anchors (specification §9.2 check #7). This example's records carry none.\"\n  ring: 1\n  name: RFC 3161 Time-Stamp Protocol\n  publisher: IETF\n  pin:\n    fetchedAt: \"2026-09-22T19:20:27Z\"\n    bytes: 54585\n    httpStatus: 200\n    basis: RFC 3161, August 2001 (Proposed Standard)\n    licence: The Internet Society Full Copyright Statement (2001), in the document\n  curation: { seed: kept }\n---\nid: typedstandards.org/map/rfc-8785\ncreatedAt: \"2026-09-22\"\nsubject:\n  id: typedstandards.org\n  ref:\n    location: https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md\n    sha256: 0e3b54b39e6877a076c495b82afd7295aefac09c70054c02e9832147037ff3f5\nobject:\n  id: rfc-editor.org/rfc/rfc8785\n  ref:\n    location: https://www.rfc-editor.org/rfc/rfc8785.txt\n    sha256: 63d52294eb0e3f0014174288186d388b4ddbf2c67d1ce8af1d9726eb0c3ab240\nx-typedstandards:\n  relation: builds-on\n  basis: \"The envelope hash is the SHA-256 of the RFC 8785 canonicalization of the unsigned envelope (specification §8.2).\"\n  ring: 1\n  name: RFC 8785 JSON Canonicalization Scheme\n  publisher: RFC Editor (Independent Submission)\n  pin:\n    fetchedAt: \"2026-09-22T19:20:27Z\"\n    bytes: 41879\n    httpStatus: 200\n    basis: RFC 8785, June 2020 (Informational)\n    licence: IETF Trust Legal Provisions (BCP 78), as the document states\n  curation: { seed: kept }\n---\nid: typedstandards.org/map/rfc-8032\ncreatedAt: \"2026-09-22\"\nsubject:\n  id: typedstandards.org\n  ref:\n    location: https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md\n    sha256: 0e3b54b39e6877a076c495b82afd7295aefac09c70054c02e9832147037ff3f5\nobject:\n  id: rfc-editor.org/rfc/rfc8032\n  ref:\n    location: https://www.rfc-editor.org/rfc/rfc8032.txt\n    sha256: ed63657ff389301282b169b0abde9b5dd2c7e4d524fdfa5da6ff3094fc93c4c3\nx-typedstandards:\n  relation: builds-on\n  basis: \"Every record signature is Ed25519ph, defined in RFC 8032 §5.1 (specification §8.3.1).\"\n  ring: 1\n  name: RFC 8032 EdDSA (Ed25519ph)\n  publisher: IRTF Crypto Forum Research Group\n  pin:\n    fetchedAt: \"2026-09-22T19:20:28Z\"\n    bytes: 103210\n    httpStatus: 200\n    basis: RFC 8032, January 2017 (Informational)\n    licence: IETF Trust Legal Provisions (BCP 78), as the document states\n  curation: { seed: added, reason: \"The signature algorithm of every record, this example's two included.\" }\n---\nid: typedstandards.org/map/did-key\ncreatedAt: \"2026-09-22\"\nsubject:\n  id: typedstandards.org\n  ref:\n    location: https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md\n    sha256: 0e3b54b39e6877a076c495b82afd7295aefac09c70054c02e9832147037ff3f5\nobject:\n  id: github.com/w3c-ccg/did-key-spec\n  ref:\n    location: https://raw.githubusercontent.com/w3c-ccg/did-key-spec/2cc490c38c5aacf58497a87fc0cf8794668bf716/index.html\n    sha256: e014a146acb0dcdafbdfee01226061d778da3ee72e8a048a7d53754c79675764\nx-typedstandards:\n  relation: builds-on\n  basis: \"A self-certifying signer's identifier is a did:key in base58btc form, derived from the signing key (specification §8.5.1, hub ADR-0030). This example's two records use one.\"\n  ring: 1\n  name: The did:key Method v0.9\n  publisher: W3C Credentials Community Group\n  pin:\n    fetchedAt: \"2026-09-22T19:20:28Z\"\n    bytes: 49713\n    httpStatus: 200\n    basis: \"main HEAD on 2026-09-22 (the repository has no tags); the document states v0.9, a Community Group draft\"\n    licence: W3C Software and Document License (LICENSE.md)\n  curation: { seed: kept }\n---\nid: typedstandards.org/map/discourse-graphs\ncreatedAt: \"2026-09-22\"\nsubject:\n  id: typedstandards.org\n  ref:\n    location: https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md\n    sha256: 0e3b54b39e6877a076c495b82afd7295aefac09c70054c02e9832147037ff3f5\nobject:\n  id: github.com/DiscourseGraphs/schemas\n  ref:\n    location: https://raw.githubusercontent.com/DiscourseGraphs/schemas/19403e9e28d505dbce6cd2af5868eb27af6e3e36/owl/dg_core.ttl\n    sha256: 0e41bd5223785716146fac882667a56afdb14e705380c41704174a55f82a8982\nx-typedstandards:\n  relation: builds-on\n  basis: \"The specification takes its claim, question and evidence content types and its support, opposition and answer relations from the Discourse Graphs pattern (§5.5, §7.5). Those content types are specified, not built, and the current schema file names its relations differently.\"\n  ring: 1\n  name: Discourse Graphs\n  publisher: Discourse Graphs project\n  pin:\n    fetchedAt: \"2026-09-22T19:20:28Z\"\n    bytes: 2806\n    httpStatus: 200\n    basis: main HEAD on 2026-09-22 (the repository has no tags)\n    licence: CC0-1.0 (repository LICENSE)\n  curation: { seed: kept }\n---\nid: typedstandards.org/map/c2pa\ncreatedAt: \"2026-09-22\"\nsubject:\n  id: typedstandards.org\n  ref:\n    location: https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md\n    sha256: 0e3b54b39e6877a076c495b82afd7295aefac09c70054c02e9832147037ff3f5\nobject:\n  id: github.com/c2pa-org/specifications\n  ref:\n    location: https://raw.githubusercontent.com/c2pa-org/specifications/6998a277b4519fc652550686861f0b97a64e5c19/build/site/specifications/2.3/specs/C2PA_Specification.html\n    sha256: 0d2a8936068caa60cbb5ad8f04d8c83dccf700d3f9d97fb9b589f862438a37d1\nx-typedstandards:\n  relation: complements\n  basis: \"C2PA binds signed provenance manifests to media assets, and Typed Standards signs production records for analytical artifacts. It is the same job for a different artifact class, and neither depends on the other (specification §5.5).\"\n  ring: 2\n  name: C2PA Technical Specification 2.3\n  publisher: Coalition for Content Provenance and Authenticity\n  pin:\n    fetchedAt: \"2026-09-22T19:20:28Z\"\n    bytes: 970234\n    httpStatus: 200\n    basis: tag 2.3, release 'C2PA Specification 2.3' (2026-01-11)\n    licence: CC BY 4.0 except where noted (repository LICENSE and the document)\n  curation: { seed: kept }\n---\nid: typedstandards.org/map/w3c-vc-2\ncreatedAt: \"2026-09-22\"\nsubject:\n  id: typedstandards.org\n  ref:\n    location: https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md\n    sha256: 0e3b54b39e6877a076c495b82afd7295aefac09c70054c02e9832147037ff3f5\nobject:\n  id: w3.org/TR/vc-data-model-2.0\n  ref:\n    location: https://www.w3.org/TR/2025/REC-vc-data-model-2.0-20250515/\n    sha256: a9196a3d0b6601356c4e127bad24f8c7f2c17f6ed22e41b35755a910104156f8\nx-typedstandards:\n  relation: adjacent\n  basis: \"A data model for issuer-secured claims about a subject. It does not model how an artifact was produced (specification §5.5).\"\n  ring: 2\n  name: W3C Verifiable Credentials Data Model v2.0\n  publisher: W3C\n  pin:\n    fetchedAt: \"2026-09-22T19:20:28Z\"\n    bytes: 1023165\n    httpStatus: 200\n    basis: W3C Recommendation, 15 May 2025\n    licence: W3C Software and Document License, as the document's copyright block states\n  curation: { seed: kept }\n---\nid: typedstandards.org/map/ietf-scitt\ncreatedAt: \"2026-09-22\"\nsubject:\n  id: typedstandards.org\n  ref:\n    location: https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md\n    sha256: 0e3b54b39e6877a076c495b82afd7295aefac09c70054c02e9832147037ff3f5\nobject:\n  id: rfc-editor.org/rfc/rfc9943\n  ref:\n    location: https://www.rfc-editor.org/rfc/rfc9943.txt\n    sha256: 204aea020731e1306e8ffe0aaae5c9559a7a8edf24bd089ae79d6a6d6c7676f1\nx-typedstandards:\n  relation: complements\n  basis: An architecture for transparency services that register signed statements of any payload type and return receipts. That is the transparency layer Typed Standards fills with Sigstore Rekor today.\n  ring: 2\n  name: IETF SCITT architecture (RFC 9943)\n  publisher: IETF\n  pin:\n    fetchedAt: \"2026-09-22T19:20:29Z\"\n    bytes: 76117\n    httpStatus: 200\n    basis: RFC 9943, June 2026 (Proposed Standard), the SCITT architecture\n    licence: IETF Trust Legal Provisions (BCP 78), as the document states\n  curation: { seed: kept, reason: RFC 9943 confirmed at rfc-editor.org as the SCITT architecture (June 2026). }\n---\nid: typedstandards.org/map/slsa\ncreatedAt: \"2026-09-22\"\nsubject:\n  id: typedstandards.org\n  ref:\n    location: https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md\n    sha256: 0e3b54b39e6877a076c495b82afd7295aefac09c70054c02e9832147037ff3f5\nobject:\n  id: github.com/slsa-framework/slsa\n  ref:\n    location: https://raw.githubusercontent.com/slsa-framework/slsa/19e4e2f005f871270c4f555fc47afecfb37f3efe/docs/spec/v1.2/build-provenance.md\n    sha256: 182ab5cf823c374874136371466ba43f99f0a9ba87a8046757d26a2ed74854a0\nx-typedstandards:\n  relation: adjacent\n  basis: \"Build provenance for software artifacts, carried as an in-toto predicate. Typed Standards covers analytical artifacts instead (specification §5.5).\"\n  ring: 2\n  name: SLSA Build Provenance v1.2\n  publisher: SLSA project\n  pin:\n    fetchedAt: \"2026-09-22T19:20:29Z\"\n    bytes: 25746\n    httpStatus: 200\n    basis: tag v1.2, the latest tag (the repository has no releases)\n    licence: Community Specification License 1.0 (LICENSE.md)\n  curation: { seed: kept }\n---\nid: typedstandards.org/map/nanopublications\ncreatedAt: \"2026-09-22\"\nsubject:\n  id: typedstandards.org\n  ref:\n    location: https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md\n    sha256: 0e3b54b39e6877a076c495b82afd7295aefac09c70054c02e9832147037ff3f5\nobject:\n  id: github.com/Nanopublication/Guidelines\n  ref:\n    location: https://raw.githubusercontent.com/Nanopublication/Guidelines/8388dd90795b264f4b01c64d0f7218babcae4871/index.html\n    sha256: f3ee522113a4372604d61ff2cae25ee307cedbcc5ab1094a3e86c5ebff56dbbb\nx-typedstandards:\n  relation: adjacent\n  basis: \"Nanopublications are RDF named graphs that pair an atomic assertion with its provenance and publication information. Typed Standards is envelope-first JSON with capture-method labels, and consuming one as the other is not built (specification §5.5).\"\n  ring: 2\n  name: Nanopublication Guidelines\n  publisher: Nanopublication community\n  pin:\n    fetchedAt: \"2026-09-22T19:20:29Z\"\n    bytes: 18495\n    httpStatus: 200\n    basis: master HEAD on 2026-09-22 (the only tag dates from 2013)\n    licence: Creative Commons ShareAlike Attribution 3.0, as the document states (the repository has no LICENSE file)\n  curation: { seed: kept }\n---\nid: typedstandards.org/map/proof-of-control\ncreatedAt: \"2026-09-22\"\nsubject:\n  id: typedstandards.org\n  ref:\n    location: https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md\n    sha256: 0e3b54b39e6877a076c495b82afd7295aefac09c70054c02e9832147037ff3f5\nobject:\n  id: github.com/LFDT-ProofOfControl/ov-poc-standard\n  ref:\n    location: https://raw.githubusercontent.com/LFDT-ProofOfControl/ov-poc-standard/22c7b625be459f5eee7dd8690afd080b5141b8c6/0.1/en/0x01-Frontispiece.md\n    sha256: 28323b575b63255c6636c62ef748fb694455f86d56fa81bf28b6fc31c20b3eb5\nx-typedstandards:\n  relation: complements\n  basis: \"Specifies audit requirements and an evidence-token format (JWT and CWT) for an agent's runtime control: the data it touched, the authority it used, the tools it invoked. It points to SLSA and in-toto for artifact provenance and defines no record of how an analytical artifact was produced.\"\n  ring: 2\n  name: \"Open Verification: the Proof-of-Control Standard for Agents\"\n  publisher: Advanced AI Society (steward), in the LFDT-ProofOfControl GitHub organization\n  pin:\n    fetchedAt: \"2026-09-22T19:20:29Z\"\n    bytes: 3503\n    httpStatus: 200\n    basis: \"master HEAD on 2026-09-22 (the repository has no tags); the document states v1.0, a working draft for public comment until 2026-10-30\"\n    licence: Apache-2.0 (LICENSE.md, which changed from CC BY 4.0 in the commit of 2026-09-19)\n  curation:\n    seed: kept\n    reason: \"The seed described a v0.1 working draft; the pinned document states v1.0, a working draft for public comment.\"\n---\nid: typedstandards.org/map/proof-of-insight\ncreatedAt: \"2026-09-22\"\nsubject:\n  id: typedstandards.org\n  ref:\n    location: https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md\n    sha256: 0e3b54b39e6877a076c495b82afd7295aefac09c70054c02e9832147037ff3f5\nobject:\n  id: github.com/proof-of-insight/spec\n  ref:\n    location: https://raw.githubusercontent.com/proof-of-insight/spec/6f390d76a3a660d3863fd7341062bdfdc3ec29f2/versions/v0.7.0.md\n    sha256: e6a63102bf7830b982e7740afdb4610e74a908ad3434e8b64122dcbbd636b2b0\nx-typedstandards:\n  relation: adjacent\n  basis: \"Specifies the same kind of object as Typed Standards: a signed, content-addressed record of how an analysis was produced, as a graph of observe, compute, reason and attest steps, with a Sigstore Rekor profile. It is working draft v0.7.0, and neither depends on the other.\"\n  ring: 2\n  name: The Proof of Insight Protocol\n  publisher: Arclio LLC, as interim editor\n  pin:\n    fetchedAt: \"2026-09-22T19:20:29Z\"\n    bytes: 172469\n    httpStatus: 200\n    basis: \"tag v0.7.0, the latest release (a prerelease); the document states Version 0.7.0, Working Draft\"\n    licence: \"CC BY 4.0 for the specification text (§0 and LICENSE)\"\n  curation: { seed: kept }\n---\nid: typedstandards.org/map/nanda-agentfacts\ncreatedAt: \"2026-09-22\"\nsubject:\n  id: typedstandards.org\n  ref:\n    location: https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md\n    sha256: 0e3b54b39e6877a076c495b82afd7295aefac09c70054c02e9832147037ff3f5\nobject:\n  id: github.com/projnanda/agentfacts-format\n  ref:\n    location: https://raw.githubusercontent.com/projnanda/agentfacts-format/89e938c08a7166341201568055c0a3b6852d26e4/agentfacts_schema.json\n    sha256: 34495d046d6c579209296c8a4ffcd32b7ff2624733d63eda6ada8df8dbef1745\nx-typedstandards:\n  relation: adjacent\n  basis: A JSON Schema for agent metadata (identity, endpoints, capabilities, evaluations, certification), used for discovery and routing. It defines no record of how an output was produced.\n  ring: 2\n  name: Project NANDA AgentFacts\n  publisher: Project NANDA\n  pin:\n    fetchedAt: \"2026-09-22T19:20:29Z\"\n    bytes: 7583\n    httpStatus: 200\n    basis: main HEAD on 2026-09-22, a single commit of 2025-06-17 (the repository has no tags)\n    licence: MIT, as one line of README.md states (the repository has no LICENSE file)\n  curation: { seed: kept }\n---\nid: typedstandards.org/map/mcp-sep-3094\ncreatedAt: \"2026-09-22\"\nsubject:\n  id: typedstandards.org\n  ref:\n    location: https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md\n    sha256: 0e3b54b39e6877a076c495b82afd7295aefac09c70054c02e9832147037ff3f5\nobject:\n  id: github.com/modelcontextprotocol/modelcontextprotocol/pull/3094\n  ref:\n    location: https://raw.githubusercontent.com/modelcontextprotocol/modelcontextprotocol/109bbfe75d43c93a23ee17aa2b6dcdf05d21b338/seps/3094-granular-citations-and-fragment-addressing.md\n    sha256: ebc6d82df5d14ada988d90506029be251674a272184ef0f958d4ab54f0a80715\nx-typedstandards:\n  relation: complements\n  basis: Proposes that MCP tool results carry citations to source fragments. Its content-integrity section says the proposal 'punts on a decision to add integrity checks', which a signed record provides at another layer.\n  ring: 2\n  name: \"MCP SEP-3094: Granular Citations Format (draft)\"\n  publisher: Model Context Protocol project (open proposal)\n  pin:\n    fetchedAt: \"2026-09-22T19:20:29Z\"\n    bytes: 40062\n    httpStatus: 200\n    basis: \"head commit of the open pull request #3094 (2026-09-04); the commit is on the proposer's fork and resolves through the base repository; the document states Status: Draft\"\n    licence: \"not stated in the file; the repository LICENSE assigns Apache-2.0 to specification contributions\"\n  curation: { seed: kept }\n---\nid: typedstandards.org/map/atproto-lexicon\ncreatedAt: \"2026-09-22\"\nsubject:\n  id: typedstandards.org\n  ref:\n    location: https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md\n    sha256: 0e3b54b39e6877a076c495b82afd7295aefac09c70054c02e9832147037ff3f5\nobject:\n  id: atproto.com/specs/lexicon\n  ref:\n    location: \"https://raw.githubusercontent.com/bluesky-social/atproto-website/7a6cdd6c7b48d2aa8d93293827374e0c4fdbb305/src/app/%5Blocale%5D/specs/lexicon/en.mdx\"\n    sha256: 3c893eb2eb94c50c12ad491d9b75f3965af49d8328be5140bea628126969be55\nx-typedstandards:\n  relation: adjacent\n  basis: A schema language for typed records in the AT Protocol. The SciOS paper names it as a model for its common schema. Neither depends on the other.\n  ring: 2\n  name: ATProto Lexicon\n  publisher: Bluesky Social PBC (AT Protocol)\n  pin:\n    fetchedAt: \"2026-09-22T19:20:30Z\"\n    bytes: 35613\n    httpStatus: 200\n    basis: \"main HEAD on 2026-09-22 (the repository has no tags); the source of atproto.com/specs/lexicon\"\n    licence: CC BY 4.0 for documentation text and specifications (README)\n  curation: { seed: kept }\n---\nid: typedstandards.org/map/google-okf\ncreatedAt: \"2026-09-22\"\nsubject:\n  id: typedstandards.org\n  ref:\n    location: https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md\n    sha256: 0e3b54b39e6877a076c495b82afd7295aefac09c70054c02e9832147037ff3f5\nobject:\n  id: github.com/GoogleCloudPlatform/knowledge-catalog/okf\n  ref:\n    location: https://raw.githubusercontent.com/GoogleCloudPlatform/knowledge-catalog/22efaa5402775a7c4d4c37f89e41258daaf3cb65/okf/SPEC.md\n    sha256: 26aa5da029278939f914e578107242d9607d4f2dc5fe153272b82f9ed1030101\nx-typedstandards:\n  relation: complements\n  basis: Organisational knowledge as Markdown files with YAML front matter, with provenance and attested-computation fields that are not signed. A raw-bytes/v1 record can sign such a file byte for byte, as this example signs core.md. The SciOS paper names it as a model for its schema.\n  ring: 2\n  name: Open Knowledge Format v0.2\n  publisher: Google Cloud\n  pin:\n    fetchedAt: \"2026-09-22T19:20:30Z\"\n    bytes: 37748\n    httpStatus: 200\n    basis: \"main HEAD on 2026-09-22 (the repository has no tags); the document states Version 0.2\"\n    licence: Apache-2.0 (okf/LICENSE.md)\n  curation: { seed: kept }\n---\nid: typedstandards.org/map/w3c-dcat-3\ncreatedAt: \"2026-09-22\"\nsubject:\n  id: typedstandards.org\n  ref:\n    location: https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md\n    sha256: 0e3b54b39e6877a076c495b82afd7295aefac09c70054c02e9832147037ff3f5\nobject:\n  id: w3.org/TR/vocab-dcat-3\n  ref:\n    location: https://www.w3.org/TR/2024/REC-vocab-dcat-3-20240822/\n    sha256: 068b43f7814525ea784b7d565ada8de2b4538f5377517c4f0ec9b162a34dedfb\nx-typedstandards:\n  relation: complements\n  basis: \"DCAT describes datasets and catalogs for discovery. A record's data-source references may cite DCAT-described datasets (specification §5.5).\"\n  ring: 2\n  name: W3C DCAT 3\n  publisher: W3C\n  pin:\n    fetchedAt: \"2026-09-22T19:20:30Z\"\n    bytes: 664822\n    httpStatus: 200\n    basis: W3C Recommendation, 22 August 2024\n    licence: W3C Software and Document License, as the document's copyright line states\n  curation:\n    seed: moved\n    reason: \"Moved from Ring 1. The specification calls DCAT a different layer (§5.5), so the relation is complements, not builds-on.\"\n---\nid: typedstandards.org/map/ro-crate\ncreatedAt: \"2026-09-22\"\nsubject:\n  id: typedstandards.org\n  ref:\n    location: https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md\n    sha256: 0e3b54b39e6877a076c495b82afd7295aefac09c70054c02e9832147037ff3f5\nobject:\n  id: github.com/ResearchObject/ro-crate\n  ref:\n    location: https://raw.githubusercontent.com/ResearchObject/ro-crate/22fbd7e098ccd2839c80967e363a2201528a2efe/docs/_specification/1.3/structure.md\n    sha256: e63fe86d1a098d01ab9ea71af4f0f8742ab9fbcd29fe8afc7b55837c0e5d96e9\nx-typedstandards:\n  relation: adjacent\n  basis: A JSON-LD packaging format for research data. The specification names an RO-Crate compatibility profile as the direction for a multi-file package (open question Q1). Nothing is built.\n  ring: 2\n  name: RO-Crate 1.3\n  publisher: researchobject.org community\n  pin:\n    fetchedAt: \"2026-09-22T19:20:30Z\"\n    bytes: 18282\n    httpStatus: 200\n    basis: \"tag 1.3.0, release of 2026-06-22; the file that defines RO-Crate packages\"\n    licence: Apache-2.0 (repository LICENSE)\n  curation:\n    seed: moved\n    reason: Moved from Ring 1, where it was listed with WRROC. It is a direction under an open question, not something the specification builds on. Split from WRROC because the two are separate specifications.\n---\nid: typedstandards.org/map/workflow-run-crate\ncreatedAt: \"2026-09-22\"\nsubject:\n  id: typedstandards.org\n  ref:\n    location: https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md\n    sha256: 0e3b54b39e6877a076c495b82afd7295aefac09c70054c02e9832147037ff3f5\nobject:\n  id: github.com/ResearchObject/workflow-run-crate\n  ref:\n    location: https://raw.githubusercontent.com/ResearchObject/workflow-run-crate/3c5b530c3d2784169e461d3273855a6b3a57246e/docs/profiles/0.6/workflow_run_crate/index.md\n    sha256: 204a5af0f2823899503fe150d53feccb2a04b2f5f9988d9f605d2b4d269cb597\nx-typedstandards:\n  relation: adjacent\n  basis: RO-Crate profiles for recording tool and workflow executions. The specification names WRROC with RO-Crate as the direction for a multi-file package. Nothing is built.\n  ring: 2\n  name: Workflow Run RO-Crate 0.6\n  publisher: Workflow Run RO-Crate working group\n  pin:\n    fetchedAt: \"2026-09-22T19:20:30Z\"\n    bytes: 17132\n    httpStatus: 200\n    basis: tag 0.6.0, the latest release (2026-09-07)\n    licence: Apache-2.0 (the document's License header)\n  curation: { seed: moved, reason: \"Moved from Ring 1 and split from RO-Crate, for the same reasons.\" }\n---\nid: typedstandards.org/map/mira-schema\ncreatedAt: \"2026-09-22\"\nsubject:\n  id: typedstandards.org\n  ref:\n    location: https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md\n    sha256: 0e3b54b39e6877a076c495b82afd7295aefac09c70054c02e9832147037ff3f5\nobject:\n  id: github.com/MIRA-science/schema\n  ref:\n    location: https://raw.githubusercontent.com/MIRA-science/schema/f42c5966629cbc90ca09464b52d55c82c4f21116/mira.yaml\n    sha256: 21eafff5ac0bd7ad5ef9edcd867491824a4ff833b4af1096cb4cdb4298eaae0a\nx-typedstandards:\n  relation: adjacent\n  basis: A draft LinkML schema for question, claim and evidence graphs over research papers, built on Discourse Graphs and PROV. It signs nothing.\n  ring: 2\n  name: MIRA schema (draft)\n  publisher: MIRA-science\n  pin:\n    fetchedAt: \"2026-09-22T19:20:30Z\"\n    bytes: 5637\n    httpStatus: 200\n    basis: \"main HEAD on 2026-09-22 (the repository has no tags); its README calls it a draft\"\n    licence: Apache-2.0 (repository LICENSE)\n  curation:\n    seed: added\n    reason: Listed at scios.tech/thoughts (read 2026-09-22) as a published schema. It builds on Discourse Graphs, as the specification does.\n---\nid: typedstandards.org/map/civicaitools-org\ncreatedAt: \"2026-09-22\"\nsubject:\n  id: civicaitools.org\n  ref:\n    location: https://raw.githubusercontent.com/npstorey/civic-ai-tools-website/109eecb809a53bd36cc3468c79d243457570a49d/README.md\n    sha256: ba16dd52cf07fe369bf6359d22bfe36bae345614179fd14d5e814ac481cde89f\nobject:\n  id: typedstandards.org\n  ref:\n    location: https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md\n    sha256: 0e3b54b39e6877a076c495b82afd7295aefac09c70054c02e9832147037ff3f5\nx-typedstandards:\n  relation: builds-on\n  basis: The reference publishing application. It answers questions over civic open data through MCP servers and packages each published analysis as a signed record package.\n  ring: 3\n  name: civicaitools.org\n  publisher: Civic AI Tools\n  pin:\n    fetchedAt: \"2026-09-22T19:20:26Z\"\n    bytes: 9092\n    httpStatus: 200\n    basis: npstorey/civic-ai-tools-website main HEAD 109eecb on 2026-09-22\n    licence: MIT (repository LICENSE)\n  curation:\n    seed: kept\n    reason: Listed with socrata-mcp-server in the seed, and split from it because the two relate to the specification differently.\n---\nid: typedstandards.org/map/socrata-mcp-server\ncreatedAt: \"2026-09-22\"\nsubject:\n  id: github.com/npstorey/socrata-mcp-server\n  ref:\n    location: https://raw.githubusercontent.com/npstorey/socrata-mcp-server/5b18c979b37465999d686785074973a340207555/README.md\n    sha256: 7e4a5242bf2d8f2439ef0963b9afb823fbfced25bcc7bad59375c5dca618ae02\nobject:\n  id: typedstandards.org\n  ref:\n    location: https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md\n    sha256: 0e3b54b39e6877a076c495b82afd7295aefac09c70054c02e9832147037ff3f5\nx-typedstandards:\n  relation: complements\n  basis: An MCP server that gives AI tools query access to Socrata open-data portals. It serves the tool results an analysis cites, and signs nothing itself.\n  ring: 3\n  name: socrata-mcp-server\n  publisher: Civic AI Tools\n  pin:\n    fetchedAt: \"2026-09-22T19:20:26Z\"\n    bytes: 7975\n    httpStatus: 200\n    basis: npstorey/socrata-mcp-server main HEAD 5b18c97 on 2026-09-22\n    licence: MIT (repository LICENSE, two copyright lines)\n  curation: { seed: kept }\n---\nid: typedstandards.org/map/typedstandards-verifier\ncreatedAt: \"2026-09-22\"\nsubject:\n  id: typedstandards.org/verify\n  ref:\n    location: https://raw.githubusercontent.com/npstorey/typedstandards/b0bf0a447ba35991ca2a211fa71983e1ba9ac78e/README.md\n    sha256: c0a1894c4089a615d685b420d632f50b9edfadd963a58fda9c7b9e025a086f9c\nobject:\n  id: typedstandards.org\n  ref:\n    location: https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md\n    sha256: 0e3b54b39e6877a076c495b82afd7295aefac09c70054c02e9832147037ff3f5\nx-typedstandards:\n  relation: builds-on\n  basis: The site's client-side verifier runs verify-core's checks on a record package in the browser.\n  ring: 3\n  name: typedstandards.org verifier\n  publisher: Typed Standards\n  pin:\n    fetchedAt: \"2026-09-22T19:20:25Z\"\n    bytes: 7358\n    httpStatus: 200\n    basis: npstorey/typedstandards main HEAD b0bf0a4 on 2026-09-22\n    licence: MIT (repository LICENSE)\n  curation: { seed: kept }\n---\nid: typedstandards.org/map/eval-run-example\ncreatedAt: \"2026-09-22\"\nsubject:\n  id: github.com/npstorey/typedstandards-eval-run-example\n  ref:\n    location: https://raw.githubusercontent.com/npstorey/typedstandards-eval-run-example/9031a94eebe0d800e52eab6fd4e01c7e788603a6/README.md\n    sha256: 3e405213b53a67e9ebffa7e1f332b34ddbbd3c894d6b1c556c8ca25109930529\nobject:\n  id: typedstandards.org\n  ref:\n    location: https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md\n    sha256: 0e3b54b39e6877a076c495b82afd7295aefac09c70054c02e9832147037ff3f5\nx-typedstandards:\n  relation: builds-on\n  basis: Turns one public AI benchmark evaluation run into two signed record packages that verify offline with one command (hub ADR-0028).\n  ring: 3\n  name: typedstandards-eval-run-example\n  publisher: Typed Standards\n  pin:\n    fetchedAt: \"2026-09-22T19:20:27Z\"\n    bytes: 9271\n    httpStatus: 200\n    basis: npstorey/typedstandards-eval-run-example main HEAD 9031a94 on 2026-09-22\n    licence: MIT for code, CC BY 4.0 for text (README)\n  curation: { seed: kept }\n---\nid: typedstandards.org/map/qsv\ncreatedAt: \"2026-09-22\"\nsubject:\n  id: github.com/dathere/qsv\n  ref:\n    location: https://raw.githubusercontent.com/dathere/qsv/7c43b6bc77b22556220328eef22f29b9fac6d24b/README.md\n    sha256: 1541ba978efb0231096072c945df32e282dda499fb6a919bee13a987c3efb639\nobject:\n  id: typedstandards.org\n  ref:\n    location: https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md\n    sha256: 0e3b54b39e6877a076c495b82afd7295aefac09c70054c02e9832147037ff3f5\nx-typedstandards:\n  relation: could-emit\n  basis: An open issue on the project's own tracker, titled with the intent, and a plan comment posted from the maintainer account describe emitting JCS envelopes and Ed25519ph signatures for the Data Schematic output. The issue is open and labelled revisit-later.\n  ring: 3\n  name: qsv\n  publisher: datHere\n  intent:\n    readAt: \"2026-09-22\"\n    state: \"open; labels include revisit-later, added 2026-09-13\"\n    statedIn:\n      - url: https://github.com/dathere/qsv/issues/4448\n        date: \"2026-08-20\"\n        quote: \"Data Schematic: Replace Provenance free-text info with TypedStandards cryptographic signature\"\n      - url: \"https://github.com/dathere/qsv/issues/4448#issuecomment-5440060941\"\n        date: \"2026-08-27\"\n        quote: \"Phase 2 (signing) — Ed25519ph via --sign-key; signature envelope embedded in the HTML + sidecar\"\n      - url: \"https://github.com/dathere/qsv/issues/4448#issuecomment-5649582321\"\n        date: \"2026-09-13\"\n        quote: Revisit once TypedStandards supports something like Decentralized Identifiers\n  pin:\n    fetchedAt: \"2026-09-22T19:20:30Z\"\n    bytes: 81584\n    httpStatus: 200\n    basis: tag 23.0.1, the latest release (2026-09-13)\n    licence: MIT (COPYING and Cargo.toml at the tag)\n  curation: { seed: kept, reason: The one Ring 3 intent stated on the project's own public record. }\n---\nid: typedstandards.org/map/verikan\ncreatedAt: \"2026-09-22\"\nsubject:\n  id: github.com/dathere/Verikan\n  ref:\n    location: https://raw.githubusercontent.com/dathere/Verikan/8e5e85fdda9829d142358c51f9b5db797333ed47/README.md\n    sha256: 28e521a2d04351228578376487b4354e3ef39e9c2f46c2072d59eadee66dfe0b\nobject:\n  id: typedstandards.org\n  ref:\n    location: https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md\n    sha256: 0e3b54b39e6877a076c495b82afd7295aefac09c70054c02e9832147037ff3f5\nx-typedstandards:\n  relation: builds-on\n  basis: Its README at the pinned release lists a module that builds 'Typed Standards evidence packages' and states 'Evidence format by Typed Standards'. Its package builder targets the datHere content profile at specification revision v0.1.7.\n  ring: 3\n  name: Verikan\n  publisher: datHere\n  pin:\n    fetchedAt: \"2026-09-22T19:20:31Z\"\n    bytes: 14073\n    httpStatus: 200\n    basis: tag V1.0.1, the latest release (2026-08-31)\n    licence: MIT (repository LICENSE)\n  curation:\n    seed: added\n    reason: Found by searching the qsv publisher's public repositories for the specification's name. Its own source states the relation.\n---\nid: typedstandards.org/map/okfn-ckan-mcp\ncreatedAt: \"2026-09-22\"\nsubject:\n  id: typedstandards.org\n  ref:\n    location: https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md\n    sha256: 0e3b54b39e6877a076c495b82afd7295aefac09c70054c02e9832147037ff3f5\nobject:\n  id: github.com/okfn/mcp-server\n  ref:\n    location: https://raw.githubusercontent.com/okfn/mcp-server/38f65642325067feb3c0354f046a19b80520d526/README.md\n    sha256: b0937703f25c094df17c2f1f98389a98da9074c458c579936bf5c9ede0a326b8\nx-typedstandards:\n  relation: adjacent\n  basis: An MCP server for CKAN portals, in an early research phase, whose repository states the aim of making AI-generated answers traceable to their underlying datasets. It states no intent to produce signed records.\n  ring: 3\n  name: MCP for CKAN (okfn/mcp-server)\n  publisher: Open Knowledge Foundation\n  pin:\n    fetchedAt: \"2026-09-22T19:20:31Z\"\n    bytes: 10358\n    httpStatus: 200\n    basis: main HEAD on 2026-09-22 (the repository has no tags or releases)\n    licence: not stated\n  curation: { seed: kept }\n---\nid: typedstandards.org/map/humane-intelligence-red-teaming\ncreatedAt: \"2026-09-22\"\nsubject:\n  id: typedstandards.org\n  ref:\n    location: https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md\n    sha256: 0e3b54b39e6877a076c495b82afd7295aefac09c70054c02e9832147037ff3f5\nobject:\n  id: github.com/humane-intelligence/hi-oss-ai-red-teaming\n  ref:\n    location: https://raw.githubusercontent.com/humane-intelligence/hi-oss-ai-red-teaming/046a45d5a37339133c4b3f527276bbf9fb2b61bc/README.md\n    sha256: 0b0343ea53fce2f3655b9bde927340c2852c95f1efbca9d9298d54f525ccffde\nx-typedstandards:\n  relation: adjacent\n  basis: A platform for human red-teaming evaluations of AI systems that keeps reviewable records (conversation capture, reviewer verdicts, an append-only audit trail). None is signed, and its public text states no intent to produce signed evaluation records, so no evaluator relation is asserted.\n  ring: 3\n  name: hi-oss-ai-red-teaming\n  publisher: Humane Intelligence\n  pin:\n    fetchedAt: \"2026-09-22T19:20:31Z\"\n    bytes: 6470\n    httpStatus: 200\n    basis: tag v0.1.0, the latest release (2026-09-10)\n    licence: Apache-2.0 (repository LICENSE)\n  curation: { seed: kept }\n---\nid: typedstandards.org/map/strands-agents\ncreatedAt: \"2026-09-22\"\nsubject:\n  id: typedstandards.org\n  ref:\n    location: https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md\n    sha256: 0e3b54b39e6877a076c495b82afd7295aefac09c70054c02e9832147037ff3f5\nobject:\n  id: github.com/strands-agents/harness-sdk\n  ref:\n    location: https://raw.githubusercontent.com/strands-agents/harness-sdk/45c2ffd3333cdb67c1dd9f4f208639ce3b89aa19/strands-py/README.md\n    sha256: a5f8050bf77d175f9208e80d163e0f5ca337a50332fec05523e202c43f2742c3\nx-typedstandards:\n  relation: adjacent\n  basis: \"An agent SDK that runs the model and tool calls a producer records in queries[] and trace. Its README states nothing about provenance or signing.\"\n  ring: 3\n  name: Strands Agents (Python SDK)\n  publisher: Strands Agents\n  pin:\n    fetchedAt: \"2026-09-22T19:20:31Z\"\n    bytes: 12531\n    httpStatus: 200\n    basis: tag python/v1.56.0, the latest Python SDK release (2026-09-15)\n    licence: Apache-2.0 (LICENSE.APACHE)\n  curation: { seed: kept }\n---\nid: typedstandards.org/map/microsoft-agent-framework\ncreatedAt: \"2026-09-22\"\nsubject:\n  id: typedstandards.org\n  ref:\n    location: https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md\n    sha256: 0e3b54b39e6877a076c495b82afd7295aefac09c70054c02e9832147037ff3f5\nobject:\n  id: github.com/microsoft/agent-framework\n  ref:\n    location: https://raw.githubusercontent.com/microsoft/agent-framework/0c9944cc9f577d51277ac7c55dbc388b60a577af/README.md\n    sha256: 4a628aa224c014ff326587cc543a4991e483e11723a226f6fcdb22664224c58a\nx-typedstandards:\n  relation: adjacent\n  basis: An agent and workflow framework with built-in OpenTelemetry tracing, the trace shape a record's trace field carries. Its README states nothing about signed records.\n  ring: 3\n  name: Microsoft Agent Framework\n  publisher: Microsoft\n  pin:\n    fetchedAt: \"2026-09-22T19:20:31Z\"\n    bytes: 13336\n    httpStatus: 200\n    basis: tag dotnet-1.22.0, the latest release (2026-09-18)\n    licence: MIT (repository LICENSE)\n  curation: { seed: kept }\n---\nid: typedstandards.org/map/mila-mozilla-foundation-layer\ncreatedAt: \"2026-09-22\"\nsubject:\n  id: typedstandards.org\n  ref:\n    location: https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md\n    sha256: 0e3b54b39e6877a076c495b82afd7295aefac09c70054c02e9832147037ff3f5\nobject:\n  id: mila.quebec/en/news/mila-and-mozilla-announce-new-initiative-to-build-trustworthy-open-source-ai-for-everyone\n  ref:\n    location: https://mila.quebec/en/news/mila-and-mozilla-announce-new-initiative-to-build-trustworthy-open-source-ai-for-everyone\n    sha256: null\nx-typedstandards:\n  relation: adjacent\n  basis: An announced open standard of interface contracts, with a self-hosted reference implementation for running AI systems. Nothing is published yet, and the announcement says nothing about provenance or signing.\n  ring: 3\n  name: Open-source AI foundation layer (Mila and Mozilla initiative)\n  publisher: Mila and Mozilla\n  pin:\n    sha256: null\n    reason: Only announcement pages exist, from Mila and from Mozilla, both dated 2026-09-17. No repository, specification or release is published, and an announcement page is not immutable.\n    licence: not stated\n  curation: { seed: kept }\n",
+    "trace": {
+      "resourceSpans": []
+    },
+    "summary": "map.yaml: Typed Standards relations to public projects. The file's exact UTF-8 bytes (44720 bytes) are this record's output under raw-bytes/v1, so contentHash.sha256 is the file's ordinary SHA-256. The 34 source digests in queries are signed assertions that no check recomputes. The signer is a self-certifying did:key; it shows which key signed, not who holds it.",
+    "extensions": {
+      "io.github.npstorey.core-satellite-example": {
+        "role": "map",
+        "repository": "https://github.com/npstorey/typedstandards-core-satellite-example",
+        "file": {
+          "path": "map.yaml",
+          "sha256": "38945eb4cb3ac6528f77647e082778fa8d0ebc9afb66c8cc25508127ba8d155c",
+          "bytes": 44720
+        },
+        "writer": {
+          "path": "corpus/pin.mjs",
+          "sha256": "b1a04ee486324c401541c979c6fa7e74b958759c7b5a141bb45295217742e4d7"
+        },
+        "writerInputs": [
+          {
+            "path": "corpus/sources.json",
+            "sha256": "72337b854d073159d8d67c5ab16f2cc52c70e6d74649cb1d59b0d1378b20edbe"
+          },
+          {
+            "path": "corpus/manifest.json",
+            "sha256": "2c23dafb122ed6dd7f1acb5f82296ccce65079417a29a898589aa9fcbba77980"
+          }
+        ],
+        "pinnedAt": "2026-09-22T19:20:31Z",
+        "sourcesCited": {
+          "pinned": 34,
+          "unpinned": 1
+        },
+        "model": {
+          "title": "The Core-Satellite Model",
+          "publisher": "SciOS",
+          "location": "https://scios.tech/thoughts",
+          "dated": "2026-06-30",
+          "readAt": "2026-09-22"
+        }
+      }
+    },
+    "contentHash": {
+      "sha256": "38945eb4cb3ac6528f77647e082778fa8d0ebc9afb66c8cc25508127ba8d155c"
+    }
+  },
+  "envelopeHash": "7f1c14cd34919dfe540f75c6de041133f17cfebd59e607596a8e610827cf2911",
+  "signature": {
+    "signature": "+FFa5sViAArpzOp9h3f3U/qo3lrKONxXI7bEyFRAN/ICO90leswLkck/AMfaM62MSqPPKViL9bP5RrLlkfW8Cg==",
+    "publicKey": "MCowBQYDK2VwAyEA+BmmxJyxU0vnC2LLuSu0xcr1wwevoOLpcCFjnbnTUYQ=",
+    "algorithm": "Ed25519ph",
+    "kid": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH"
+  }
+}

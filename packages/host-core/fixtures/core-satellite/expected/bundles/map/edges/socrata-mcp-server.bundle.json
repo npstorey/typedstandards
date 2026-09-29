@@ -1,0 +1,196 @@
+{
+  "protocolVersion": "0.1.0",
+  "packageHash": "2b90437826a5c233a86b56bbb27a83512561ca51ff822a64161b8bb5b812df1f",
+  "visibility": "public",
+  "captureMethod": "script-run",
+  "contentProfile": "default",
+  "producerProfile": "scripted-recomputation/core-satellite-example",
+  "type": "content/analysis/v1",
+  "signer": {
+    "bindingTier": "pseudonymous",
+    "identifier": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+    "displayName": "typedstandards-core-satellite-example (self-certifying example key)"
+  },
+  "contentHash": {
+    "sha256": "64f7ba75f25710a16fd359d3649c8b59a88c0d3a820e06be92116789f6f7887f"
+  },
+  "contentCanonicalization": "https://typedstandards.org/canonicalization/raw-bytes/v1",
+  "signature": {
+    "signature": "sHAuY1F7wEG8rt4lEWDme5zG9wcEpmceKsoo5NyCzyWIkbkqoIdn79+H3MuOeQ1mPF8qRDY84mIvediZXFHnAQ==",
+    "publicKey": "MCowBQYDK2VwAyEA+BmmxJyxU0vnC2LLuSu0xcr1wwevoOLpcCFjnbnTUYQ=",
+    "algorithm": "Ed25519ph",
+    "kid": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH"
+  },
+  "trustRegistryUrl": "https://core-satellite.typedstandards.org/.well-known/typed-publisher.json",
+  "subjectTitle": "map/edges/socrata-mcp-server.yaml: socrata-mcp-server complements typedstandards.org",
+  "subjectSummary": "map/edges/socrata-mcp-server.yaml: socrata-mcp-server complements typedstandards.org. The file's exact UTF-8 bytes (1292 bytes) are this record's output under raw-bytes/v1, so contentHash.sha256 is the file's ordinary SHA-256. The 2 source digests in queries are signed assertions that no check recomputes. The signer is a self-certifying did:key; it shows which key signed, not who holds it.",
+  "trustRegistry": {
+    "$comment": "The example publisher's own statement about its signing key, served at https://core-satellite.typedstandards.org/.well-known/typed-publisher.json. It is not a Typed Standards record, and not an endorsement by the Typed Standards specification or by typedstandards.org, although this host is a subdomain of it. activatedAt is the earliest createdAt in package/build-log.json: the first record signed under the key, as the signer states it.",
+    "keys": [
+      {
+        "kid": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+        "publicKey": "MCowBQYDK2VwAyEA+BmmxJyxU0vnC2LLuSu0xcr1wwevoOLpcCFjnbnTUYQ=",
+        "status": "active",
+        "activatedAt": "2026-09-22T19:25:30.535Z",
+        "deprecatedAt": null,
+        "revokedAt": null,
+        "signerIdentity": {
+          "bindingTier": "pseudonymous",
+          "identifier": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+          "displayName": "typedstandards-core-satellite-example (self-certifying example key)"
+        }
+      }
+    ]
+  },
+  "package": {
+    "metadata": {
+      "schemaVersion": "0.1.0",
+      "packageId": "3177f968-ddaa-4254-8dc8-7ab87557186d",
+      "createdAt": "2026-09-23T12:44:17.054Z",
+      "signingKeyId": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "captureMethod": "script-run"
+    },
+    "producerProfile": "scripted-recomputation/core-satellite-example",
+    "type": "content/analysis/v1",
+    "signer": {
+      "bindingTier": "pseudonymous",
+      "identifier": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "displayName": "typedstandards-core-satellite-example (self-certifying example key)"
+    },
+    "contentCanonicalization": "https://typedstandards.org/canonicalization/raw-bytes/v1",
+    "prompt": {
+      "hash": "ecb4c19922db758ddbac1b65448331943f759c04a6a5fe41a82a39d2dc03adff",
+      "visibility": "full_text",
+      "text": "Package the file map/edges/socrata-mcp-server.yaml, one edge of the map of Typed Standards relations to public projects: socrata-mcp-server complements typedstandards.org, ring 3, as the output of a scripted-recomputation record under raw-bytes/v1. corpus/pin.mjs wrote the file from corpus/sources.json, corpus/manifest.json; this program read it from disk."
+    },
+    "queries": [
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://raw.githubusercontent.com/npstorey/socrata-mcp-server/5b18c979b37465999d686785074973a340207555/README.md",
+          "sha256": "7e4a5242bf2d8f2439ef0963b9afb823fbfced25bcc7bad59375c5dca618ae02",
+          "bytes": 7975,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:26Z",
+          "licence": "MIT (repository LICENSE, two copyright lines)"
+        },
+        "datasetId": "socrata-mcp-server"
+      },
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md",
+          "sha256": "0e3b54b39e6877a076c495b82afd7295aefac09c70054c02e9832147037ff3f5",
+          "bytes": 294146,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:25Z",
+          "licence": "CC BY 4.0, as the document states (§3)"
+        },
+        "datasetId": "ts-spec"
+      },
+      {
+        "tool": "corpus/pin.mjs",
+        "operationType": "script-run",
+        "arguments": {
+          "command": "node corpus/pin.mjs",
+          "scriptSha256": "094d6fe92ed15262e5f53b2437988d73f410e81fd889aeb9e7266a1d358dd42e",
+          "inputs": [
+            {
+              "path": "corpus/sources.json",
+              "sha256": "72337b854d073159d8d67c5ab16f2cc52c70e6d74649cb1d59b0d1378b20edbe"
+            },
+            {
+              "path": "corpus/manifest.json",
+              "sha256": "2c23dafb122ed6dd7f1acb5f82296ccce65079417a29a898589aa9fcbba77980"
+            }
+          ],
+          "output": {
+            "path": "map/edges/socrata-mcp-server.yaml",
+            "sha256": "64f7ba75f25710a16fd359d3649c8b59a88c0d3a820e06be92116789f6f7887f",
+            "bytes": 1292
+          }
+        }
+      },
+      {
+        "tool": "package/build.mjs",
+        "operationType": "package-file",
+        "arguments": {
+          "command": "node package/build.mjs sign",
+          "scriptSha256": "ed15926462300ec6a3051d16b58797b058a6f01a9c746239022c655b877cf21c",
+          "inputFile": "map/edges/socrata-mcp-server.yaml",
+          "inputSha256": "64f7ba75f25710a16fd359d3649c8b59a88c0d3a820e06be92116789f6f7887f"
+        }
+      }
+    ],
+    "dataSources": [
+      {
+        "sourceId": "socrata-mcp-server",
+        "catalogType": "github-raw-at-sha",
+        "portalUrl": "https://raw.githubusercontent.com",
+        "datasetId": "socrata-mcp-server",
+        "datasetUrl": "https://raw.githubusercontent.com/npstorey/socrata-mcp-server/5b18c979b37465999d686785074973a340207555/README.md",
+        "accessTimestamp": "2026-09-22T19:20:26Z"
+      },
+      {
+        "sourceId": "ts-spec",
+        "catalogType": "github-raw-at-sha",
+        "portalUrl": "https://raw.githubusercontent.com",
+        "datasetId": "ts-spec",
+        "datasetUrl": "https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md",
+        "accessTimestamp": "2026-09-22T19:20:25Z"
+      }
+    ],
+    "cost": {
+      "model": "none"
+    },
+    "skillMetadata": {},
+    "output": "# One edge of the map whose header is map/header.yaml. Written by corpus/pin.mjs; this file's exact bytes\n# are the output of one signed Typed Standards record in package/.\nid: typedstandards.org/map/socrata-mcp-server\ncreatedAt: \"2026-09-22\"\nsubject:\n  id: github.com/npstorey/socrata-mcp-server\n  ref:\n    location: https://raw.githubusercontent.com/npstorey/socrata-mcp-server/5b18c979b37465999d686785074973a340207555/README.md\n    sha256: 7e4a5242bf2d8f2439ef0963b9afb823fbfced25bcc7bad59375c5dca618ae02\nobject:\n  id: typedstandards.org\n  ref:\n    location: https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md\n    sha256: 0e3b54b39e6877a076c495b82afd7295aefac09c70054c02e9832147037ff3f5\nx-typedstandards:\n  relation: complements\n  basis: An MCP server that gives AI tools query access to Socrata open-data portals. It serves the tool results an analysis cites, and signs nothing itself.\n  ring: 3\n  name: socrata-mcp-server\n  publisher: Civic AI Tools\n  pin:\n    fetchedAt: \"2026-09-22T19:20:26Z\"\n    bytes: 7975\n    httpStatus: 200\n    basis: npstorey/socrata-mcp-server main HEAD 5b18c97 on 2026-09-22\n    licence: MIT (repository LICENSE, two copyright lines)\n  curation: { seed: kept }\n",
+    "trace": {
+      "resourceSpans": []
+    },
+    "summary": "map/edges/socrata-mcp-server.yaml: socrata-mcp-server complements typedstandards.org. The file's exact UTF-8 bytes (1292 bytes) are this record's output under raw-bytes/v1, so contentHash.sha256 is the file's ordinary SHA-256. The 2 source digests in queries are signed assertions that no check recomputes. The signer is a self-certifying did:key; it shows which key signed, not who holds it.",
+    "extensions": {
+      "io.github.npstorey.core-satellite-example": {
+        "role": "map-edge",
+        "edgeId": "typedstandards.org/map/socrata-mcp-server",
+        "repository": "https://github.com/npstorey/typedstandards-core-satellite-example",
+        "file": {
+          "path": "map/edges/socrata-mcp-server.yaml",
+          "sha256": "64f7ba75f25710a16fd359d3649c8b59a88c0d3a820e06be92116789f6f7887f",
+          "bytes": 1292
+        },
+        "writer": {
+          "path": "corpus/pin.mjs",
+          "sha256": "094d6fe92ed15262e5f53b2437988d73f410e81fd889aeb9e7266a1d358dd42e"
+        },
+        "writerInputs": [
+          {
+            "path": "corpus/sources.json",
+            "sha256": "72337b854d073159d8d67c5ab16f2cc52c70e6d74649cb1d59b0d1378b20edbe"
+          },
+          {
+            "path": "corpus/manifest.json",
+            "sha256": "2c23dafb122ed6dd7f1acb5f82296ccce65079417a29a898589aa9fcbba77980"
+          }
+        ],
+        "pinnedAt": "2026-09-22T19:20:31Z",
+        "sourcesCited": {
+          "pinned": 2,
+          "unpinned": 0
+        },
+        "model": {
+          "title": "The Core-Satellite Model",
+          "publisher": "SciOS",
+          "location": "https://scios.tech/thoughts",
+          "dated": "2026-06-30",
+          "readAt": "2026-09-22"
+        }
+      }
+    },
+    "contentHash": {
+      "sha256": "64f7ba75f25710a16fd359d3649c8b59a88c0d3a820e06be92116789f6f7887f"
+    }
+  }
+}

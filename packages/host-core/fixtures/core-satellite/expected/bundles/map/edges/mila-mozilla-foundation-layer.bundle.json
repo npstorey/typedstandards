@@ -1,0 +1,183 @@
+{
+  "protocolVersion": "0.1.0",
+  "packageHash": "22c3994b35da559cc1ae11e9df7d598f8c2aab3e170736da4064623fdad8bd2b",
+  "visibility": "public",
+  "captureMethod": "script-run",
+  "contentProfile": "default",
+  "producerProfile": "scripted-recomputation/core-satellite-example",
+  "type": "content/analysis/v1",
+  "signer": {
+    "bindingTier": "pseudonymous",
+    "identifier": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+    "displayName": "typedstandards-core-satellite-example (self-certifying example key)"
+  },
+  "contentHash": {
+    "sha256": "c6340dfbefda71a5904bd52ca3514e574df38ae96ec0d6b2600cdd5799f65be1"
+  },
+  "contentCanonicalization": "https://typedstandards.org/canonicalization/raw-bytes/v1",
+  "signature": {
+    "signature": "B25OHe74Awe4Q7ZCuKFoPxTSBsBlxeCeihqQOyTivE79Mg1nxQuXwLpmeWQVsf1DDuimxPStZ0yhuOd8DlhBAA==",
+    "publicKey": "MCowBQYDK2VwAyEA+BmmxJyxU0vnC2LLuSu0xcr1wwevoOLpcCFjnbnTUYQ=",
+    "algorithm": "Ed25519ph",
+    "kid": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH"
+  },
+  "trustRegistryUrl": "https://core-satellite.typedstandards.org/.well-known/typed-publisher.json",
+  "subjectTitle": "map/edges/mila-mozilla-foundation-layer.yaml: typedstandards.org adjacent Open-source AI foundation layer (Mila and Mozilla initiative)",
+  "subjectSummary": "map/edges/mila-mozilla-foundation-layer.yaml: typedstandards.org adjacent Open-source AI foundation layer (Mila and Mozilla initiative). The file's exact UTF-8 bytes (1448 bytes) are this record's output under raw-bytes/v1, so contentHash.sha256 is the file's ordinary SHA-256. The source digest in queries is a signed assertion that no check recomputes. One source has no immutable location; queries give its location and the reason. The signer is a self-certifying did:key; it shows which key signed, not who holds it.",
+  "trustRegistry": {
+    "$comment": "The example publisher's own statement about its signing key, served at https://core-satellite.typedstandards.org/.well-known/typed-publisher.json. It is not a Typed Standards record, and not an endorsement by the Typed Standards specification or by typedstandards.org, although this host is a subdomain of it. activatedAt is the earliest createdAt in package/build-log.json: the first record signed under the key, as the signer states it.",
+    "keys": [
+      {
+        "kid": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+        "publicKey": "MCowBQYDK2VwAyEA+BmmxJyxU0vnC2LLuSu0xcr1wwevoOLpcCFjnbnTUYQ=",
+        "status": "active",
+        "activatedAt": "2026-09-22T19:25:30.535Z",
+        "deprecatedAt": null,
+        "revokedAt": null,
+        "signerIdentity": {
+          "bindingTier": "pseudonymous",
+          "identifier": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+          "displayName": "typedstandards-core-satellite-example (self-certifying example key)"
+        }
+      }
+    ]
+  },
+  "package": {
+    "metadata": {
+      "schemaVersion": "0.1.0",
+      "packageId": "a681d073-adaf-4ee0-9cf3-1481678c28d3",
+      "createdAt": "2026-09-23T12:44:17.067Z",
+      "signingKeyId": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "captureMethod": "script-run"
+    },
+    "producerProfile": "scripted-recomputation/core-satellite-example",
+    "type": "content/analysis/v1",
+    "signer": {
+      "bindingTier": "pseudonymous",
+      "identifier": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "displayName": "typedstandards-core-satellite-example (self-certifying example key)"
+    },
+    "contentCanonicalization": "https://typedstandards.org/canonicalization/raw-bytes/v1",
+    "prompt": {
+      "hash": "4646215ea45c542b0ff937f37d605a9c6e264f5d70d1843a212a36bc18f5c43c",
+      "visibility": "full_text",
+      "text": "Package the file map/edges/mila-mozilla-foundation-layer.yaml, one edge of the map of Typed Standards relations to public projects: typedstandards.org adjacent Open-source AI foundation layer (Mila and Mozilla initiative), ring 3, as the output of a scripted-recomputation record under raw-bytes/v1. corpus/pin.mjs wrote the file from corpus/sources.json, corpus/manifest.json; this program read it from disk."
+    },
+    "queries": [
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md",
+          "sha256": "0e3b54b39e6877a076c495b82afd7295aefac09c70054c02e9832147037ff3f5",
+          "bytes": 294146,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:25Z",
+          "licence": "CC BY 4.0, as the document states (§3)"
+        },
+        "datasetId": "ts-spec"
+      },
+      {
+        "tool": "corpus/pin.mjs",
+        "operationType": "script-run",
+        "arguments": {
+          "command": "node corpus/pin.mjs",
+          "scriptSha256": "094d6fe92ed15262e5f53b2437988d73f410e81fd889aeb9e7266a1d358dd42e",
+          "inputs": [
+            {
+              "path": "corpus/sources.json",
+              "sha256": "72337b854d073159d8d67c5ab16f2cc52c70e6d74649cb1d59b0d1378b20edbe"
+            },
+            {
+              "path": "corpus/manifest.json",
+              "sha256": "2c23dafb122ed6dd7f1acb5f82296ccce65079417a29a898589aa9fcbba77980"
+            }
+          ],
+          "unpinned": [
+            {
+              "key": "mila-mozilla-foundation-layer",
+              "location": "https://mila.quebec/en/news/mila-and-mozilla-announce-new-initiative-to-build-trustworthy-open-source-ai-for-everyone",
+              "sha256": null,
+              "reason": "Only announcement pages exist, from Mila and from Mozilla, both dated 2026-09-17. No repository, specification or release is published, and an announcement page is not immutable."
+            }
+          ],
+          "output": {
+            "path": "map/edges/mila-mozilla-foundation-layer.yaml",
+            "sha256": "c6340dfbefda71a5904bd52ca3514e574df38ae96ec0d6b2600cdd5799f65be1",
+            "bytes": 1448
+          }
+        }
+      },
+      {
+        "tool": "package/build.mjs",
+        "operationType": "package-file",
+        "arguments": {
+          "command": "node package/build.mjs sign",
+          "scriptSha256": "ed15926462300ec6a3051d16b58797b058a6f01a9c746239022c655b877cf21c",
+          "inputFile": "map/edges/mila-mozilla-foundation-layer.yaml",
+          "inputSha256": "c6340dfbefda71a5904bd52ca3514e574df38ae96ec0d6b2600cdd5799f65be1"
+        }
+      }
+    ],
+    "dataSources": [
+      {
+        "sourceId": "ts-spec",
+        "catalogType": "github-raw-at-sha",
+        "portalUrl": "https://raw.githubusercontent.com",
+        "datasetId": "ts-spec",
+        "datasetUrl": "https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md",
+        "accessTimestamp": "2026-09-22T19:20:25Z"
+      }
+    ],
+    "cost": {
+      "model": "none"
+    },
+    "skillMetadata": {},
+    "output": "# One edge of the map whose header is map/header.yaml. Written by corpus/pin.mjs; this file's exact bytes\n# are the output of one signed Typed Standards record in package/.\nid: typedstandards.org/map/mila-mozilla-foundation-layer\ncreatedAt: \"2026-09-22\"\nsubject:\n  id: typedstandards.org\n  ref:\n    location: https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md\n    sha256: 0e3b54b39e6877a076c495b82afd7295aefac09c70054c02e9832147037ff3f5\nobject:\n  id: mila.quebec/en/news/mila-and-mozilla-announce-new-initiative-to-build-trustworthy-open-source-ai-for-everyone\n  ref:\n    location: https://mila.quebec/en/news/mila-and-mozilla-announce-new-initiative-to-build-trustworthy-open-source-ai-for-everyone\n    sha256: null\nx-typedstandards:\n  relation: adjacent\n  basis: An announced open standard of interface contracts, with a self-hosted reference implementation for running AI systems. Nothing is published yet, and the announcement says nothing about provenance or signing.\n  ring: 3\n  name: Open-source AI foundation layer (Mila and Mozilla initiative)\n  publisher: Mila and Mozilla\n  pin:\n    sha256: null\n    reason: Only announcement pages exist, from Mila and from Mozilla, both dated 2026-09-17. No repository, specification or release is published, and an announcement page is not immutable.\n    licence: not stated\n  curation: { seed: kept }\n",
+    "trace": {
+      "resourceSpans": []
+    },
+    "summary": "map/edges/mila-mozilla-foundation-layer.yaml: typedstandards.org adjacent Open-source AI foundation layer (Mila and Mozilla initiative). The file's exact UTF-8 bytes (1448 bytes) are this record's output under raw-bytes/v1, so contentHash.sha256 is the file's ordinary SHA-256. The source digest in queries is a signed assertion that no check recomputes. One source has no immutable location; queries give its location and the reason. The signer is a self-certifying did:key; it shows which key signed, not who holds it.",
+    "extensions": {
+      "io.github.npstorey.core-satellite-example": {
+        "role": "map-edge",
+        "edgeId": "typedstandards.org/map/mila-mozilla-foundation-layer",
+        "repository": "https://github.com/npstorey/typedstandards-core-satellite-example",
+        "file": {
+          "path": "map/edges/mila-mozilla-foundation-layer.yaml",
+          "sha256": "c6340dfbefda71a5904bd52ca3514e574df38ae96ec0d6b2600cdd5799f65be1",
+          "bytes": 1448
+        },
+        "writer": {
+          "path": "corpus/pin.mjs",
+          "sha256": "094d6fe92ed15262e5f53b2437988d73f410e81fd889aeb9e7266a1d358dd42e"
+        },
+        "writerInputs": [
+          {
+            "path": "corpus/sources.json",
+            "sha256": "72337b854d073159d8d67c5ab16f2cc52c70e6d74649cb1d59b0d1378b20edbe"
+          },
+          {
+            "path": "corpus/manifest.json",
+            "sha256": "2c23dafb122ed6dd7f1acb5f82296ccce65079417a29a898589aa9fcbba77980"
+          }
+        ],
+        "pinnedAt": "2026-09-22T19:20:31Z",
+        "sourcesCited": {
+          "pinned": 1,
+          "unpinned": 1
+        },
+        "model": {
+          "title": "The Core-Satellite Model",
+          "publisher": "SciOS",
+          "location": "https://scios.tech/thoughts",
+          "dated": "2026-06-30",
+          "readAt": "2026-09-22"
+        }
+      }
+    },
+    "contentHash": {
+      "sha256": "c6340dfbefda71a5904bd52ca3514e574df38ae96ec0d6b2600cdd5799f65be1"
+    }
+  }
+}

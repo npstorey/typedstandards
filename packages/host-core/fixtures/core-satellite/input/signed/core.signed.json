@@ -1,0 +1,356 @@
+{
+  "package": {
+    "metadata": {
+      "schemaVersion": "0.1.0",
+      "packageId": "8883cf12-53d0-4578-8552-ab38c4336d18",
+      "createdAt": "2026-09-22T19:25:30.535Z",
+      "signingKeyId": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "captureMethod": "script-run"
+    },
+    "producerProfile": "scripted-recomputation/core-satellite-example",
+    "type": "content/analysis/v1",
+    "signer": {
+      "bindingTier": "pseudonymous",
+      "identifier": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "displayName": "typedstandards-core-satellite-example (self-certifying example key)"
+    },
+    "contentCanonicalization": "https://typedstandards.org/canonicalization/raw-bytes/v1",
+    "prompt": {
+      "hash": "45124e0eae28b6aa66047ad15c83b0ce36bcb4a6770ca19fd3bd6f24e1907078",
+      "visibility": "full_text",
+      "text": "Package the file core.md, the partial core record for Typed Standards in the SciOS core-and-satellite front-matter shape, self-assessed as a satellite, as the output of a scripted-recomputation record under raw-bytes/v1. corpus/pin.mjs wrote the file from corpus/sources.json, corpus/core.template.md, corpus/manifest.json; this program read it from disk."
+    },
+    "queries": [
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md",
+          "sha256": "0e3b54b39e6877a076c495b82afd7295aefac09c70054c02e9832147037ff3f5",
+          "bytes": 294146,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:25Z",
+          "licence": "CC BY 4.0, as the document states (§3)"
+        },
+        "datasetId": "ts-spec"
+      },
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/ROADMAP.md",
+          "sha256": "691cce2f7419e3e0514654ecbd17538c56fdd2bc55eb9f30225a2130d48795d6",
+          "bytes": 36097,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:25Z",
+          "licence": "MIT (repository LICENSE)"
+        },
+        "datasetId": "hub-roadmap"
+      },
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/LICENSING.md",
+          "sha256": "bba91fe755ada927433253be351d3b6475e39a03adbce568da2303e26c379c19",
+          "bytes": 5160,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:25Z",
+          "licence": "MIT (repository LICENSE)"
+        },
+        "datasetId": "hub-licensing"
+      },
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/adr/0029-scripted-recomputation-producer-profile.md",
+          "sha256": "77bac194751209d897438b5e8f7b716fe84804ba3388d0c7a61ff790810697f5",
+          "bytes": 26099,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:25Z",
+          "licence": "MIT (repository LICENSE)"
+        },
+        "datasetId": "hub-adr-0029"
+      },
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/adr/0030-self-certifying-signer-did-key.md",
+          "sha256": "0e237cd72737e4e3ab115e0a2515be8d9d3d1f4440f75323b5983433468fde55",
+          "bytes": 35063,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:25Z",
+          "licence": "MIT (repository LICENSE)"
+        },
+        "datasetId": "hub-adr-0030"
+      },
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://raw.githubusercontent.com/npstorey/typedstandards/b0bf0a447ba35991ca2a211fa71983e1ba9ac78e/README.md",
+          "sha256": "c0a1894c4089a615d685b420d632f50b9edfadd963a58fda9c7b9e025a086f9c",
+          "bytes": 7358,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:25Z",
+          "licence": "MIT (repository LICENSE)"
+        },
+        "datasetId": "typedstandards-repo"
+      },
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://registry.npmjs.org/@typedstandards/verify-core/-/verify-core-0.10.0.tgz",
+          "sha256": "cb37b7491a5e150c80e3075a35c7e0a23accfa15633604c03ba2d235962e1738",
+          "bytes": 65418,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:25Z",
+          "licence": "MIT (package.json license field)"
+        },
+        "datasetId": "verify-core-npm"
+      },
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://registry.npmjs.org/@typedstandards/produce-core/-/produce-core-0.5.0.tgz",
+          "sha256": "77f9414ee03f3054f09fff83786b4cabd41871acb9b137e506b5dcf6a207c143",
+          "bytes": 30853,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:26Z",
+          "licence": "MIT (package.json license field)"
+        },
+        "datasetId": "produce-core-npm"
+      },
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://raw.githubusercontent.com/npstorey/civic-ai-tools-website/109eecb809a53bd36cc3468c79d243457570a49d/README.md",
+          "sha256": "ba16dd52cf07fe369bf6359d22bfe36bae345614179fd14d5e814ac481cde89f",
+          "bytes": 9092,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:26Z",
+          "licence": "MIT (repository LICENSE)"
+        },
+        "datasetId": "civicaitools-website"
+      },
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://raw.githubusercontent.com/npstorey/socrata-mcp-server/5b18c979b37465999d686785074973a340207555/README.md",
+          "sha256": "7e4a5242bf2d8f2439ef0963b9afb823fbfced25bcc7bad59375c5dca618ae02",
+          "bytes": 7975,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:26Z",
+          "licence": "MIT (repository LICENSE, two copyright lines)"
+        },
+        "datasetId": "socrata-mcp-server"
+      },
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://raw.githubusercontent.com/npstorey/typedstandards-eval-run-example/9031a94eebe0d800e52eab6fd4e01c7e788603a6/README.md",
+          "sha256": "3e405213b53a67e9ebffa7e1f332b34ddbbd3c894d6b1c556c8ca25109930529",
+          "bytes": 9271,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:27Z",
+          "licence": "MIT for code, CC BY 4.0 for text (README)"
+        },
+        "datasetId": "eval-run-example"
+      },
+      {
+        "tool": "corpus/pin.mjs",
+        "operationType": "script-run",
+        "arguments": {
+          "command": "node corpus/pin.mjs",
+          "scriptSha256": "b1a04ee486324c401541c979c6fa7e74b958759c7b5a141bb45295217742e4d7",
+          "inputs": [
+            {
+              "path": "corpus/sources.json",
+              "sha256": "72337b854d073159d8d67c5ab16f2cc52c70e6d74649cb1d59b0d1378b20edbe"
+            },
+            {
+              "path": "corpus/core.template.md",
+              "sha256": "170c40d6ffa6dc203d93a9b433ea79098b8fb4f668139b7b5b29d2ff8317c8e9"
+            },
+            {
+              "path": "corpus/manifest.json",
+              "sha256": "2c23dafb122ed6dd7f1acb5f82296ccce65079417a29a898589aa9fcbba77980"
+            }
+          ],
+          "output": {
+            "path": "core.md",
+            "sha256": "c85c650af7c47608a27cff4f6760d3313d62ff18095e8f4f0fdb947df6aece3b",
+            "bytes": 11742
+          }
+        }
+      },
+      {
+        "tool": "package/build.mjs",
+        "operationType": "package-file",
+        "arguments": {
+          "command": "node package/build.mjs assemble",
+          "scriptSha256": "ceb66b69cc13fde3527c7ac94adb3fa5b467206f166350d79a3fd9d1a9baf1a7",
+          "inputFile": "core.md",
+          "inputSha256": "c85c650af7c47608a27cff4f6760d3313d62ff18095e8f4f0fdb947df6aece3b"
+        }
+      }
+    ],
+    "dataSources": [
+      {
+        "sourceId": "ts-spec",
+        "catalogType": "github-raw-at-sha",
+        "portalUrl": "https://raw.githubusercontent.com",
+        "datasetId": "ts-spec",
+        "datasetUrl": "https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md",
+        "accessTimestamp": "2026-09-22T19:20:25Z"
+      },
+      {
+        "sourceId": "hub-roadmap",
+        "catalogType": "github-raw-at-sha",
+        "portalUrl": "https://raw.githubusercontent.com",
+        "datasetId": "hub-roadmap",
+        "datasetUrl": "https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/ROADMAP.md",
+        "accessTimestamp": "2026-09-22T19:20:25Z"
+      },
+      {
+        "sourceId": "hub-licensing",
+        "catalogType": "github-raw-at-sha",
+        "portalUrl": "https://raw.githubusercontent.com",
+        "datasetId": "hub-licensing",
+        "datasetUrl": "https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/LICENSING.md",
+        "accessTimestamp": "2026-09-22T19:20:25Z"
+      },
+      {
+        "sourceId": "hub-adr-0029",
+        "catalogType": "github-raw-at-sha",
+        "portalUrl": "https://raw.githubusercontent.com",
+        "datasetId": "hub-adr-0029",
+        "datasetUrl": "https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/adr/0029-scripted-recomputation-producer-profile.md",
+        "accessTimestamp": "2026-09-22T19:20:25Z"
+      },
+      {
+        "sourceId": "hub-adr-0030",
+        "catalogType": "github-raw-at-sha",
+        "portalUrl": "https://raw.githubusercontent.com",
+        "datasetId": "hub-adr-0030",
+        "datasetUrl": "https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/adr/0030-self-certifying-signer-did-key.md",
+        "accessTimestamp": "2026-09-22T19:20:25Z"
+      },
+      {
+        "sourceId": "typedstandards-repo",
+        "catalogType": "github-raw-at-sha",
+        "portalUrl": "https://raw.githubusercontent.com",
+        "datasetId": "typedstandards-repo",
+        "datasetUrl": "https://raw.githubusercontent.com/npstorey/typedstandards/b0bf0a447ba35991ca2a211fa71983e1ba9ac78e/README.md",
+        "accessTimestamp": "2026-09-22T19:20:25Z"
+      },
+      {
+        "sourceId": "verify-core-npm",
+        "catalogType": "npm-release-tarball",
+        "portalUrl": "https://registry.npmjs.org",
+        "datasetId": "verify-core-npm",
+        "datasetUrl": "https://registry.npmjs.org/@typedstandards/verify-core/-/verify-core-0.10.0.tgz",
+        "accessTimestamp": "2026-09-22T19:20:25Z"
+      },
+      {
+        "sourceId": "produce-core-npm",
+        "catalogType": "npm-release-tarball",
+        "portalUrl": "https://registry.npmjs.org",
+        "datasetId": "produce-core-npm",
+        "datasetUrl": "https://registry.npmjs.org/@typedstandards/produce-core/-/produce-core-0.5.0.tgz",
+        "accessTimestamp": "2026-09-22T19:20:26Z"
+      },
+      {
+        "sourceId": "civicaitools-website",
+        "catalogType": "github-raw-at-sha",
+        "portalUrl": "https://raw.githubusercontent.com",
+        "datasetId": "civicaitools-website",
+        "datasetUrl": "https://raw.githubusercontent.com/npstorey/civic-ai-tools-website/109eecb809a53bd36cc3468c79d243457570a49d/README.md",
+        "accessTimestamp": "2026-09-22T19:20:26Z"
+      },
+      {
+        "sourceId": "socrata-mcp-server",
+        "catalogType": "github-raw-at-sha",
+        "portalUrl": "https://raw.githubusercontent.com",
+        "datasetId": "socrata-mcp-server",
+        "datasetUrl": "https://raw.githubusercontent.com/npstorey/socrata-mcp-server/5b18c979b37465999d686785074973a340207555/README.md",
+        "accessTimestamp": "2026-09-22T19:20:26Z"
+      },
+      {
+        "sourceId": "eval-run-example",
+        "catalogType": "github-raw-at-sha",
+        "portalUrl": "https://raw.githubusercontent.com",
+        "datasetId": "eval-run-example",
+        "datasetUrl": "https://raw.githubusercontent.com/npstorey/typedstandards-eval-run-example/9031a94eebe0d800e52eab6fd4e01c7e788603a6/README.md",
+        "accessTimestamp": "2026-09-22T19:20:27Z"
+      }
+    ],
+    "cost": {
+      "model": "none"
+    },
+    "skillMetadata": {},
+    "output": "---\n# A record in the front-matter shape of the SciOS core-and-satellite model, filled in for Typed\n# Standards from public sources. Field names are those the model's published examples show;\n# everything else is under x-typedstandards. NOT DONE marks a core responsibility this project\n# does not hold.\n# type: core       NOT DECLARED. The self-assessment below is \"satellite\"; see x-typedstandards.\nname: Typed Standards\nid: typedstandards.org\ncreatedAt: 2026-09-22\ndomain: analysis-provenance              # horizontal: spans the fields whose analyses it records\nmission: Make how an analytical artifact was produced checkable by anyone, offline, without trusting its publisher.\ndescription: A specification for signed records of how analytical artifacts were produced, including AI-assisted analyses of public data, with a reference producer, a reference verifier and a reference publishing application.\nresource: https://typedstandards.org\nlifecycleStatus: active\ntags: [provenance, signed-records, ai-assisted-analysis, open-data, horizontal]\n\n# funding: {}      NOT DONE. No fiscal host, no public ledger, no allocation rule; nothing is routed to other projects.\n# agent: {}        NOT EXPOSED for this domain. The project's MCP server serves civic open data, not this domain's map; no vetted skills or eval suites for the domain.\n# certifies: []    NOT DONE. No model, agent or tool is certified; no norms for AI-generated contributions.\n\nx-typedstandards:\n  selfAssessment: satellite\n  selfAssessmentBasis:\n    - One maintainer. The project's roadmap says \"The project is maintained by one person\" (hub-roadmap, section 2).\n    - The model describes a core as a body of people, \"a community of humans, not a collaboration of artifacts\", and reads one repository surfacing a record as, in spirit, a satellite.\n    - Typed Standards is a specification, and the model says a core is not a standards body.\n    - No core record exists in this domain, so the map beside this record carries no orbits edge.\n  typeDeclared: false\n  specification:\n    version: v0.1.9\n    licence: CC BY 4.0\n    ref: { location: https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md, sha256: 0e3b54b39e6877a076c495b82afd7295aefac09c70054c02e9832147037ff3f5 }\n  artifacts:\n    - name: \"@typedstandards/verify-core\"\n      kind: library\n      version: \"0.10.0\"\n      ref: { location: https://registry.npmjs.org/@typedstandards/verify-core/-/verify-core-0.10.0.tgz, sha256: cb37b7491a5e150c80e3075a35c7e0a23accfa15633604c03ba2d235962e1738 }\n    - name: \"@typedstandards/produce-core\"\n      kind: library\n      version: \"0.5.0\"\n      ref: { location: https://registry.npmjs.org/@typedstandards/produce-core/-/produce-core-0.5.0.tgz, sha256: 77f9414ee03f3054f09fff83786b4cabd41871acb9b137e506b5dcf6a207c143 }\n    - name: typedstandards.org\n      kind: site and client-side verifier\n      ref: { location: https://raw.githubusercontent.com/npstorey/typedstandards/b0bf0a447ba35991ca2a211fa71983e1ba9ac78e/README.md, sha256: c0a1894c4089a615d685b420d632f50b9edfadd963a58fda9c7b9e025a086f9c }\n    - name: civicaitools.org\n      kind: reference publishing application\n      ref: { location: https://raw.githubusercontent.com/npstorey/civic-ai-tools-website/109eecb809a53bd36cc3468c79d243457570a49d/README.md, sha256: ba16dd52cf07fe369bf6359d22bfe36bae345614179fd14d5e814ac481cde89f }\n    - name: socrata-mcp-server\n      kind: MCP server for civic open data\n      ref: { location: https://raw.githubusercontent.com/npstorey/socrata-mcp-server/5b18c979b37465999d686785074973a340207555/README.md, sha256: 7e4a5242bf2d8f2439ef0963b9afb823fbfced25bcc7bad59375c5dca618ae02 }\n    - name: typedstandards-eval-run-example\n      kind: worked example\n      ref: { location: https://raw.githubusercontent.com/npstorey/typedstandards-eval-run-example/9031a94eebe0d800e52eab6fd4e01c7e788603a6/README.md, sha256: 3e405213b53a67e9ebffa7e1f332b34ddbbd3c894d6b1c556c8ca25109930529 }\n  governance:\n    decisionRecords: '29 public ADRs in the hub repository at the pinned commit, each stating \"Decision-maker: Solo maintainer\"'\n    decisionRecordsCited:\n      - { location: https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/adr/0029-scripted-recomputation-producer-profile.md, sha256: 77bac194751209d897438b5e8f7b716fe84804ba3388d0c7a61ff790810697f5 }\n      - { location: https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/adr/0030-self-certifying-signer-did-key.md, sha256: 0e237cd72737e4e3ab115e0a2515be8d9d3d1f4440f75323b5983433468fde55 }\n    roadmap: { location: https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/ROADMAP.md, sha256: 691cce2f7419e3e0514654ecbd17538c56fdd2bc55eb9f30225a2130d48795d6 }\n    licensing: { location: https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/LICENSING.md, sha256: bba91fe755ada927433253be351d3b6475e39a03adbce568da2303e26c379c19 }\n  satelliteLifecycle: none\n  map: map.yaml\n---\n\n# What this record is\n\nA record in the front-matter shape that the SciOS paper \"The Core-Satellite Model\" (scios.tech/thoughts,\ndated 2026-06-30) uses for its worked examples, filled in for Typed Standards and the Civic AI Tools\nrepositories that implement it. Every fact comes from a public source listed at the end, pinned by\nSHA-256. The paper's schema v0.1 is not published (scios.tech/thoughts, read 2026-09-22), so this record\nuses only the field names its examples show, and puts everything else under `x-typedstandards`.\n\n# Self-assessment: a satellite\n\nIn the model's terms this project is a satellite, not a core and not an emerging core. It is one\nmaintainer's specification and the libraries, site and application that implement it. The model reads\na core as a body of people who hold a domain's judgment together, and it names a standards body as one of\nthe things a core is not.\n\nThe record inverts the paper's AstroPy example. AstroPy has the people half of a core (a committee,\nvoting members, a finance body, a proposal process) and lacks the agent half. This project has parts of\nthe agent half (signed records, an offline verifier an agent can call, an MCP server) and none of the\npeople half.\n\nThe record omits `type: core`. The model treats surfacing a core record as declaring oneself a core, and\nthis record's self-assessment says the project is not one.\n\n# Core responsibilities\n\n| Core responsibility (the model's list) | What this project does | Verdict |\n|---|---|---|\n| Hold an opinionated judgment on the domain: canonical, dependency, trusted, experimental, dead | `map.yaml` states technical relations to public projects. It marks nothing canonical, trusted or dead, and it is one maintainer's reading. | NOT DONE |\n| Maintain stabilized, canonical versions of the domain's artifacts | The specification (v0.1.9, CC BY 4.0) and its reference packages, versioned independently. They are this project's own artifacts; no other party has declared them canonical. | Partial |\n| Manage in-flow and distribution of funding | None. | NOT DONE |\n| Build and maintain an agentic toolchain for the domain | An offline verifier library and a producer library that an agent can call, and an MCP server and a publishing skill for civic open data. No MCP endpoint serves this domain's map, and there is no eval suite. | Partial |\n| Certify or attest to AI behavior in the domain | The specification's `attestation/certifies/v1` and `attestation/evaluates/v1` sub-types are ratified and recognized by check #12. No check enforces their authorization rules or payloads (specification §8.12.4), and nothing is certified. | NOT DONE |\n| Act as a partner channel for AI labs | None. | NOT DONE |\n| Set internal protocols for governance, finance and satellite lifecycle | A public roadmap and public decision records, each decided by the solo maintainer. No finance protocol, and no insertion, orbit, accretion, ejection or sunsetting protocol. | Partial |\n| The people: maintainers, governance, sustainability and domain roles | One maintainer. | NOT DONE |\n\n# Sources\n\nEach source was fetched once by `corpus/pin.mjs` and is pinned in `corpus/manifest.json`.\n\n- `ts-spec`: https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md\n  sha256 `0e3b54b39e6877a076c495b82afd7295aefac09c70054c02e9832147037ff3f5`, 294146 bytes, HTTP 200, fetched 2026-09-22T19:20:25Z; licence: CC BY 4.0, as the document states (§3)\n- `hub-roadmap`: https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/ROADMAP.md\n  sha256 `691cce2f7419e3e0514654ecbd17538c56fdd2bc55eb9f30225a2130d48795d6`, 36097 bytes, HTTP 200, fetched 2026-09-22T19:20:25Z; licence: MIT (repository LICENSE)\n- `hub-licensing`: https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/LICENSING.md\n  sha256 `bba91fe755ada927433253be351d3b6475e39a03adbce568da2303e26c379c19`, 5160 bytes, HTTP 200, fetched 2026-09-22T19:20:25Z; licence: MIT (repository LICENSE)\n- `hub-adr-0029`: https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/adr/0029-scripted-recomputation-producer-profile.md\n  sha256 `77bac194751209d897438b5e8f7b716fe84804ba3388d0c7a61ff790810697f5`, 26099 bytes, HTTP 200, fetched 2026-09-22T19:20:25Z; licence: MIT (repository LICENSE)\n- `hub-adr-0030`: https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/adr/0030-self-certifying-signer-did-key.md\n  sha256 `0e237cd72737e4e3ab115e0a2515be8d9d3d1f4440f75323b5983433468fde55`, 35063 bytes, HTTP 200, fetched 2026-09-22T19:20:25Z; licence: MIT (repository LICENSE)\n- `typedstandards-repo`: https://raw.githubusercontent.com/npstorey/typedstandards/b0bf0a447ba35991ca2a211fa71983e1ba9ac78e/README.md\n  sha256 `c0a1894c4089a615d685b420d632f50b9edfadd963a58fda9c7b9e025a086f9c`, 7358 bytes, HTTP 200, fetched 2026-09-22T19:20:25Z; licence: MIT (repository LICENSE)\n- `verify-core-npm`: https://registry.npmjs.org/@typedstandards/verify-core/-/verify-core-0.10.0.tgz\n  sha256 `cb37b7491a5e150c80e3075a35c7e0a23accfa15633604c03ba2d235962e1738`, 65418 bytes, HTTP 200, fetched 2026-09-22T19:20:25Z; licence: MIT (package.json license field)\n- `produce-core-npm`: https://registry.npmjs.org/@typedstandards/produce-core/-/produce-core-0.5.0.tgz\n  sha256 `77f9414ee03f3054f09fff83786b4cabd41871acb9b137e506b5dcf6a207c143`, 30853 bytes, HTTP 200, fetched 2026-09-22T19:20:26Z; licence: MIT (package.json license field)\n- `civicaitools-website`: https://raw.githubusercontent.com/npstorey/civic-ai-tools-website/109eecb809a53bd36cc3468c79d243457570a49d/README.md\n  sha256 `ba16dd52cf07fe369bf6359d22bfe36bae345614179fd14d5e814ac481cde89f`, 9092 bytes, HTTP 200, fetched 2026-09-22T19:20:26Z; licence: MIT (repository LICENSE)\n- `socrata-mcp-server`: https://raw.githubusercontent.com/npstorey/socrata-mcp-server/5b18c979b37465999d686785074973a340207555/README.md\n  sha256 `7e4a5242bf2d8f2439ef0963b9afb823fbfced25bcc7bad59375c5dca618ae02`, 7975 bytes, HTTP 200, fetched 2026-09-22T19:20:26Z; licence: MIT (repository LICENSE, two copyright lines)\n- `eval-run-example`: https://raw.githubusercontent.com/npstorey/typedstandards-eval-run-example/9031a94eebe0d800e52eab6fd4e01c7e788603a6/README.md\n  sha256 `3e405213b53a67e9ebffa7e1f332b34ddbbd3c894d6b1c556c8ca25109930529`, 9271 bytes, HTTP 200, fetched 2026-09-22T19:20:27Z; licence: MIT for code, CC BY 4.0 for text (README)\n",
+    "trace": {
+      "resourceSpans": []
+    },
+    "summary": "core.md: Typed Standards in the core-record shape. The file's exact UTF-8 bytes (11742 bytes) are this record's output under raw-bytes/v1, so contentHash.sha256 is the file's ordinary SHA-256. The 11 source digests in queries are signed assertions that no check recomputes. The signer is a self-certifying did:key; it shows which key signed, not who holds it.",
+    "extensions": {
+      "io.github.npstorey.core-satellite-example": {
+        "role": "core-record",
+        "repository": "https://github.com/npstorey/typedstandards-core-satellite-example",
+        "file": {
+          "path": "core.md",
+          "sha256": "c85c650af7c47608a27cff4f6760d3313d62ff18095e8f4f0fdb947df6aece3b",
+          "bytes": 11742
+        },
+        "writer": {
+          "path": "corpus/pin.mjs",
+          "sha256": "b1a04ee486324c401541c979c6fa7e74b958759c7b5a141bb45295217742e4d7"
+        },
+        "writerInputs": [
+          {
+            "path": "corpus/sources.json",
+            "sha256": "72337b854d073159d8d67c5ab16f2cc52c70e6d74649cb1d59b0d1378b20edbe"
+          },
+          {
+            "path": "corpus/core.template.md",
+            "sha256": "170c40d6ffa6dc203d93a9b433ea79098b8fb4f668139b7b5b29d2ff8317c8e9"
+          },
+          {
+            "path": "corpus/manifest.json",
+            "sha256": "2c23dafb122ed6dd7f1acb5f82296ccce65079417a29a898589aa9fcbba77980"
+          }
+        ],
+        "pinnedAt": "2026-09-22T19:20:31Z",
+        "sourcesCited": {
+          "pinned": 11,
+          "unpinned": 0
+        },
+        "model": {
+          "title": "The Core-Satellite Model",
+          "publisher": "SciOS",
+          "location": "https://scios.tech/thoughts",
+          "dated": "2026-06-30",
+          "readAt": "2026-09-22"
+        }
+      }
+    },
+    "contentHash": {
+      "sha256": "c85c650af7c47608a27cff4f6760d3313d62ff18095e8f4f0fdb947df6aece3b"
+    }
+  },
+  "envelopeHash": "a9623ef408e4dc1b1f3833c3bf1dc5e4aff6dfd96139f088c0493975ce8f0a93",
+  "signature": {
+    "signature": "YFju0QN0JqJ+wJ9pOoZ8Vl7cuZyFW3sObLgnG+qtWPM4cwJhp9ty0L69rQCn52DkQU0UKJzLX/zWYSBXPOm1AA==",
+    "publicKey": "MCowBQYDK2VwAyEA+BmmxJyxU0vnC2LLuSu0xcr1wwevoOLpcCFjnbnTUYQ=",
+    "algorithm": "Ed25519ph",
+    "kid": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH"
+  }
+}

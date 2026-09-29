@@ -1,0 +1,160 @@
+{
+  "package": {
+    "metadata": {
+      "schemaVersion": "0.1.0",
+      "packageId": "42ae2790-1b55-41a6-91f5-8017e77ce21e",
+      "createdAt": "2026-09-23T12:44:17.026Z",
+      "signingKeyId": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "captureMethod": "script-run"
+    },
+    "producerProfile": "scripted-recomputation/core-satellite-example",
+    "type": "content/analysis/v1",
+    "signer": {
+      "bindingTier": "pseudonymous",
+      "identifier": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "displayName": "typedstandards-core-satellite-example (self-certifying example key)"
+    },
+    "contentCanonicalization": "https://typedstandards.org/canonicalization/raw-bytes/v1",
+    "prompt": {
+      "hash": "8ea1c02cffdcd31000a9e4106b74a5a8793048f945e74ffebb7ff36d5c926cc7",
+      "visibility": "full_text",
+      "text": "Package the file map/edges/did-key.yaml, one edge of the map of Typed Standards relations to public projects: typedstandards.org builds-on The did:key Method v0.9, ring 1, as the output of a scripted-recomputation record under raw-bytes/v1. corpus/pin.mjs wrote the file from corpus/sources.json, corpus/manifest.json; this program read it from disk."
+    },
+    "queries": [
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md",
+          "sha256": "0e3b54b39e6877a076c495b82afd7295aefac09c70054c02e9832147037ff3f5",
+          "bytes": 294146,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:25Z",
+          "licence": "CC BY 4.0, as the document states (§3)"
+        },
+        "datasetId": "ts-spec"
+      },
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://raw.githubusercontent.com/w3c-ccg/did-key-spec/2cc490c38c5aacf58497a87fc0cf8794668bf716/index.html",
+          "sha256": "e014a146acb0dcdafbdfee01226061d778da3ee72e8a048a7d53754c79675764",
+          "bytes": 49713,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:28Z",
+          "licence": "W3C Software and Document License (LICENSE.md)"
+        },
+        "datasetId": "did-key"
+      },
+      {
+        "tool": "corpus/pin.mjs",
+        "operationType": "script-run",
+        "arguments": {
+          "command": "node corpus/pin.mjs",
+          "scriptSha256": "094d6fe92ed15262e5f53b2437988d73f410e81fd889aeb9e7266a1d358dd42e",
+          "inputs": [
+            {
+              "path": "corpus/sources.json",
+              "sha256": "72337b854d073159d8d67c5ab16f2cc52c70e6d74649cb1d59b0d1378b20edbe"
+            },
+            {
+              "path": "corpus/manifest.json",
+              "sha256": "2c23dafb122ed6dd7f1acb5f82296ccce65079417a29a898589aa9fcbba77980"
+            }
+          ],
+          "output": {
+            "path": "map/edges/did-key.yaml",
+            "sha256": "7cf5cb46b11f11749209d9a11575f322cd765cc30208884e96a35ad4f9d4ba5f",
+            "bytes": 1363
+          }
+        }
+      },
+      {
+        "tool": "package/build.mjs",
+        "operationType": "package-file",
+        "arguments": {
+          "command": "node package/build.mjs sign",
+          "scriptSha256": "ed15926462300ec6a3051d16b58797b058a6f01a9c746239022c655b877cf21c",
+          "inputFile": "map/edges/did-key.yaml",
+          "inputSha256": "7cf5cb46b11f11749209d9a11575f322cd765cc30208884e96a35ad4f9d4ba5f"
+        }
+      }
+    ],
+    "dataSources": [
+      {
+        "sourceId": "ts-spec",
+        "catalogType": "github-raw-at-sha",
+        "portalUrl": "https://raw.githubusercontent.com",
+        "datasetId": "ts-spec",
+        "datasetUrl": "https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md",
+        "accessTimestamp": "2026-09-22T19:20:25Z"
+      },
+      {
+        "sourceId": "did-key",
+        "catalogType": "github-raw-at-sha",
+        "portalUrl": "https://raw.githubusercontent.com",
+        "datasetId": "did-key",
+        "datasetUrl": "https://raw.githubusercontent.com/w3c-ccg/did-key-spec/2cc490c38c5aacf58497a87fc0cf8794668bf716/index.html",
+        "accessTimestamp": "2026-09-22T19:20:28Z"
+      }
+    ],
+    "cost": {
+      "model": "none"
+    },
+    "skillMetadata": {},
+    "output": "# One edge of the map whose header is map/header.yaml. Written by corpus/pin.mjs; this file's exact bytes\n# are the output of one signed Typed Standards record in package/.\nid: typedstandards.org/map/did-key\ncreatedAt: \"2026-09-22\"\nsubject:\n  id: typedstandards.org\n  ref:\n    location: https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md\n    sha256: 0e3b54b39e6877a076c495b82afd7295aefac09c70054c02e9832147037ff3f5\nobject:\n  id: github.com/w3c-ccg/did-key-spec\n  ref:\n    location: https://raw.githubusercontent.com/w3c-ccg/did-key-spec/2cc490c38c5aacf58497a87fc0cf8794668bf716/index.html\n    sha256: e014a146acb0dcdafbdfee01226061d778da3ee72e8a048a7d53754c79675764\nx-typedstandards:\n  relation: builds-on\n  basis: \"A self-certifying signer's identifier is a did:key in base58btc form, derived from the signing key (specification §8.5.1, hub ADR-0030). This example's two records use one.\"\n  ring: 1\n  name: The did:key Method v0.9\n  publisher: W3C Credentials Community Group\n  pin:\n    fetchedAt: \"2026-09-22T19:20:28Z\"\n    bytes: 49713\n    httpStatus: 200\n    basis: \"main HEAD on 2026-09-22 (the repository has no tags); the document states v0.9, a Community Group draft\"\n    licence: W3C Software and Document License (LICENSE.md)\n  curation: { seed: kept }\n",
+    "trace": {
+      "resourceSpans": []
+    },
+    "summary": "map/edges/did-key.yaml: typedstandards.org builds-on The did:key Method v0.9. The file's exact UTF-8 bytes (1363 bytes) are this record's output under raw-bytes/v1, so contentHash.sha256 is the file's ordinary SHA-256. The 2 source digests in queries are signed assertions that no check recomputes. The signer is a self-certifying did:key; it shows which key signed, not who holds it.",
+    "extensions": {
+      "io.github.npstorey.core-satellite-example": {
+        "role": "map-edge",
+        "edgeId": "typedstandards.org/map/did-key",
+        "repository": "https://github.com/npstorey/typedstandards-core-satellite-example",
+        "file": {
+          "path": "map/edges/did-key.yaml",
+          "sha256": "7cf5cb46b11f11749209d9a11575f322cd765cc30208884e96a35ad4f9d4ba5f",
+          "bytes": 1363
+        },
+        "writer": {
+          "path": "corpus/pin.mjs",
+          "sha256": "094d6fe92ed15262e5f53b2437988d73f410e81fd889aeb9e7266a1d358dd42e"
+        },
+        "writerInputs": [
+          {
+            "path": "corpus/sources.json",
+            "sha256": "72337b854d073159d8d67c5ab16f2cc52c70e6d74649cb1d59b0d1378b20edbe"
+          },
+          {
+            "path": "corpus/manifest.json",
+            "sha256": "2c23dafb122ed6dd7f1acb5f82296ccce65079417a29a898589aa9fcbba77980"
+          }
+        ],
+        "pinnedAt": "2026-09-22T19:20:31Z",
+        "sourcesCited": {
+          "pinned": 2,
+          "unpinned": 0
+        },
+        "model": {
+          "title": "The Core-Satellite Model",
+          "publisher": "SciOS",
+          "location": "https://scios.tech/thoughts",
+          "dated": "2026-06-30",
+          "readAt": "2026-09-22"
+        }
+      }
+    },
+    "contentHash": {
+      "sha256": "7cf5cb46b11f11749209d9a11575f322cd765cc30208884e96a35ad4f9d4ba5f"
+    }
+  },
+  "envelopeHash": "b6c5b3100494dccc52097c5f78724dd8fb4efb3f409d8cd2eb889282040e982c",
+  "signature": {
+    "signature": "LntU7JdvKnBZ2uki92rUN34y+NjELwuD3+YpLJdg9jX0k8hkio/pY8ZUGabIczctrA0clNaOFKpyJoa087IcDQ==",
+    "publicKey": "MCowBQYDK2VwAyEA+BmmxJyxU0vnC2LLuSu0xcr1wwevoOLpcCFjnbnTUYQ=",
+    "algorithm": "Ed25519ph",
+    "kid": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH"
+  }
+}

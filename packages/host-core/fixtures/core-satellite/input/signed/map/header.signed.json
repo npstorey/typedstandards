@@ -1,0 +1,116 @@
+{
+  "package": {
+    "metadata": {
+      "schemaVersion": "0.1.0",
+      "packageId": "530f59df-4871-4234-83ea-561cb7eb5982",
+      "createdAt": "2026-09-23T12:44:17.005Z",
+      "signingKeyId": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "captureMethod": "script-run"
+    },
+    "producerProfile": "scripted-recomputation/core-satellite-example",
+    "type": "content/analysis/v1",
+    "signer": {
+      "bindingTier": "pseudonymous",
+      "identifier": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "displayName": "typedstandards-core-satellite-example (self-certifying example key)"
+    },
+    "contentCanonicalization": "https://typedstandards.org/canonicalization/raw-bytes/v1",
+    "prompt": {
+      "hash": "708468c927366538e41c7f5bac950529918641789e475eff85c4a6a82fe6cc97",
+      "visibility": "full_text",
+      "text": "Package the file map/header.yaml, the header of the map of Typed Standards relations to public projects, whose edges are records of their own, as the output of a scripted-recomputation record under raw-bytes/v1. corpus/pin.mjs wrote the file from corpus/sources.json, corpus/manifest.json; this program read it from disk."
+    },
+    "queries": [
+      {
+        "tool": "corpus/pin.mjs",
+        "operationType": "script-run",
+        "arguments": {
+          "command": "node corpus/pin.mjs",
+          "scriptSha256": "094d6fe92ed15262e5f53b2437988d73f410e81fd889aeb9e7266a1d358dd42e",
+          "inputs": [
+            {
+              "path": "corpus/sources.json",
+              "sha256": "72337b854d073159d8d67c5ab16f2cc52c70e6d74649cb1d59b0d1378b20edbe"
+            },
+            {
+              "path": "corpus/manifest.json",
+              "sha256": "2c23dafb122ed6dd7f1acb5f82296ccce65079417a29a898589aa9fcbba77980"
+            }
+          ],
+          "output": {
+            "path": "map/header.yaml",
+            "sha256": "c49391de1bf45b9e0cea5dee020396d850dc6a6c588d89f7817f7249a52092ce",
+            "bytes": 2518
+          }
+        }
+      },
+      {
+        "tool": "package/build.mjs",
+        "operationType": "package-file",
+        "arguments": {
+          "command": "node package/build.mjs sign",
+          "scriptSha256": "ed15926462300ec6a3051d16b58797b058a6f01a9c746239022c655b877cf21c",
+          "inputFile": "map/header.yaml",
+          "inputSha256": "c49391de1bf45b9e0cea5dee020396d850dc6a6c588d89f7817f7249a52092ce"
+        }
+      }
+    ],
+    "dataSources": [],
+    "cost": {
+      "model": "none"
+    },
+    "skillMetadata": {},
+    "output": "# map/header.yaml: the header of the map of Typed Standards' technical relations to public projects.\n# Each edge is one file in map/edges/. Written by corpus/pin.mjs; this file's exact bytes are the output of\n# one signed Typed Standards record in package/.\nx-typedstandards:\n  map: \"Typed Standards: relations to public projects\"\n  domain: analysis-provenance\n  subject: typedstandards.org\n  createdAt: \"2026-09-22\"\n  writtenFrom: { sources: corpus/sources.json, manifest: corpus/manifest.json }\n  edgeTypes: The published schema shows one edge type, orbits, from a satellite to a core. This map has no orbits edge. No core record exists in this domain to be the object of one, and the model says a core is never a satellite. Each edge names its relation in x-typedstandards.relation, because the published schema has no edge type for any of these relations.\n  relations:\n    builds-on: The subject implements, or normatively uses, the object's published specification or code.\n    complements: The two address different layers or artifact classes of one job and can be used together. Neither depends on the other.\n    could-emit: The subject's own public text states an intent to produce Typed Standards records, cited by URL and date.\n    adjacent: A related problem space. Neither depends on the other, and there is no public statement of an intent to emit or evaluate Typed Standards records.\n  rings:\n    1: Standards the specification builds on.\n    2: Adjacent standards, drafts and proposals.\n    3: Implementations, possible emitters, and agent runtimes.\n  refs: Each ref is either a file at a 40-character commit SHA, a dated W3C TR URL, an rfc-editor.org text URL, or a published npm release tarball. A ref gives both the location and the SHA-256 of the bytes that location served when it was fetched. Where a project has no immutable location, the ref gives the location, a null sha256, and the reason in x-typedstandards.pin.\n  dropped:\n    - name: DSSE (Dead Simple Signing Envelope)\n      seed: Ring 1, listed with in-toto\n      reason: \"Typed Standards uses neither the DSSE envelope nor its pre-authentication encoding. It signs an Ed25519ph signature over the envelope-hash hex string (specification §8.3.1). The specification does name DSSE: its adjacent-standards table lists in-toto / DSSE (§5.5), and Appendix C lists DSSE as a candidate envelope-serialization profile for in-toto-native consumers. Nothing is built on it. The in-toto entry covers the conventions the specification does use.\"\n",
+    "trace": {
+      "resourceSpans": []
+    },
+    "summary": "map/header.yaml: the header of the map of Typed Standards relations to public projects. The file's exact UTF-8 bytes (2518 bytes) are this record's output under raw-bytes/v1, so contentHash.sha256 is the file's ordinary SHA-256. It cites no pinned source. The signer is a self-certifying did:key; it shows which key signed, not who holds it.",
+    "extensions": {
+      "io.github.npstorey.core-satellite-example": {
+        "role": "map-header",
+        "repository": "https://github.com/npstorey/typedstandards-core-satellite-example",
+        "file": {
+          "path": "map/header.yaml",
+          "sha256": "c49391de1bf45b9e0cea5dee020396d850dc6a6c588d89f7817f7249a52092ce",
+          "bytes": 2518
+        },
+        "writer": {
+          "path": "corpus/pin.mjs",
+          "sha256": "094d6fe92ed15262e5f53b2437988d73f410e81fd889aeb9e7266a1d358dd42e"
+        },
+        "writerInputs": [
+          {
+            "path": "corpus/sources.json",
+            "sha256": "72337b854d073159d8d67c5ab16f2cc52c70e6d74649cb1d59b0d1378b20edbe"
+          },
+          {
+            "path": "corpus/manifest.json",
+            "sha256": "2c23dafb122ed6dd7f1acb5f82296ccce65079417a29a898589aa9fcbba77980"
+          }
+        ],
+        "pinnedAt": "2026-09-22T19:20:31Z",
+        "sourcesCited": {
+          "pinned": 0,
+          "unpinned": 0
+        },
+        "model": {
+          "title": "The Core-Satellite Model",
+          "publisher": "SciOS",
+          "location": "https://scios.tech/thoughts",
+          "dated": "2026-06-30",
+          "readAt": "2026-09-22"
+        }
+      }
+    },
+    "contentHash": {
+      "sha256": "c49391de1bf45b9e0cea5dee020396d850dc6a6c588d89f7817f7249a52092ce"
+    }
+  },
+  "envelopeHash": "9736a500e4a945202b80d4e8645a16fa9719592702b998e46b27b0daba2876fd",
+  "signature": {
+    "signature": "u7QF+eYPu52jsgXukFVdYuZrp7jxi9+iUcj/6JVzIF95SYVYJEGR9p2syfmNHe7mzCdsCVO7nKXGLAfLx7aGAg==",
+    "publicKey": "MCowBQYDK2VwAyEA+BmmxJyxU0vnC2LLuSu0xcr1wwevoOLpcCFjnbnTUYQ=",
+    "algorithm": "Ed25519ph",
+    "kid": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH"
+  }
+}

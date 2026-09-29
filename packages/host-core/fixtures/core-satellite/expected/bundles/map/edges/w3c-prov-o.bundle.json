@@ -1,0 +1,196 @@
+{
+  "protocolVersion": "0.1.0",
+  "packageHash": "3167d2912199da262d600a4d0c8f6d53fb0650ff2f7eae28f2196a5d0b0fe30e",
+  "visibility": "public",
+  "captureMethod": "script-run",
+  "contentProfile": "default",
+  "producerProfile": "scripted-recomputation/core-satellite-example",
+  "type": "content/analysis/v1",
+  "signer": {
+    "bindingTier": "pseudonymous",
+    "identifier": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+    "displayName": "typedstandards-core-satellite-example (self-certifying example key)"
+  },
+  "contentHash": {
+    "sha256": "c3bc3ef887e0502cd88feca114cc34a3a9ee0f32f7a1bd9c1e5719fb4c004479"
+  },
+  "contentCanonicalization": "https://typedstandards.org/canonicalization/raw-bytes/v1",
+  "signature": {
+    "signature": "Wp3KcLhU9TKecf0wa4iTwVicX5Mzg4BzP1vOOKLUN+XCD91Fl4VsRqetkg+TZT4iOCBUByq9hYy1PIahnSH4AQ==",
+    "publicKey": "MCowBQYDK2VwAyEA+BmmxJyxU0vnC2LLuSu0xcr1wwevoOLpcCFjnbnTUYQ=",
+    "algorithm": "Ed25519ph",
+    "kid": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH"
+  },
+  "trustRegistryUrl": "https://core-satellite.typedstandards.org/.well-known/typed-publisher.json",
+  "subjectTitle": "map/edges/w3c-prov-o.yaml: typedstandards.org builds-on W3C PROV-O",
+  "subjectSummary": "map/edges/w3c-prov-o.yaml: typedstandards.org builds-on W3C PROV-O. The file's exact UTF-8 bytes (1179 bytes) are this record's output under raw-bytes/v1, so contentHash.sha256 is the file's ordinary SHA-256. The 2 source digests in queries are signed assertions that no check recomputes. The signer is a self-certifying did:key; it shows which key signed, not who holds it.",
+  "trustRegistry": {
+    "$comment": "The example publisher's own statement about its signing key, served at https://core-satellite.typedstandards.org/.well-known/typed-publisher.json. It is not a Typed Standards record, and not an endorsement by the Typed Standards specification or by typedstandards.org, although this host is a subdomain of it. activatedAt is the earliest createdAt in package/build-log.json: the first record signed under the key, as the signer states it.",
+    "keys": [
+      {
+        "kid": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+        "publicKey": "MCowBQYDK2VwAyEA+BmmxJyxU0vnC2LLuSu0xcr1wwevoOLpcCFjnbnTUYQ=",
+        "status": "active",
+        "activatedAt": "2026-09-22T19:25:30.535Z",
+        "deprecatedAt": null,
+        "revokedAt": null,
+        "signerIdentity": {
+          "bindingTier": "pseudonymous",
+          "identifier": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+          "displayName": "typedstandards-core-satellite-example (self-certifying example key)"
+        }
+      }
+    ]
+  },
+  "package": {
+    "metadata": {
+      "schemaVersion": "0.1.0",
+      "packageId": "ec85ba74-f087-4264-ad75-2d118723dfa5",
+      "createdAt": "2026-09-23T12:44:17.016Z",
+      "signingKeyId": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "captureMethod": "script-run"
+    },
+    "producerProfile": "scripted-recomputation/core-satellite-example",
+    "type": "content/analysis/v1",
+    "signer": {
+      "bindingTier": "pseudonymous",
+      "identifier": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "displayName": "typedstandards-core-satellite-example (self-certifying example key)"
+    },
+    "contentCanonicalization": "https://typedstandards.org/canonicalization/raw-bytes/v1",
+    "prompt": {
+      "hash": "edfc6f129ad28a70b7da4bd671b94b57906f2c99593ef0d408e499ac6db73ec4",
+      "visibility": "full_text",
+      "text": "Package the file map/edges/w3c-prov-o.yaml, one edge of the map of Typed Standards relations to public projects: typedstandards.org builds-on W3C PROV-O, ring 1, as the output of a scripted-recomputation record under raw-bytes/v1. corpus/pin.mjs wrote the file from corpus/sources.json, corpus/manifest.json; this program read it from disk."
+    },
+    "queries": [
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md",
+          "sha256": "0e3b54b39e6877a076c495b82afd7295aefac09c70054c02e9832147037ff3f5",
+          "bytes": 294146,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:25Z",
+          "licence": "CC BY 4.0, as the document states (§3)"
+        },
+        "datasetId": "ts-spec"
+      },
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://www.w3.org/TR/2013/REC-prov-o-20130430/",
+          "sha256": "6b96671ab84faf12ce3f041aca12c3f93a6df2ed242348810743179a68e69555",
+          "bytes": 464179,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:27Z",
+          "licence": "W3C document use rules, as the document's copyright line states"
+        },
+        "datasetId": "w3c-prov-o"
+      },
+      {
+        "tool": "corpus/pin.mjs",
+        "operationType": "script-run",
+        "arguments": {
+          "command": "node corpus/pin.mjs",
+          "scriptSha256": "094d6fe92ed15262e5f53b2437988d73f410e81fd889aeb9e7266a1d358dd42e",
+          "inputs": [
+            {
+              "path": "corpus/sources.json",
+              "sha256": "72337b854d073159d8d67c5ab16f2cc52c70e6d74649cb1d59b0d1378b20edbe"
+            },
+            {
+              "path": "corpus/manifest.json",
+              "sha256": "2c23dafb122ed6dd7f1acb5f82296ccce65079417a29a898589aa9fcbba77980"
+            }
+          ],
+          "output": {
+            "path": "map/edges/w3c-prov-o.yaml",
+            "sha256": "c3bc3ef887e0502cd88feca114cc34a3a9ee0f32f7a1bd9c1e5719fb4c004479",
+            "bytes": 1179
+          }
+        }
+      },
+      {
+        "tool": "package/build.mjs",
+        "operationType": "package-file",
+        "arguments": {
+          "command": "node package/build.mjs sign",
+          "scriptSha256": "ed15926462300ec6a3051d16b58797b058a6f01a9c746239022c655b877cf21c",
+          "inputFile": "map/edges/w3c-prov-o.yaml",
+          "inputSha256": "c3bc3ef887e0502cd88feca114cc34a3a9ee0f32f7a1bd9c1e5719fb4c004479"
+        }
+      }
+    ],
+    "dataSources": [
+      {
+        "sourceId": "ts-spec",
+        "catalogType": "github-raw-at-sha",
+        "portalUrl": "https://raw.githubusercontent.com",
+        "datasetId": "ts-spec",
+        "datasetUrl": "https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md",
+        "accessTimestamp": "2026-09-22T19:20:25Z"
+      },
+      {
+        "sourceId": "w3c-prov-o",
+        "catalogType": "w3c-dated-tr",
+        "portalUrl": "https://www.w3.org",
+        "datasetId": "w3c-prov-o",
+        "datasetUrl": "https://www.w3.org/TR/2013/REC-prov-o-20130430/",
+        "accessTimestamp": "2026-09-22T19:20:27Z"
+      }
+    ],
+    "cost": {
+      "model": "none"
+    },
+    "skillMetadata": {},
+    "output": "# One edge of the map whose header is map/header.yaml. Written by corpus/pin.mjs; this file's exact bytes\n# are the output of one signed Typed Standards record in package/.\nid: typedstandards.org/map/w3c-prov-o\ncreatedAt: \"2026-09-22\"\nsubject:\n  id: typedstandards.org\n  ref:\n    location: https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md\n    sha256: 0e3b54b39e6877a076c495b82afd7295aefac09c70054c02e9832147037ff3f5\nobject:\n  id: w3.org/TR/prov-o\n  ref:\n    location: https://www.w3.org/TR/2013/REC-prov-o-20130430/\n    sha256: 6b96671ab84faf12ce3f041aca12c3f93a6df2ed242348810743179a68e69555\nx-typedstandards:\n  relation: builds-on\n  basis: \"Every record's provenance graph is PROV-O JSON-LD, and the envelope does not redefine derivation, attribution or generation (specification §5.5, §8.1.4).\"\n  ring: 1\n  name: W3C PROV-O\n  publisher: W3C\n  pin:\n    fetchedAt: \"2026-09-22T19:20:27Z\"\n    bytes: 464179\n    httpStatus: 200\n    basis: W3C Recommendation, 30 April 2013\n    licence: W3C document use rules, as the document's copyright line states\n  curation: { seed: kept }\n",
+    "trace": {
+      "resourceSpans": []
+    },
+    "summary": "map/edges/w3c-prov-o.yaml: typedstandards.org builds-on W3C PROV-O. The file's exact UTF-8 bytes (1179 bytes) are this record's output under raw-bytes/v1, so contentHash.sha256 is the file's ordinary SHA-256. The 2 source digests in queries are signed assertions that no check recomputes. The signer is a self-certifying did:key; it shows which key signed, not who holds it.",
+    "extensions": {
+      "io.github.npstorey.core-satellite-example": {
+        "role": "map-edge",
+        "edgeId": "typedstandards.org/map/w3c-prov-o",
+        "repository": "https://github.com/npstorey/typedstandards-core-satellite-example",
+        "file": {
+          "path": "map/edges/w3c-prov-o.yaml",
+          "sha256": "c3bc3ef887e0502cd88feca114cc34a3a9ee0f32f7a1bd9c1e5719fb4c004479",
+          "bytes": 1179
+        },
+        "writer": {
+          "path": "corpus/pin.mjs",
+          "sha256": "094d6fe92ed15262e5f53b2437988d73f410e81fd889aeb9e7266a1d358dd42e"
+        },
+        "writerInputs": [
+          {
+            "path": "corpus/sources.json",
+            "sha256": "72337b854d073159d8d67c5ab16f2cc52c70e6d74649cb1d59b0d1378b20edbe"
+          },
+          {
+            "path": "corpus/manifest.json",
+            "sha256": "2c23dafb122ed6dd7f1acb5f82296ccce65079417a29a898589aa9fcbba77980"
+          }
+        ],
+        "pinnedAt": "2026-09-22T19:20:31Z",
+        "sourcesCited": {
+          "pinned": 2,
+          "unpinned": 0
+        },
+        "model": {
+          "title": "The Core-Satellite Model",
+          "publisher": "SciOS",
+          "location": "https://scios.tech/thoughts",
+          "dated": "2026-06-30",
+          "readAt": "2026-09-22"
+        }
+      }
+    },
+    "contentHash": {
+      "sha256": "c3bc3ef887e0502cd88feca114cc34a3a9ee0f32f7a1bd9c1e5719fb4c004479"
+    }
+  }
+}

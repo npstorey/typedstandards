@@ -1,0 +1,228 @@
+{
+  "protocolVersion": "0.1.0",
+  "packageHash": "7ade72677f97e161b34000aea2d2d53a8fc654383cdb9c131e4d38b9665d6e96",
+  "visibility": "public",
+  "captureMethod": "script-run",
+  "contentProfile": "default",
+  "producerProfile": "scripted-recomputation/core-satellite-example",
+  "type": "content/analysis/v1",
+  "signer": {
+    "bindingTier": "pseudonymous",
+    "identifier": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+    "displayName": "typedstandards-core-satellite-example (self-certifying example key)"
+  },
+  "contentHash": {
+    "sha256": "b81e7fa332bdffa6805a33456f4d946654bcd6f5dc8ecd7929904eb1455ee574"
+  },
+  "contentCanonicalization": "https://typedstandards.org/canonicalization/raw-bytes/v1",
+  "signature": {
+    "signature": "dhLEn8wrAc0KAreR+QXAV4k1J06IwWdbegoiDQePc3ZD2OPOgOW29R/GA34rVysuglsziUt2YjpOt71zVTajCw==",
+    "publicKey": "MCowBQYDK2VwAyEA+BmmxJyxU0vnC2LLuSu0xcr1wwevoOLpcCFjnbnTUYQ=",
+    "algorithm": "Ed25519ph",
+    "kid": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH"
+  },
+  "lifecycleAttestations": [
+    {
+      "node": {
+        "metadata": {
+          "schemaVersion": "0.1.0",
+          "packageId": "7559c021-9c63-4a4f-8b30-0e7e9077efe4",
+          "createdAt": "2026-09-24T01:52:29.465Z",
+          "signingKeyId": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH"
+        },
+        "type": "attestation/withdraws/v1",
+        "signer": {
+          "bindingTier": "pseudonymous",
+          "identifier": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+          "displayName": "typedstandards-core-satellite-example (self-certifying example key)"
+        },
+        "targetNodeId": "7ade72677f97e161b34000aea2d2d53a8fc654383cdb9c131e4d38b9665d6e96",
+        "contentCanonicalization": "https://typedstandards.org/canonicalization/legacy-json/v1",
+        "reason": "Its curation note counted this example's records as two; it was signed as one of 37. Restated as map/edges/rfc-8032-2.yaml.",
+        "effectiveAt": "2026-09-24T01:52:29.465Z",
+        "contentHash": {
+          "sha256": "ce387358a52a3d6e88bcd2f952f5dc0650331811cdd8bea63aff2bfff875f475"
+        }
+      },
+      "nodeId": "85d296419a6cec556fe29d75f2a6e23d4475ab4bf43856481aee15af7894d0c3",
+      "signature": {
+        "signature": "Ikc3kuMIteTIlCi4WJAbMiYQKmBYZYy8SoRso2+41/mzW4zI0WnDIkvzVvgc3jEWgdHN8AfiIbgTRD3HN2pRDA==",
+        "publicKey": "MCowBQYDK2VwAyEA+BmmxJyxU0vnC2LLuSu0xcr1wwevoOLpcCFjnbnTUYQ=",
+        "algorithm": "Ed25519ph",
+        "kid": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH"
+      }
+    }
+  ],
+  "trustRegistryUrl": "https://core-satellite.typedstandards.org/.well-known/typed-publisher.json",
+  "subjectTitle": "map/edges/rfc-8032.yaml: typedstandards.org builds-on RFC 8032 EdDSA (Ed25519ph)",
+  "subjectSummary": "map/edges/rfc-8032.yaml: typedstandards.org builds-on RFC 8032 EdDSA (Ed25519ph). The file's exact UTF-8 bytes (1243 bytes) are this record's output under raw-bytes/v1, so contentHash.sha256 is the file's ordinary SHA-256. The 2 source digests in queries are signed assertions that no check recomputes. The signer is a self-certifying did:key; it shows which key signed, not who holds it.",
+  "trustRegistry": {
+    "$comment": "The example publisher's own statement about its signing key, served at https://core-satellite.typedstandards.org/.well-known/typed-publisher.json. It is not a Typed Standards record, and not an endorsement by the Typed Standards specification or by typedstandards.org, although this host is a subdomain of it. activatedAt is the earliest createdAt in package/build-log.json: the first record signed under the key, as the signer states it.",
+    "keys": [
+      {
+        "kid": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+        "publicKey": "MCowBQYDK2VwAyEA+BmmxJyxU0vnC2LLuSu0xcr1wwevoOLpcCFjnbnTUYQ=",
+        "status": "active",
+        "activatedAt": "2026-09-22T19:25:30.535Z",
+        "deprecatedAt": null,
+        "revokedAt": null,
+        "signerIdentity": {
+          "bindingTier": "pseudonymous",
+          "identifier": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+          "displayName": "typedstandards-core-satellite-example (self-certifying example key)"
+        }
+      }
+    ]
+  },
+  "package": {
+    "metadata": {
+      "schemaVersion": "0.1.0",
+      "packageId": "6cb8c462-36e4-46bb-bc88-c6a171e7dadd",
+      "createdAt": "2026-09-23T12:44:17.025Z",
+      "signingKeyId": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "captureMethod": "script-run"
+    },
+    "producerProfile": "scripted-recomputation/core-satellite-example",
+    "type": "content/analysis/v1",
+    "signer": {
+      "bindingTier": "pseudonymous",
+      "identifier": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "displayName": "typedstandards-core-satellite-example (self-certifying example key)"
+    },
+    "contentCanonicalization": "https://typedstandards.org/canonicalization/raw-bytes/v1",
+    "prompt": {
+      "hash": "8414726bdce418ec2f3d4437fe2911335ae274bdc249e76455383424f278310b",
+      "visibility": "full_text",
+      "text": "Package the file map/edges/rfc-8032.yaml, one edge of the map of Typed Standards relations to public projects: typedstandards.org builds-on RFC 8032 EdDSA (Ed25519ph), ring 1, as the output of a scripted-recomputation record under raw-bytes/v1. corpus/pin.mjs wrote the file from corpus/sources.json, corpus/manifest.json; this program read it from disk."
+    },
+    "queries": [
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md",
+          "sha256": "0e3b54b39e6877a076c495b82afd7295aefac09c70054c02e9832147037ff3f5",
+          "bytes": 294146,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:25Z",
+          "licence": "CC BY 4.0, as the document states (§3)"
+        },
+        "datasetId": "ts-spec"
+      },
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://www.rfc-editor.org/rfc/rfc8032.txt",
+          "sha256": "ed63657ff389301282b169b0abde9b5dd2c7e4d524fdfa5da6ff3094fc93c4c3",
+          "bytes": 103210,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:28Z",
+          "licence": "IETF Trust Legal Provisions (BCP 78), as the document states"
+        },
+        "datasetId": "rfc-8032"
+      },
+      {
+        "tool": "corpus/pin.mjs",
+        "operationType": "script-run",
+        "arguments": {
+          "command": "node corpus/pin.mjs",
+          "scriptSha256": "094d6fe92ed15262e5f53b2437988d73f410e81fd889aeb9e7266a1d358dd42e",
+          "inputs": [
+            {
+              "path": "corpus/sources.json",
+              "sha256": "72337b854d073159d8d67c5ab16f2cc52c70e6d74649cb1d59b0d1378b20edbe"
+            },
+            {
+              "path": "corpus/manifest.json",
+              "sha256": "2c23dafb122ed6dd7f1acb5f82296ccce65079417a29a898589aa9fcbba77980"
+            }
+          ],
+          "output": {
+            "path": "map/edges/rfc-8032.yaml",
+            "sha256": "b81e7fa332bdffa6805a33456f4d946654bcd6f5dc8ecd7929904eb1455ee574",
+            "bytes": 1243
+          }
+        }
+      },
+      {
+        "tool": "package/build.mjs",
+        "operationType": "package-file",
+        "arguments": {
+          "command": "node package/build.mjs sign",
+          "scriptSha256": "ed15926462300ec6a3051d16b58797b058a6f01a9c746239022c655b877cf21c",
+          "inputFile": "map/edges/rfc-8032.yaml",
+          "inputSha256": "b81e7fa332bdffa6805a33456f4d946654bcd6f5dc8ecd7929904eb1455ee574"
+        }
+      }
+    ],
+    "dataSources": [
+      {
+        "sourceId": "ts-spec",
+        "catalogType": "github-raw-at-sha",
+        "portalUrl": "https://raw.githubusercontent.com",
+        "datasetId": "ts-spec",
+        "datasetUrl": "https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md",
+        "accessTimestamp": "2026-09-22T19:20:25Z"
+      },
+      {
+        "sourceId": "rfc-8032",
+        "catalogType": "rfc-editor-txt",
+        "portalUrl": "https://www.rfc-editor.org",
+        "datasetId": "rfc-8032",
+        "datasetUrl": "https://www.rfc-editor.org/rfc/rfc8032.txt",
+        "accessTimestamp": "2026-09-22T19:20:28Z"
+      }
+    ],
+    "cost": {
+      "model": "none"
+    },
+    "skillMetadata": {},
+    "output": "# One edge of the map whose header is map/header.yaml. Written by corpus/pin.mjs; this file's exact bytes\n# are the output of one signed Typed Standards record in package/.\nid: typedstandards.org/map/rfc-8032\ncreatedAt: \"2026-09-22\"\nsubject:\n  id: typedstandards.org\n  ref:\n    location: https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md\n    sha256: 0e3b54b39e6877a076c495b82afd7295aefac09c70054c02e9832147037ff3f5\nobject:\n  id: rfc-editor.org/rfc/rfc8032\n  ref:\n    location: https://www.rfc-editor.org/rfc/rfc8032.txt\n    sha256: ed63657ff389301282b169b0abde9b5dd2c7e4d524fdfa5da6ff3094fc93c4c3\nx-typedstandards:\n  relation: builds-on\n  basis: \"Every record signature is Ed25519ph, defined in RFC 8032 §5.1 (specification §8.3.1).\"\n  ring: 1\n  name: RFC 8032 EdDSA (Ed25519ph)\n  publisher: IRTF Crypto Forum Research Group\n  pin:\n    fetchedAt: \"2026-09-22T19:20:28Z\"\n    bytes: 103210\n    httpStatus: 200\n    basis: RFC 8032, January 2017 (Informational)\n    licence: IETF Trust Legal Provisions (BCP 78), as the document states\n  curation: { seed: added, reason: \"The signature algorithm of every record, this example's two included.\" }\n",
+    "trace": {
+      "resourceSpans": []
+    },
+    "summary": "map/edges/rfc-8032.yaml: typedstandards.org builds-on RFC 8032 EdDSA (Ed25519ph). The file's exact UTF-8 bytes (1243 bytes) are this record's output under raw-bytes/v1, so contentHash.sha256 is the file's ordinary SHA-256. The 2 source digests in queries are signed assertions that no check recomputes. The signer is a self-certifying did:key; it shows which key signed, not who holds it.",
+    "extensions": {
+      "io.github.npstorey.core-satellite-example": {
+        "role": "map-edge",
+        "edgeId": "typedstandards.org/map/rfc-8032",
+        "repository": "https://github.com/npstorey/typedstandards-core-satellite-example",
+        "file": {
+          "path": "map/edges/rfc-8032.yaml",
+          "sha256": "b81e7fa332bdffa6805a33456f4d946654bcd6f5dc8ecd7929904eb1455ee574",
+          "bytes": 1243
+        },
+        "writer": {
+          "path": "corpus/pin.mjs",
+          "sha256": "094d6fe92ed15262e5f53b2437988d73f410e81fd889aeb9e7266a1d358dd42e"
+        },
+        "writerInputs": [
+          {
+            "path": "corpus/sources.json",
+            "sha256": "72337b854d073159d8d67c5ab16f2cc52c70e6d74649cb1d59b0d1378b20edbe"
+          },
+          {
+            "path": "corpus/manifest.json",
+            "sha256": "2c23dafb122ed6dd7f1acb5f82296ccce65079417a29a898589aa9fcbba77980"
+          }
+        ],
+        "pinnedAt": "2026-09-22T19:20:31Z",
+        "sourcesCited": {
+          "pinned": 2,
+          "unpinned": 0
+        },
+        "model": {
+          "title": "The Core-Satellite Model",
+          "publisher": "SciOS",
+          "location": "https://scios.tech/thoughts",
+          "dated": "2026-06-30",
+          "readAt": "2026-09-22"
+        }
+      }
+    },
+    "contentHash": {
+      "sha256": "b81e7fa332bdffa6805a33456f4d946654bcd6f5dc8ecd7929904eb1455ee574"
+    }
+  }
+}

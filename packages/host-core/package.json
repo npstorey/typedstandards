@@ -1,0 +1,63 @@
+{
+  "name": "@typedstandards/host-core",
+  "version": "0.0.0",
+  "description": "Serve signed Typed Standards records from a static host: build the bundles, the key registry and a versioned index from what the CLI's sign and withdraw print, check and verify what is served, print verifier links, and apply a display policy. Holds no key.",
+  "license": "MIT",
+  "author": "Nathan Storey",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "prebuild": "npm run build --workspace @typedstandards/verify-core && npm run build --workspace @typedstandards/produce-core",
+    "build": "tsc -p tsconfig.json",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
+    "test": "node --test --experimental-strip-types \"src/**/*.test.ts\"",
+    "prepublishOnly": "npm run clean && npm run build"
+  },
+  "dependencies": {
+    "@typedstandards/produce-core": "^0.8.0",
+    "@typedstandards/verify-core": "^0.13.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/npstorey/typedstandards.git",
+    "directory": "packages/host-core"
+  },
+  "homepage": "https://github.com/npstorey/typedstandards/tree/main/packages/host-core#readme",
+  "bugs": {
+    "url": "https://github.com/npstorey/typedstandards/issues"
+  },
+  "keywords": [
+    "typed-standards",
+    "record-package",
+    "provenance",
+    "static-host",
+    "commitment-view",
+    "trust-registry",
+    "verification"
+  ]
+}

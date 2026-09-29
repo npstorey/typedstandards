@@ -1,0 +1,228 @@
+{
+  "protocolVersion": "0.1.0",
+  "packageHash": "76541f4b15d7d71d2ee1f62d4d34bcb73d9e04335548008d633f08090c92e51a",
+  "visibility": "public",
+  "captureMethod": "script-run",
+  "contentProfile": "default",
+  "producerProfile": "scripted-recomputation/core-satellite-example",
+  "type": "content/analysis/v1",
+  "signer": {
+    "bindingTier": "pseudonymous",
+    "identifier": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+    "displayName": "typedstandards-core-satellite-example (self-certifying example key)"
+  },
+  "contentHash": {
+    "sha256": "98727a4822b365a1459a8deba7bd60e866a43b05ae46640b330324f19a736f93"
+  },
+  "contentCanonicalization": "https://typedstandards.org/canonicalization/raw-bytes/v1",
+  "signature": {
+    "signature": "ggZgUZek8IK0ZYrr7+obKTO4WY6rf1WzuvthT8wAmLJ71jMJ+t7JQBAAKRDhxLDg3RzkALJcdjRJnRM5yFTCBQ==",
+    "publicKey": "MCowBQYDK2VwAyEA+BmmxJyxU0vnC2LLuSu0xcr1wwevoOLpcCFjnbnTUYQ=",
+    "algorithm": "Ed25519ph",
+    "kid": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH"
+  },
+  "lifecycleAttestations": [
+    {
+      "node": {
+        "metadata": {
+          "schemaVersion": "0.1.0",
+          "packageId": "92ea38f8-2078-41e0-b41a-9b4cc8121f68",
+          "createdAt": "2026-09-24T01:52:30.306Z",
+          "signingKeyId": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH"
+        },
+        "type": "attestation/withdraws/v1",
+        "signer": {
+          "bindingTier": "pseudonymous",
+          "identifier": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+          "displayName": "typedstandards-core-satellite-example (self-certifying example key)"
+        },
+        "targetNodeId": "76541f4b15d7d71d2ee1f62d4d34bcb73d9e04335548008d633f08090c92e51a",
+        "contentCanonicalization": "https://typedstandards.org/canonicalization/legacy-json/v1",
+        "reason": "Its basis said the SciOS paper names OKF as a model, where the paper likens its schema to it, and that a raw-bytes/v1 record can sign any such file, where the pinned specification admits raw-bytes/v1 only for program-computed content. Restated as map/edges/google-okf-2.yaml.",
+        "effectiveAt": "2026-09-24T01:52:30.306Z",
+        "contentHash": {
+          "sha256": "598b5e8e98b1093eddf0eb651cc1b4aaced4d68d55e06d86247f8f3e403e2978"
+        }
+      },
+      "nodeId": "3baae0c68b7e11afa7c57c910b781f0279377f2897981bc384041f168689fc77",
+      "signature": {
+        "signature": "B8/zZOAZhFPBdUB/UAJnygiE43fvsRpLfs6s44xDZfQUcEp42zc3h2wk0eY+8ku9VJl7cFPEwJpIT24t0OUODA==",
+        "publicKey": "MCowBQYDK2VwAyEA+BmmxJyxU0vnC2LLuSu0xcr1wwevoOLpcCFjnbnTUYQ=",
+        "algorithm": "Ed25519ph",
+        "kid": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH"
+      }
+    }
+  ],
+  "trustRegistryUrl": "https://core-satellite.typedstandards.org/.well-known/typed-publisher.json",
+  "subjectTitle": "map/edges/google-okf.yaml: typedstandards.org complements Open Knowledge Format v0.2",
+  "subjectSummary": "map/edges/google-okf.yaml: typedstandards.org complements Open Knowledge Format v0.2. The file's exact UTF-8 bytes (1455 bytes) are this record's output under raw-bytes/v1, so contentHash.sha256 is the file's ordinary SHA-256. The 2 source digests in queries are signed assertions that no check recomputes. The signer is a self-certifying did:key; it shows which key signed, not who holds it.",
+  "trustRegistry": {
+    "$comment": "The example publisher's own statement about its signing key, served at https://core-satellite.typedstandards.org/.well-known/typed-publisher.json. It is not a Typed Standards record, and not an endorsement by the Typed Standards specification or by typedstandards.org, although this host is a subdomain of it. activatedAt is the earliest createdAt in package/build-log.json: the first record signed under the key, as the signer states it.",
+    "keys": [
+      {
+        "kid": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+        "publicKey": "MCowBQYDK2VwAyEA+BmmxJyxU0vnC2LLuSu0xcr1wwevoOLpcCFjnbnTUYQ=",
+        "status": "active",
+        "activatedAt": "2026-09-22T19:25:30.535Z",
+        "deprecatedAt": null,
+        "revokedAt": null,
+        "signerIdentity": {
+          "bindingTier": "pseudonymous",
+          "identifier": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+          "displayName": "typedstandards-core-satellite-example (self-certifying example key)"
+        }
+      }
+    ]
+  },
+  "package": {
+    "metadata": {
+      "schemaVersion": "0.1.0",
+      "packageId": "3a217349-58b8-49dd-bd52-2cd6de516a97",
+      "createdAt": "2026-09-23T12:44:17.045Z",
+      "signingKeyId": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "captureMethod": "script-run"
+    },
+    "producerProfile": "scripted-recomputation/core-satellite-example",
+    "type": "content/analysis/v1",
+    "signer": {
+      "bindingTier": "pseudonymous",
+      "identifier": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "displayName": "typedstandards-core-satellite-example (self-certifying example key)"
+    },
+    "contentCanonicalization": "https://typedstandards.org/canonicalization/raw-bytes/v1",
+    "prompt": {
+      "hash": "204e2acc54178a83c45c9137d35053a9b626f646bbb416aa8b99aa05846b321b",
+      "visibility": "full_text",
+      "text": "Package the file map/edges/google-okf.yaml, one edge of the map of Typed Standards relations to public projects: typedstandards.org complements Open Knowledge Format v0.2, ring 2, as the output of a scripted-recomputation record under raw-bytes/v1. corpus/pin.mjs wrote the file from corpus/sources.json, corpus/manifest.json; this program read it from disk."
+    },
+    "queries": [
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md",
+          "sha256": "0e3b54b39e6877a076c495b82afd7295aefac09c70054c02e9832147037ff3f5",
+          "bytes": 294146,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:25Z",
+          "licence": "CC BY 4.0, as the document states (§3)"
+        },
+        "datasetId": "ts-spec"
+      },
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://raw.githubusercontent.com/GoogleCloudPlatform/knowledge-catalog/22efaa5402775a7c4d4c37f89e41258daaf3cb65/okf/SPEC.md",
+          "sha256": "26aa5da029278939f914e578107242d9607d4f2dc5fe153272b82f9ed1030101",
+          "bytes": 37748,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:30Z",
+          "licence": "Apache-2.0 (okf/LICENSE.md)"
+        },
+        "datasetId": "google-okf"
+      },
+      {
+        "tool": "corpus/pin.mjs",
+        "operationType": "script-run",
+        "arguments": {
+          "command": "node corpus/pin.mjs",
+          "scriptSha256": "094d6fe92ed15262e5f53b2437988d73f410e81fd889aeb9e7266a1d358dd42e",
+          "inputs": [
+            {
+              "path": "corpus/sources.json",
+              "sha256": "72337b854d073159d8d67c5ab16f2cc52c70e6d74649cb1d59b0d1378b20edbe"
+            },
+            {
+              "path": "corpus/manifest.json",
+              "sha256": "2c23dafb122ed6dd7f1acb5f82296ccce65079417a29a898589aa9fcbba77980"
+            }
+          ],
+          "output": {
+            "path": "map/edges/google-okf.yaml",
+            "sha256": "98727a4822b365a1459a8deba7bd60e866a43b05ae46640b330324f19a736f93",
+            "bytes": 1455
+          }
+        }
+      },
+      {
+        "tool": "package/build.mjs",
+        "operationType": "package-file",
+        "arguments": {
+          "command": "node package/build.mjs sign",
+          "scriptSha256": "ed15926462300ec6a3051d16b58797b058a6f01a9c746239022c655b877cf21c",
+          "inputFile": "map/edges/google-okf.yaml",
+          "inputSha256": "98727a4822b365a1459a8deba7bd60e866a43b05ae46640b330324f19a736f93"
+        }
+      }
+    ],
+    "dataSources": [
+      {
+        "sourceId": "ts-spec",
+        "catalogType": "github-raw-at-sha",
+        "portalUrl": "https://raw.githubusercontent.com",
+        "datasetId": "ts-spec",
+        "datasetUrl": "https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md",
+        "accessTimestamp": "2026-09-22T19:20:25Z"
+      },
+      {
+        "sourceId": "google-okf",
+        "catalogType": "github-raw-at-sha",
+        "portalUrl": "https://raw.githubusercontent.com",
+        "datasetId": "google-okf",
+        "datasetUrl": "https://raw.githubusercontent.com/GoogleCloudPlatform/knowledge-catalog/22efaa5402775a7c4d4c37f89e41258daaf3cb65/okf/SPEC.md",
+        "accessTimestamp": "2026-09-22T19:20:30Z"
+      }
+    ],
+    "cost": {
+      "model": "none"
+    },
+    "skillMetadata": {},
+    "output": "# One edge of the map whose header is map/header.yaml. Written by corpus/pin.mjs; this file's exact bytes\n# are the output of one signed Typed Standards record in package/.\nid: typedstandards.org/map/google-okf\ncreatedAt: \"2026-09-22\"\nsubject:\n  id: typedstandards.org\n  ref:\n    location: https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md\n    sha256: 0e3b54b39e6877a076c495b82afd7295aefac09c70054c02e9832147037ff3f5\nobject:\n  id: github.com/GoogleCloudPlatform/knowledge-catalog/okf\n  ref:\n    location: https://raw.githubusercontent.com/GoogleCloudPlatform/knowledge-catalog/22efaa5402775a7c4d4c37f89e41258daaf3cb65/okf/SPEC.md\n    sha256: 26aa5da029278939f914e578107242d9607d4f2dc5fe153272b82f9ed1030101\nx-typedstandards:\n  relation: complements\n  basis: Organisational knowledge as Markdown files with YAML front matter, with provenance and attested-computation fields that are not signed. A raw-bytes/v1 record can sign such a file byte for byte, as this example signs core.md. The SciOS paper names it as a model for its schema.\n  ring: 2\n  name: Open Knowledge Format v0.2\n  publisher: Google Cloud\n  pin:\n    fetchedAt: \"2026-09-22T19:20:30Z\"\n    bytes: 37748\n    httpStatus: 200\n    basis: \"main HEAD on 2026-09-22 (the repository has no tags); the document states Version 0.2\"\n    licence: Apache-2.0 (okf/LICENSE.md)\n  curation: { seed: kept }\n",
+    "trace": {
+      "resourceSpans": []
+    },
+    "summary": "map/edges/google-okf.yaml: typedstandards.org complements Open Knowledge Format v0.2. The file's exact UTF-8 bytes (1455 bytes) are this record's output under raw-bytes/v1, so contentHash.sha256 is the file's ordinary SHA-256. The 2 source digests in queries are signed assertions that no check recomputes. The signer is a self-certifying did:key; it shows which key signed, not who holds it.",
+    "extensions": {
+      "io.github.npstorey.core-satellite-example": {
+        "role": "map-edge",
+        "edgeId": "typedstandards.org/map/google-okf",
+        "repository": "https://github.com/npstorey/typedstandards-core-satellite-example",
+        "file": {
+          "path": "map/edges/google-okf.yaml",
+          "sha256": "98727a4822b365a1459a8deba7bd60e866a43b05ae46640b330324f19a736f93",
+          "bytes": 1455
+        },
+        "writer": {
+          "path": "corpus/pin.mjs",
+          "sha256": "094d6fe92ed15262e5f53b2437988d73f410e81fd889aeb9e7266a1d358dd42e"
+        },
+        "writerInputs": [
+          {
+            "path": "corpus/sources.json",
+            "sha256": "72337b854d073159d8d67c5ab16f2cc52c70e6d74649cb1d59b0d1378b20edbe"
+          },
+          {
+            "path": "corpus/manifest.json",
+            "sha256": "2c23dafb122ed6dd7f1acb5f82296ccce65079417a29a898589aa9fcbba77980"
+          }
+        ],
+        "pinnedAt": "2026-09-22T19:20:31Z",
+        "sourcesCited": {
+          "pinned": 2,
+          "unpinned": 0
+        },
+        "model": {
+          "title": "The Core-Satellite Model",
+          "publisher": "SciOS",
+          "location": "https://scios.tech/thoughts",
+          "dated": "2026-06-30",
+          "readAt": "2026-09-22"
+        }
+      }
+    },
+    "contentHash": {
+      "sha256": "98727a4822b365a1459a8deba7bd60e866a43b05ae46640b330324f19a736f93"
+    }
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "node": {
+    "metadata": {
+      "schemaVersion": "0.1.0",
+      "packageId": "7559c021-9c63-4a4f-8b30-0e7e9077efe4",
+      "createdAt": "2026-09-24T01:52:29.465Z",
+      "signingKeyId": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH"
+    },
+    "type": "attestation/withdraws/v1",
+    "signer": {
+      "bindingTier": "pseudonymous",
+      "identifier": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "displayName": "typedstandards-core-satellite-example (self-certifying example key)"
+    },
+    "targetNodeId": "7ade72677f97e161b34000aea2d2d53a8fc654383cdb9c131e4d38b9665d6e96",
+    "contentCanonicalization": "https://typedstandards.org/canonicalization/legacy-json/v1",
+    "reason": "Its curation note counted this example's records as two; it was signed as one of 37. Restated as map/edges/rfc-8032-2.yaml.",
+    "effectiveAt": "2026-09-24T01:52:29.465Z",
+    "contentHash": {
+      "sha256": "ce387358a52a3d6e88bcd2f952f5dc0650331811cdd8bea63aff2bfff875f475"
+    }
+  },
+  "nodeId": "85d296419a6cec556fe29d75f2a6e23d4475ab4bf43856481aee15af7894d0c3",
+  "signature": {
+    "signature": "Ikc3kuMIteTIlCi4WJAbMiYQKmBYZYy8SoRso2+41/mzW4zI0WnDIkvzVvgc3jEWgdHN8AfiIbgTRD3HN2pRDA==",
+    "publicKey": "MCowBQYDK2VwAyEA+BmmxJyxU0vnC2LLuSu0xcr1wwevoOLpcCFjnbnTUYQ=",
+    "algorithm": "Ed25519ph",
+    "kid": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH"
+  }
+}

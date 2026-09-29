@@ -1,0 +1,228 @@
+{
+  "protocolVersion": "0.1.0",
+  "packageHash": "9a064095b691fec1a0942513a0f5d4f1395037ff1bfff77fc9103cc6fb1b32e2",
+  "visibility": "public",
+  "captureMethod": "script-run",
+  "contentProfile": "default",
+  "producerProfile": "scripted-recomputation/core-satellite-example",
+  "type": "content/analysis/v1",
+  "signer": {
+    "bindingTier": "pseudonymous",
+    "identifier": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+    "displayName": "typedstandards-core-satellite-example (self-certifying example key)"
+  },
+  "contentHash": {
+    "sha256": "a4823d0a517edd16425f7903980451f7233a6edb2e3726bd296f9dedc324d9ca"
+  },
+  "contentCanonicalization": "https://typedstandards.org/canonicalization/raw-bytes/v1",
+  "signature": {
+    "signature": "riPdso1kHYMakLF/6NR76a9SL6k8/hJx26JAkZDkCbwAHAWl25kF03dIDY0FN2jqz+/TF9hHbp2csf5xwtAaAw==",
+    "publicKey": "MCowBQYDK2VwAyEA+BmmxJyxU0vnC2LLuSu0xcr1wwevoOLpcCFjnbnTUYQ=",
+    "algorithm": "Ed25519ph",
+    "kid": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH"
+  },
+  "lifecycleAttestations": [
+    {
+      "node": {
+        "metadata": {
+          "schemaVersion": "0.1.0",
+          "packageId": "21cf25ff-9713-44b4-9a6b-dcab42574b99",
+          "createdAt": "2026-09-24T01:52:29.348Z",
+          "signingKeyId": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH"
+        },
+        "type": "attestation/withdraws/v1",
+        "signer": {
+          "bindingTier": "pseudonymous",
+          "identifier": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+          "displayName": "typedstandards-core-satellite-example (self-certifying example key)"
+        },
+        "targetNodeId": "9a064095b691fec1a0942513a0f5d4f1395037ff1bfff77fc9103cc6fb1b32e2",
+        "contentCanonicalization": "https://typedstandards.org/canonicalization/legacy-json/v1",
+        "reason": "Its basis said records carry RFC 3161 timestamp tokens; the pinned specification says a package SHOULD carry one (§8.3.2). Restated as map/edges/rfc-3161-2.yaml.",
+        "effectiveAt": "2026-09-24T01:52:29.348Z",
+        "contentHash": {
+          "sha256": "cd9ac13aae17d0b32676c2131ff37b09dcf6987e2a11637b4d05732019abbe29"
+        }
+      },
+      "nodeId": "e190a37268754671506986f0a15c237bf2b0618ed7fd5d9e956ccc205ff1c66e",
+      "signature": {
+        "signature": "cJPcLto6uJd5yR5oSVpIgBGgEy5RdTdyYb20j8j6irJ0qrKHbSJnEAXPPA+/Ps9vuBLzG5XKPACpUxIUEFEjAQ==",
+        "publicKey": "MCowBQYDK2VwAyEA+BmmxJyxU0vnC2LLuSu0xcr1wwevoOLpcCFjnbnTUYQ=",
+        "algorithm": "Ed25519ph",
+        "kid": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH"
+      }
+    }
+  ],
+  "trustRegistryUrl": "https://core-satellite.typedstandards.org/.well-known/typed-publisher.json",
+  "subjectTitle": "map/edges/rfc-3161.yaml: typedstandards.org builds-on RFC 3161 Time-Stamp Protocol",
+  "subjectSummary": "map/edges/rfc-3161.yaml: typedstandards.org builds-on RFC 3161 Time-Stamp Protocol. The file's exact UTF-8 bytes (1218 bytes) are this record's output under raw-bytes/v1, so contentHash.sha256 is the file's ordinary SHA-256. The 2 source digests in queries are signed assertions that no check recomputes. The signer is a self-certifying did:key; it shows which key signed, not who holds it.",
+  "trustRegistry": {
+    "$comment": "The example publisher's own statement about its signing key, served at https://core-satellite.typedstandards.org/.well-known/typed-publisher.json. It is not a Typed Standards record, and not an endorsement by the Typed Standards specification or by typedstandards.org, although this host is a subdomain of it. activatedAt is the earliest createdAt in package/build-log.json: the first record signed under the key, as the signer states it.",
+    "keys": [
+      {
+        "kid": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+        "publicKey": "MCowBQYDK2VwAyEA+BmmxJyxU0vnC2LLuSu0xcr1wwevoOLpcCFjnbnTUYQ=",
+        "status": "active",
+        "activatedAt": "2026-09-22T19:25:30.535Z",
+        "deprecatedAt": null,
+        "revokedAt": null,
+        "signerIdentity": {
+          "bindingTier": "pseudonymous",
+          "identifier": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+          "displayName": "typedstandards-core-satellite-example (self-certifying example key)"
+        }
+      }
+    ]
+  },
+  "package": {
+    "metadata": {
+      "schemaVersion": "0.1.0",
+      "packageId": "e42c0baa-b740-4f86-a488-b23e6811538e",
+      "createdAt": "2026-09-23T12:44:17.022Z",
+      "signingKeyId": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "captureMethod": "script-run"
+    },
+    "producerProfile": "scripted-recomputation/core-satellite-example",
+    "type": "content/analysis/v1",
+    "signer": {
+      "bindingTier": "pseudonymous",
+      "identifier": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "displayName": "typedstandards-core-satellite-example (self-certifying example key)"
+    },
+    "contentCanonicalization": "https://typedstandards.org/canonicalization/raw-bytes/v1",
+    "prompt": {
+      "hash": "addbb92fea08cc8be9f03381c9a6786fb9c2d65d48d1141f143fbd6b0c6fd935",
+      "visibility": "full_text",
+      "text": "Package the file map/edges/rfc-3161.yaml, one edge of the map of Typed Standards relations to public projects: typedstandards.org builds-on RFC 3161 Time-Stamp Protocol, ring 1, as the output of a scripted-recomputation record under raw-bytes/v1. corpus/pin.mjs wrote the file from corpus/sources.json, corpus/manifest.json; this program read it from disk."
+    },
+    "queries": [
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md",
+          "sha256": "0e3b54b39e6877a076c495b82afd7295aefac09c70054c02e9832147037ff3f5",
+          "bytes": 294146,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:25Z",
+          "licence": "CC BY 4.0, as the document states (§3)"
+        },
+        "datasetId": "ts-spec"
+      },
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://www.rfc-editor.org/rfc/rfc3161.txt",
+          "sha256": "39fd17644ff2d654bc83814a78b1c5b5e7517f496741f34ead5064943eb98240",
+          "bytes": 54585,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:27Z",
+          "licence": "The Internet Society Full Copyright Statement (2001), in the document"
+        },
+        "datasetId": "rfc-3161"
+      },
+      {
+        "tool": "corpus/pin.mjs",
+        "operationType": "script-run",
+        "arguments": {
+          "command": "node corpus/pin.mjs",
+          "scriptSha256": "094d6fe92ed15262e5f53b2437988d73f410e81fd889aeb9e7266a1d358dd42e",
+          "inputs": [
+            {
+              "path": "corpus/sources.json",
+              "sha256": "72337b854d073159d8d67c5ab16f2cc52c70e6d74649cb1d59b0d1378b20edbe"
+            },
+            {
+              "path": "corpus/manifest.json",
+              "sha256": "2c23dafb122ed6dd7f1acb5f82296ccce65079417a29a898589aa9fcbba77980"
+            }
+          ],
+          "output": {
+            "path": "map/edges/rfc-3161.yaml",
+            "sha256": "a4823d0a517edd16425f7903980451f7233a6edb2e3726bd296f9dedc324d9ca",
+            "bytes": 1218
+          }
+        }
+      },
+      {
+        "tool": "package/build.mjs",
+        "operationType": "package-file",
+        "arguments": {
+          "command": "node package/build.mjs sign",
+          "scriptSha256": "ed15926462300ec6a3051d16b58797b058a6f01a9c746239022c655b877cf21c",
+          "inputFile": "map/edges/rfc-3161.yaml",
+          "inputSha256": "a4823d0a517edd16425f7903980451f7233a6edb2e3726bd296f9dedc324d9ca"
+        }
+      }
+    ],
+    "dataSources": [
+      {
+        "sourceId": "ts-spec",
+        "catalogType": "github-raw-at-sha",
+        "portalUrl": "https://raw.githubusercontent.com",
+        "datasetId": "ts-spec",
+        "datasetUrl": "https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md",
+        "accessTimestamp": "2026-09-22T19:20:25Z"
+      },
+      {
+        "sourceId": "rfc-3161",
+        "catalogType": "rfc-editor-txt",
+        "portalUrl": "https://www.rfc-editor.org",
+        "datasetId": "rfc-3161",
+        "datasetUrl": "https://www.rfc-editor.org/rfc/rfc3161.txt",
+        "accessTimestamp": "2026-09-22T19:20:27Z"
+      }
+    ],
+    "cost": {
+      "model": "none"
+    },
+    "skillMetadata": {},
+    "output": "# One edge of the map whose header is map/header.yaml. Written by corpus/pin.mjs; this file's exact bytes\n# are the output of one signed Typed Standards record in package/.\nid: typedstandards.org/map/rfc-3161\ncreatedAt: \"2026-09-22\"\nsubject:\n  id: typedstandards.org\n  ref:\n    location: https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md\n    sha256: 0e3b54b39e6877a076c495b82afd7295aefac09c70054c02e9832147037ff3f5\nobject:\n  id: rfc-editor.org/rfc/rfc3161\n  ref:\n    location: https://www.rfc-editor.org/rfc/rfc3161.txt\n    sha256: 39fd17644ff2d654bc83814a78b1c5b5e7517f496741f34ead5064943eb98240\nx-typedstandards:\n  relation: builds-on\n  basis: \"Records carry RFC 3161 timestamp tokens, which verify-core checks against pinned TSA anchors (specification §9.2 check #7). This example's records carry none.\"\n  ring: 1\n  name: RFC 3161 Time-Stamp Protocol\n  publisher: IETF\n  pin:\n    fetchedAt: \"2026-09-22T19:20:27Z\"\n    bytes: 54585\n    httpStatus: 200\n    basis: RFC 3161, August 2001 (Proposed Standard)\n    licence: The Internet Society Full Copyright Statement (2001), in the document\n  curation: { seed: kept }\n",
+    "trace": {
+      "resourceSpans": []
+    },
+    "summary": "map/edges/rfc-3161.yaml: typedstandards.org builds-on RFC 3161 Time-Stamp Protocol. The file's exact UTF-8 bytes (1218 bytes) are this record's output under raw-bytes/v1, so contentHash.sha256 is the file's ordinary SHA-256. The 2 source digests in queries are signed assertions that no check recomputes. The signer is a self-certifying did:key; it shows which key signed, not who holds it.",
+    "extensions": {
+      "io.github.npstorey.core-satellite-example": {
+        "role": "map-edge",
+        "edgeId": "typedstandards.org/map/rfc-3161",
+        "repository": "https://github.com/npstorey/typedstandards-core-satellite-example",
+        "file": {
+          "path": "map/edges/rfc-3161.yaml",
+          "sha256": "a4823d0a517edd16425f7903980451f7233a6edb2e3726bd296f9dedc324d9ca",
+          "bytes": 1218
+        },
+        "writer": {
+          "path": "corpus/pin.mjs",
+          "sha256": "094d6fe92ed15262e5f53b2437988d73f410e81fd889aeb9e7266a1d358dd42e"
+        },
+        "writerInputs": [
+          {
+            "path": "corpus/sources.json",
+            "sha256": "72337b854d073159d8d67c5ab16f2cc52c70e6d74649cb1d59b0d1378b20edbe"
+          },
+          {
+            "path": "corpus/manifest.json",
+            "sha256": "2c23dafb122ed6dd7f1acb5f82296ccce65079417a29a898589aa9fcbba77980"
+          }
+        ],
+        "pinnedAt": "2026-09-22T19:20:31Z",
+        "sourcesCited": {
+          "pinned": 2,
+          "unpinned": 0
+        },
+        "model": {
+          "title": "The Core-Satellite Model",
+          "publisher": "SciOS",
+          "location": "https://scios.tech/thoughts",
+          "dated": "2026-06-30",
+          "readAt": "2026-09-22"
+        }
+      }
+    },
+    "contentHash": {
+      "sha256": "a4823d0a517edd16425f7903980451f7233a6edb2e3726bd296f9dedc324d9ca"
+    }
+  }
+}

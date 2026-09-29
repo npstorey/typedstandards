@@ -1,0 +1,228 @@
+{
+  "protocolVersion": "0.1.0",
+  "packageHash": "fd93ba04ffd5506c3aeefb5e8e01165596aaed250564366b1e11ce2044ce5d48",
+  "visibility": "public",
+  "captureMethod": "script-run",
+  "contentProfile": "default",
+  "producerProfile": "scripted-recomputation/core-satellite-example",
+  "type": "content/analysis/v1",
+  "signer": {
+    "bindingTier": "pseudonymous",
+    "identifier": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+    "displayName": "typedstandards-core-satellite-example (self-certifying example key)"
+  },
+  "contentHash": {
+    "sha256": "bb582d2d0255e7f96fea01986b8f9b0e8f595b8a8097f1fac947c9a4b95db2ef"
+  },
+  "contentCanonicalization": "https://typedstandards.org/canonicalization/raw-bytes/v1",
+  "signature": {
+    "signature": "zNKPbvzzxHJmfOVt4olohPaI7YMdHzNx+ZnvsAhbbYoj8cZl7DvBgTBDrEbSEDHjEH9y4PTE0v1yowKvzS1wBw==",
+    "publicKey": "MCowBQYDK2VwAyEA+BmmxJyxU0vnC2LLuSu0xcr1wwevoOLpcCFjnbnTUYQ=",
+    "algorithm": "Ed25519ph",
+    "kid": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH"
+  },
+  "lifecycleAttestations": [
+    {
+      "node": {
+        "metadata": {
+          "schemaVersion": "0.1.0",
+          "packageId": "ce6ec6f2-08b6-409b-a2a7-56b3263bbad0",
+          "createdAt": "2026-09-24T01:52:30.551Z",
+          "signingKeyId": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH"
+        },
+        "type": "attestation/withdraws/v1",
+        "signer": {
+          "bindingTier": "pseudonymous",
+          "identifier": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+          "displayName": "typedstandards-core-satellite-example (self-certifying example key)"
+        },
+        "targetNodeId": "fd93ba04ffd5506c3aeefb5e8e01165596aaed250564366b1e11ce2044ce5d48",
+        "contentCanonicalization": "https://typedstandards.org/canonicalization/legacy-json/v1",
+        "reason": "Its basis named a specification revision that the pinned README does not. Restated as map/edges/verikan-2.yaml.",
+        "effectiveAt": "2026-09-24T01:52:30.551Z",
+        "contentHash": {
+          "sha256": "858e8633957d923b72efd39b21b72d4248d35cc776eebe9a2784ddbac00e8b5c"
+        }
+      },
+      "nodeId": "d8b0e9aeb14b69443a9f7006ba3a70d61ec84e37993816bd1283236ec2c7f3e3",
+      "signature": {
+        "signature": "MNfd6E684T0WzO5pgIyawHLx824k06KKnn0+tVbuutpJliWh6JgvP5TDhzyZFmWouorl74pfEVCP8QW0ojBkDA==",
+        "publicKey": "MCowBQYDK2VwAyEA+BmmxJyxU0vnC2LLuSu0xcr1wwevoOLpcCFjnbnTUYQ=",
+        "algorithm": "Ed25519ph",
+        "kid": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH"
+      }
+    }
+  ],
+  "trustRegistryUrl": "https://core-satellite.typedstandards.org/.well-known/typed-publisher.json",
+  "subjectTitle": "map/edges/verikan.yaml: Verikan builds-on typedstandards.org",
+  "subjectSummary": "map/edges/verikan.yaml: Verikan builds-on typedstandards.org. The file's exact UTF-8 bytes (1425 bytes) are this record's output under raw-bytes/v1, so contentHash.sha256 is the file's ordinary SHA-256. The 2 source digests in queries are signed assertions that no check recomputes. The signer is a self-certifying did:key; it shows which key signed, not who holds it.",
+  "trustRegistry": {
+    "$comment": "The example publisher's own statement about its signing key, served at https://core-satellite.typedstandards.org/.well-known/typed-publisher.json. It is not a Typed Standards record, and not an endorsement by the Typed Standards specification or by typedstandards.org, although this host is a subdomain of it. activatedAt is the earliest createdAt in package/build-log.json: the first record signed under the key, as the signer states it.",
+    "keys": [
+      {
+        "kid": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+        "publicKey": "MCowBQYDK2VwAyEA+BmmxJyxU0vnC2LLuSu0xcr1wwevoOLpcCFjnbnTUYQ=",
+        "status": "active",
+        "activatedAt": "2026-09-22T19:25:30.535Z",
+        "deprecatedAt": null,
+        "revokedAt": null,
+        "signerIdentity": {
+          "bindingTier": "pseudonymous",
+          "identifier": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+          "displayName": "typedstandards-core-satellite-example (self-certifying example key)"
+        }
+      }
+    ]
+  },
+  "package": {
+    "metadata": {
+      "schemaVersion": "0.1.0",
+      "packageId": "ea7ed278-d6a1-484a-aacd-e3585e3e6ce7",
+      "createdAt": "2026-09-23T12:44:17.060Z",
+      "signingKeyId": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "captureMethod": "script-run"
+    },
+    "producerProfile": "scripted-recomputation/core-satellite-example",
+    "type": "content/analysis/v1",
+    "signer": {
+      "bindingTier": "pseudonymous",
+      "identifier": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "displayName": "typedstandards-core-satellite-example (self-certifying example key)"
+    },
+    "contentCanonicalization": "https://typedstandards.org/canonicalization/raw-bytes/v1",
+    "prompt": {
+      "hash": "67b653400f7874b7a57a57f25452591fdae7ea979ad83188c75e5efaa03d59e6",
+      "visibility": "full_text",
+      "text": "Package the file map/edges/verikan.yaml, one edge of the map of Typed Standards relations to public projects: Verikan builds-on typedstandards.org, ring 3, as the output of a scripted-recomputation record under raw-bytes/v1. corpus/pin.mjs wrote the file from corpus/sources.json, corpus/manifest.json; this program read it from disk."
+    },
+    "queries": [
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://raw.githubusercontent.com/dathere/Verikan/8e5e85fdda9829d142358c51f9b5db797333ed47/README.md",
+          "sha256": "28e521a2d04351228578376487b4354e3ef39e9c2f46c2072d59eadee66dfe0b",
+          "bytes": 14073,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:31Z",
+          "licence": "MIT (repository LICENSE)"
+        },
+        "datasetId": "verikan"
+      },
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md",
+          "sha256": "0e3b54b39e6877a076c495b82afd7295aefac09c70054c02e9832147037ff3f5",
+          "bytes": 294146,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:25Z",
+          "licence": "CC BY 4.0, as the document states (§3)"
+        },
+        "datasetId": "ts-spec"
+      },
+      {
+        "tool": "corpus/pin.mjs",
+        "operationType": "script-run",
+        "arguments": {
+          "command": "node corpus/pin.mjs",
+          "scriptSha256": "094d6fe92ed15262e5f53b2437988d73f410e81fd889aeb9e7266a1d358dd42e",
+          "inputs": [
+            {
+              "path": "corpus/sources.json",
+              "sha256": "72337b854d073159d8d67c5ab16f2cc52c70e6d74649cb1d59b0d1378b20edbe"
+            },
+            {
+              "path": "corpus/manifest.json",
+              "sha256": "2c23dafb122ed6dd7f1acb5f82296ccce65079417a29a898589aa9fcbba77980"
+            }
+          ],
+          "output": {
+            "path": "map/edges/verikan.yaml",
+            "sha256": "bb582d2d0255e7f96fea01986b8f9b0e8f595b8a8097f1fac947c9a4b95db2ef",
+            "bytes": 1425
+          }
+        }
+      },
+      {
+        "tool": "package/build.mjs",
+        "operationType": "package-file",
+        "arguments": {
+          "command": "node package/build.mjs sign",
+          "scriptSha256": "ed15926462300ec6a3051d16b58797b058a6f01a9c746239022c655b877cf21c",
+          "inputFile": "map/edges/verikan.yaml",
+          "inputSha256": "bb582d2d0255e7f96fea01986b8f9b0e8f595b8a8097f1fac947c9a4b95db2ef"
+        }
+      }
+    ],
+    "dataSources": [
+      {
+        "sourceId": "verikan",
+        "catalogType": "github-raw-at-sha",
+        "portalUrl": "https://raw.githubusercontent.com",
+        "datasetId": "verikan",
+        "datasetUrl": "https://raw.githubusercontent.com/dathere/Verikan/8e5e85fdda9829d142358c51f9b5db797333ed47/README.md",
+        "accessTimestamp": "2026-09-22T19:20:31Z"
+      },
+      {
+        "sourceId": "ts-spec",
+        "catalogType": "github-raw-at-sha",
+        "portalUrl": "https://raw.githubusercontent.com",
+        "datasetId": "ts-spec",
+        "datasetUrl": "https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md",
+        "accessTimestamp": "2026-09-22T19:20:25Z"
+      }
+    ],
+    "cost": {
+      "model": "none"
+    },
+    "skillMetadata": {},
+    "output": "# One edge of the map whose header is map/header.yaml. Written by corpus/pin.mjs; this file's exact bytes\n# are the output of one signed Typed Standards record in package/.\nid: typedstandards.org/map/verikan\ncreatedAt: \"2026-09-22\"\nsubject:\n  id: github.com/dathere/Verikan\n  ref:\n    location: https://raw.githubusercontent.com/dathere/Verikan/8e5e85fdda9829d142358c51f9b5db797333ed47/README.md\n    sha256: 28e521a2d04351228578376487b4354e3ef39e9c2f46c2072d59eadee66dfe0b\nobject:\n  id: typedstandards.org\n  ref:\n    location: https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md\n    sha256: 0e3b54b39e6877a076c495b82afd7295aefac09c70054c02e9832147037ff3f5\nx-typedstandards:\n  relation: builds-on\n  basis: Its README at the pinned release lists a module that builds 'Typed Standards evidence packages' and states 'Evidence format by Typed Standards'. Its package builder targets the datHere content profile at specification revision v0.1.7.\n  ring: 3\n  name: Verikan\n  publisher: datHere\n  pin:\n    fetchedAt: \"2026-09-22T19:20:31Z\"\n    bytes: 14073\n    httpStatus: 200\n    basis: tag V1.0.1, the latest release (2026-08-31)\n    licence: MIT (repository LICENSE)\n  curation:\n    seed: added\n    reason: Found by searching the qsv publisher's public repositories for the specification's name. Its own source states the relation.\n",
+    "trace": {
+      "resourceSpans": []
+    },
+    "summary": "map/edges/verikan.yaml: Verikan builds-on typedstandards.org. The file's exact UTF-8 bytes (1425 bytes) are this record's output under raw-bytes/v1, so contentHash.sha256 is the file's ordinary SHA-256. The 2 source digests in queries are signed assertions that no check recomputes. The signer is a self-certifying did:key; it shows which key signed, not who holds it.",
+    "extensions": {
+      "io.github.npstorey.core-satellite-example": {
+        "role": "map-edge",
+        "edgeId": "typedstandards.org/map/verikan",
+        "repository": "https://github.com/npstorey/typedstandards-core-satellite-example",
+        "file": {
+          "path": "map/edges/verikan.yaml",
+          "sha256": "bb582d2d0255e7f96fea01986b8f9b0e8f595b8a8097f1fac947c9a4b95db2ef",
+          "bytes": 1425
+        },
+        "writer": {
+          "path": "corpus/pin.mjs",
+          "sha256": "094d6fe92ed15262e5f53b2437988d73f410e81fd889aeb9e7266a1d358dd42e"
+        },
+        "writerInputs": [
+          {
+            "path": "corpus/sources.json",
+            "sha256": "72337b854d073159d8d67c5ab16f2cc52c70e6d74649cb1d59b0d1378b20edbe"
+          },
+          {
+            "path": "corpus/manifest.json",
+            "sha256": "2c23dafb122ed6dd7f1acb5f82296ccce65079417a29a898589aa9fcbba77980"
+          }
+        ],
+        "pinnedAt": "2026-09-22T19:20:31Z",
+        "sourcesCited": {
+          "pinned": 2,
+          "unpinned": 0
+        },
+        "model": {
+          "title": "The Core-Satellite Model",
+          "publisher": "SciOS",
+          "location": "https://scios.tech/thoughts",
+          "dated": "2026-06-30",
+          "readAt": "2026-09-22"
+        }
+      }
+    },
+    "contentHash": {
+      "sha256": "bb582d2d0255e7f96fea01986b8f9b0e8f595b8a8097f1fac947c9a4b95db2ef"
+    }
+  }
+}

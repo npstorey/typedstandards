@@ -1,0 +1,30 @@
+{
+  "node": {
+    "metadata": {
+      "schemaVersion": "0.1.0",
+      "packageId": "17315444-4bb0-4843-b1a8-6c4f1653fa45",
+      "createdAt": "2026-09-24T01:52:30.060Z",
+      "signingKeyId": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH"
+    },
+    "type": "attestation/withdraws/v1",
+    "signer": {
+      "bindingTier": "pseudonymous",
+      "identifier": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "displayName": "typedstandards-core-satellite-example (self-certifying example key)"
+    },
+    "targetNodeId": "428bec9a3a6de0e0323e36fa803c1e00cbae3909f84a2144ddccae21fd968e97",
+    "contentCanonicalization": "https://typedstandards.org/canonicalization/legacy-json/v1",
+    "reason": "Its basis said the schema is used for discovery and routing; the pinned schema has routing fields but does not mention discovery. Restated as map/edges/nanda-agentfacts-2.yaml.",
+    "effectiveAt": "2026-09-24T01:52:30.060Z",
+    "contentHash": {
+      "sha256": "509bb71cb73803a585bfc1852d12b9c3043d1f620207bf64d53c46e73e1e1be4"
+    }
+  },
+  "nodeId": "fc890452f2c50aa41286fbcd24836d70bb6852eefaf6c24d1b8b57518d6585a2",
+  "signature": {
+    "signature": "kFyRugYzkQViXEtYfnlGTP9+U8toOPzSx9PaGA86KXQ/VaX9XPshTfSHfBjJEdjfUI79fD12Q28k4O5aAzvcBw==",
+    "publicKey": "MCowBQYDK2VwAyEA+BmmxJyxU0vnC2LLuSu0xcr1wwevoOLpcCFjnbnTUYQ=",
+    "algorithm": "Ed25519ph",
+    "kid": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH"
+  }
+}
