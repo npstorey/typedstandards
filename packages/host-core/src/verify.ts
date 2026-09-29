@@ -17,11 +17,14 @@
 //   - every carried attestation targets this record, is intact and validly signed;
 //   - the status the carried attestations give (verifyLifecycleChain, bound by the
 //     record's own key) equals the index's, with its withdrawn or superseded fields;
-//   - the index's packageHash, createdAt, type and signer are the bundle's; the
-//     view's copied fields equal its package's; and the view names the index's
-//     trustRegistryUrl and carries the served registry.
+//   - the index's packageHash, createdAt, type and signer are the bundle's, its type
+//     as verify-core's resolvePackageType resolves it (a package with no type is
+//     content/analysis/v1, spec §8.8.1); the view's copied fields equal its
+//     package's; and the view names the index's trustRegistryUrl and carries the
+//     served registry.
 
 import {
+  resolvePackageType,
   validateRegistry,
   verifyAttestationNode,
   verifyRecord as coreVerifyRecord,
@@ -112,7 +115,7 @@ function viewFailures(b: JsonObject, pkg: JsonObject, rec: IndexRecord, index: H
   const metadata = isObject(pkg['metadata']) ? pkg['metadata'] : {};
   if (b['packageHash'] !== rec.packageHash) out.push('the index\'s packageHash is not the bundle\'s');
   if (metadata['createdAt'] !== rec.createdAt) out.push('the index\'s createdAt is not the package\'s');
-  if (pkg['type'] !== rec.type) out.push('the index\'s type is not the package\'s');
+  if (resolvePackageType(pkg).type !== rec.type) out.push('the index\'s type is not the package\'s, as verify-core resolves it');
   if (signerIdentifierOf(pkg) !== rec.signer) out.push('the index\'s signer is not the package\'s');
   const differ: string[] = VIEW_COPIES.filter((k) => !sameJson(b[k], pkg[k]));
   if ((b['captureMethod'] ?? null) !== (metadata['captureMethod'] ?? null)) differ.push('captureMethod');

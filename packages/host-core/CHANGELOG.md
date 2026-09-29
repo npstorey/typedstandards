@@ -3,6 +3,26 @@
 Factual record of what changed per published version. Check numbers (#1–#16)
 refer to the Typed Standards specification §9.2 verification sequence.
 
+## Unreleased
+
+A patch (typedstandards#125, HOST CORE P3 fix, finding F1): `buildHost` no longer
+writes an index that its own `parseIndex` refuses. No new export.
+
+- **The index's `type`** is verify-core's `resolvePackageType` reading of the
+  package. A package signed with no `type` (the legacy chain, which the CLI's `sign`
+  produces from an input with no `type`) is listed as `content/analysis/v1`, per
+  spec §8.8.1, where 0.1.0 wrote `""`. That index was refused by `parseIndex`, so
+  `verify` and `links` exited 2 on what `build` and `check` had accepted. A display
+  rule naming `content/analysis/v1` now displays such a record.
+- **`verifyServed`** compares the index's `type` with the same resolution, not with
+  the package's raw `type`.
+- **`buildHost` refuses** a package with no `metadata.createdAt` or no
+  `signer.identifier` with a `HostError` naming the record and the field (the bin
+  exits 2), where 0.1.0 wrote `""` for `createdAt` when no registry was served, and
+  refused a missing signer through produce-core's or the registry's message.
+- Every served bundle and registry is unchanged, and an index entry for a package
+  with a non-empty `type` is byte-identical to 0.1.0's.
+
 ## 0.1.0 — 2026-09-29
 
 The first version (typedstandards#125, HOST CORE P1): a static-host library and the
