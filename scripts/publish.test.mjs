@@ -156,7 +156,7 @@ test('the range check names each in-repo range that excludes a version being pub
   assert.deepEqual(rangeProblems(fixed, published), []);
 });
 
-test('the in-repo ranges the check reads are the five D12 names', () => {
+test('the in-repo ranges the check reads are the seven: the five D12 names and host-core\'s two', () => {
   const dirs = ['packages', 'apps'].flatMap((p) =>
     readdirSync(join(ROOT, p)).map((d) => `${p}/${d}`).filter((d) => existsSync(join(ROOT, d, 'package.json'))),
   );
@@ -168,6 +168,8 @@ test('the in-repo ranges the check reads are the five D12 names', () => {
     'apps/web devDependencies @typedstandards/produce-core',
     'packages/cli dependencies @typedstandards/produce-core',
     'packages/cli dependencies @typedstandards/verify-core',
+    'packages/host-core dependencies @typedstandards/produce-core',
+    'packages/host-core dependencies @typedstandards/verify-core',
     'packages/produce-core dependencies @typedstandards/verify-core',
   ]);
 });
