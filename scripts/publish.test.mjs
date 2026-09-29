@@ -13,6 +13,7 @@ import {
   expectedHeading,
   fetchRegistryDocument,
   filesOutside,
+  headingCheckPackages,
   inRepoRanges,
   isFullSha,
   localDate,
@@ -176,8 +177,8 @@ test('the in-repo ranges the check reads are the seven: the five D12 names and h
 
 // ---- the package order ----
 
-test('the packages publish verify-core, then produce-core, then cli', () => {
-  assert.deepEqual(PACKAGES.map((p) => p.name), ['@typedstandards/verify-core', '@typedstandards/produce-core', '@typedstandards/cli']);
+test('the packages publish verify-core, then produce-core, then cli, then host-core', () => {
+  assert.deepEqual(PACKAGES.map((p) => p.name), ['@typedstandards/verify-core', '@typedstandards/produce-core', '@typedstandards/cli', '@typedstandards/host-core']);
   for (const p of PACKAGES) assert.equal(manifestOf(p.dir).name, p.name);
   assert.ok(Object.isFrozen(PACKAGES));
 });
@@ -254,4 +255,66 @@ test('the wait backs off and sums to about five minutes by default', () => {
 
 test('a stop message is one line', () => {
   assert.equal(oneLine('a\n b\r\nc'), 'a; b; c');
+});
+
+// ---- #125 D13: the registry is read first; the heading check covers only unpublished versions ----
+
+const VC = '@typedstandards/verify-core';
+const PC = '@typedstandards/produce-core';
+const CLI = '@typedstandards/cli';
+const HOST = '@typedstandards/host-core';
+const FOUR = [VC, PC, CLI, HOST].map((name) => ({ name, dir: `packages/${name.split('/')[1]}` }));
+const VERSIONS = { [VC]: { version: '0.13.0' }, [PC]: { version: '0.8.0' }, [CLI]: { version: '0.2.0' }, [HOST]: { version: '0.1.0' } };
+/** A registry package document listing `versions`. */
+const docListing = (...versions) => ({ versions: Object.fromEntries(versions.map((v) => [v, { version: v }])) });
+const namesOf = (packages) => packages.map((p) => p.name);
+
+test('the CHANGELOG heading check covers only a version the registry does not show', () => {
+  const docs = {
+    [VC]: docListing('0.12.0', '0.13.0'),
+    [PC]: docListing('0.7.0', '0.8.0'),
+    [CLI]: docListing('0.1.0'),
+    [HOST]: null,
+  };
+  assert.deepEqual(namesOf(headingCheckPackages(FOUR, VERSIONS, docs)), [CLI, HOST], 'a listed version was checked, or a 404 or an unlisted version was not');
+  const allListed = { [VC]: docListing('0.13.0'), [PC]: docListing('0.8.0'), [CLI]: docListing('0.2.0'), [HOST]: docListing('0.1.0') };
+  assert.deepEqual(headingCheckPackages(FOUR, VERSIONS, allListed), []);
+  const none = { [VC]: null, [PC]: null, [CLI]: null, [HOST]: null };
+  assert.deepEqual(namesOf(headingCheckPackages(FOUR, VERSIONS, none)), [VC, PC, CLI, HOST], 'the order changed');
+  assert.deepEqual(namesOf(headingCheckPackages(FOUR, VERSIONS, { ...allListed, [HOST]: docListing('0.0.1') })), [HOST]);
+});
+
+test('the heading-check scope fails closed on a package the registry was not read for', () => {
+  const read = { [VC]: docListing('0.13.0'), [PC]: docListing('0.8.0'), [CLI]: docListing('0.2.0') };
+  assert.throws(() => headingCheckPackages(FOUR, VERSIONS, read), /host-core/);
+  assert.throws(() => headingCheckPackages(FOUR, { ...VERSIONS, [HOST]: {} }, { ...read, [HOST]: null }), /host-core/);
+});
+
+test('a registry read fails closed: a non-OK answer other than 404, a network error, or a malformed body throws', async () => {
+  const read = (fetchImpl) => fetchRegistryDocument(HOST, { fetchImpl });
+  await assert.rejects(read(recordingFetch(500).fetchImpl), /500/);
+  await assert.rejects(read(recordingFetch(403).fetchImpl), /403/);
+  await assert.rejects(read(async () => { throw new TypeError('fetch failed'); }), /fetch failed/);
+  const notJson = async () => ({ status: 200, ok: true, json: async () => { throw new SyntaxError('Unexpected token < in JSON at position 0'); } });
+  await assert.rejects(read(notJson), /JSON/);
+  for (const body of [null, [], 'x', 42, {}, { versions: null }, { versions: [] }, { versions: 'x' }]) {
+    await assert.rejects(read(recordingFetch(200, body).fetchImpl), /malformed/, `a 200 with ${JSON.stringify(body)} read as a document`);
+  }
+});
+
+test('main() reads the registry before the CHANGELOG check, and the check takes its scope from that read', () => {
+  const script = readFileSync(join(ROOT, 'scripts', 'publish.mjs'), 'utf8');
+  const main = script.slice(script.indexOf('async function main()'));
+  const read = main.search(/\bregistryDocument\(/);
+  const scope = main.search(/\bheadingCheckPackages\(/);
+  const headings = main.search(/\bcheckChangelogs\(/);
+  assert.ok(headings > 0, 'main() no longer calls checkChangelogs');
+  assert.ok(read >= 0 && read < headings, 'main() checks the CHANGELOG headings before it reads the registry');
+  assert.ok(scope > read && scope < headings, 'the heading check does not take its scope from the registry read');
+});
+
+test('the script states no fixed package count: its closing lines count PACKAGES', () => {
+  const script = readFileSync(join(ROOT, 'scripts', 'publish.mjs'), 'utf8');
+  assert.doesNotMatch(script, /\b(all|the) three\b/, 'a line still says "three"');
+  assert.match(script, /PACKAGES\.length/);
 });
