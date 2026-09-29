@@ -1,0 +1,196 @@
+{
+  "protocolVersion": "0.1.0",
+  "packageHash": "df171a53a17fb8c2faf8ab5e6adb8fc5870bb9d77290e26ce81cd0175c04c7ee",
+  "visibility": "public",
+  "captureMethod": "script-run",
+  "contentProfile": "default",
+  "producerProfile": "scripted-recomputation/core-satellite-example",
+  "type": "content/analysis/v1",
+  "signer": {
+    "bindingTier": "pseudonymous",
+    "identifier": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+    "displayName": "typedstandards-core-satellite-example (self-certifying example key)"
+  },
+  "contentHash": {
+    "sha256": "ff54e304e151780dadcd7c4fa0f7359097b83ab01fbc36f3492e6e57ea17f6bf"
+  },
+  "contentCanonicalization": "https://typedstandards.org/canonicalization/raw-bytes/v1",
+  "signature": {
+    "signature": "tEccIDfctwIGkxDclLuQ8WUb0DKwqA+aMvmodBXoPq9gZ2fkP7HF+7qEktrwef1TNU5d+g3+sJdCEG4XWczrAA==",
+    "publicKey": "MCowBQYDK2VwAyEA+BmmxJyxU0vnC2LLuSu0xcr1wwevoOLpcCFjnbnTUYQ=",
+    "algorithm": "Ed25519ph",
+    "kid": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH"
+  },
+  "trustRegistryUrl": "https://core-satellite.typedstandards.org/.well-known/typed-publisher.json",
+  "subjectTitle": "map/edges/qsv-2.yaml: qsv writes-recordable-output typedstandards.org",
+  "subjectSummary": "map/edges/qsv-2.yaml: qsv writes-recordable-output typedstandards.org. The file's exact UTF-8 bytes (1604 bytes) are this record's output under raw-bytes/v1, so contentHash.sha256 is the file's ordinary SHA-256. The 2 source digests in queries are signed assertions that no check recomputes. The signer is a self-certifying did:key; it shows which key signed, not who holds it.",
+  "trustRegistry": {
+    "$comment": "The example publisher's own statement about its signing key, served at https://core-satellite.typedstandards.org/.well-known/typed-publisher.json. It is not a Typed Standards record, and not an endorsement by the Typed Standards specification or by typedstandards.org, although this host is a subdomain of it. activatedAt is the earliest createdAt in package/build-log.json: the first record signed under the key, as the signer states it.",
+    "keys": [
+      {
+        "kid": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+        "publicKey": "MCowBQYDK2VwAyEA+BmmxJyxU0vnC2LLuSu0xcr1wwevoOLpcCFjnbnTUYQ=",
+        "status": "active",
+        "activatedAt": "2026-09-22T19:25:30.535Z",
+        "deprecatedAt": null,
+        "revokedAt": null,
+        "signerIdentity": {
+          "bindingTier": "pseudonymous",
+          "identifier": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+          "displayName": "typedstandards-core-satellite-example (self-certifying example key)"
+        }
+      }
+    ]
+  },
+  "package": {
+    "metadata": {
+      "schemaVersion": "0.1.0",
+      "packageId": "b867c302-573d-42af-bbcd-e25a3ae7b0b2",
+      "createdAt": "2026-09-24T01:52:31.415Z",
+      "signingKeyId": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "captureMethod": "script-run"
+    },
+    "producerProfile": "scripted-recomputation/core-satellite-example",
+    "type": "content/analysis/v1",
+    "signer": {
+      "bindingTier": "pseudonymous",
+      "identifier": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "displayName": "typedstandards-core-satellite-example (self-certifying example key)"
+    },
+    "contentCanonicalization": "https://typedstandards.org/canonicalization/raw-bytes/v1",
+    "prompt": {
+      "hash": "b0c1dc2109308ca0795aa4e752044dad5c271e96de766cc66cdc9f9a89011ef9",
+      "visibility": "full_text",
+      "text": "Package the file map/edges/qsv-2.yaml, one edge of the map of Typed Standards relations to public projects: qsv writes-recordable-output typedstandards.org, ring 3, as the output of a scripted-recomputation record under raw-bytes/v1. corpus/pin.mjs wrote the file from corpus/sources.json, corpus/manifest.json; this program read it from disk."
+    },
+    "queries": [
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://raw.githubusercontent.com/dathere/qsv/7c43b6bc77b22556220328eef22f29b9fac6d24b/README.md",
+          "sha256": "1541ba978efb0231096072c945df32e282dda499fb6a919bee13a987c3efb639",
+          "bytes": 81584,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:30Z",
+          "licence": "MIT (COPYING and Cargo.toml at the tag)"
+        },
+        "datasetId": "qsv"
+      },
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md",
+          "sha256": "0e3b54b39e6877a076c495b82afd7295aefac09c70054c02e9832147037ff3f5",
+          "bytes": 294146,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:25Z",
+          "licence": "CC BY 4.0, as the document states (§3)"
+        },
+        "datasetId": "ts-spec"
+      },
+      {
+        "tool": "corpus/pin.mjs",
+        "operationType": "script-run",
+        "arguments": {
+          "command": "node corpus/pin.mjs",
+          "scriptSha256": "7cc1863dc74709a17224381785e56f133b2bfa6b02f73f9597e9a2853c098e28",
+          "inputs": [
+            {
+              "path": "corpus/sources.json",
+              "sha256": "2f11818ce690781d79d687b86dfbae33741ba0d0b8f42944bc4e12318de364c5"
+            },
+            {
+              "path": "corpus/manifest.json",
+              "sha256": "2c23dafb122ed6dd7f1acb5f82296ccce65079417a29a898589aa9fcbba77980"
+            }
+          ],
+          "output": {
+            "path": "map/edges/qsv-2.yaml",
+            "sha256": "ff54e304e151780dadcd7c4fa0f7359097b83ab01fbc36f3492e6e57ea17f6bf",
+            "bytes": 1604
+          }
+        }
+      },
+      {
+        "tool": "package/build.mjs",
+        "operationType": "package-file",
+        "arguments": {
+          "command": "node package/build.mjs sign",
+          "scriptSha256": "5ce0251a76a818431dea09e2d7b95c3ed23edccff29758a50de0b579c820b268",
+          "inputFile": "map/edges/qsv-2.yaml",
+          "inputSha256": "ff54e304e151780dadcd7c4fa0f7359097b83ab01fbc36f3492e6e57ea17f6bf"
+        }
+      }
+    ],
+    "dataSources": [
+      {
+        "sourceId": "qsv",
+        "catalogType": "github-raw-at-sha",
+        "portalUrl": "https://raw.githubusercontent.com",
+        "datasetId": "qsv",
+        "datasetUrl": "https://raw.githubusercontent.com/dathere/qsv/7c43b6bc77b22556220328eef22f29b9fac6d24b/README.md",
+        "accessTimestamp": "2026-09-22T19:20:30Z"
+      },
+      {
+        "sourceId": "ts-spec",
+        "catalogType": "github-raw-at-sha",
+        "portalUrl": "https://raw.githubusercontent.com",
+        "datasetId": "ts-spec",
+        "datasetUrl": "https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md",
+        "accessTimestamp": "2026-09-22T19:20:25Z"
+      }
+    ],
+    "cost": {
+      "model": "none"
+    },
+    "skillMetadata": {},
+    "output": "# One edge of the map whose header is map/header-2.yaml. Written by corpus/pin.mjs; this file's exact bytes\n# are the output of one signed Typed Standards record in package/.\nid: typedstandards.org/map/qsv-2\ncreatedAt: \"2026-09-22\"\nsubject:\n  id: github.com/dathere/qsv\n  ref:\n    location: https://raw.githubusercontent.com/dathere/qsv/7c43b6bc77b22556220328eef22f29b9fac6d24b/README.md\n    sha256: 1541ba978efb0231096072c945df32e282dda499fb6a919bee13a987c3efb639\nobject:\n  id: typedstandards.org\n  ref:\n    location: https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md\n    sha256: 0e3b54b39e6877a076c495b82afd7295aefac09c70054c02e9832147037ff3f5\nx-typedstandards:\n  relation: writes-recordable-output\n  basis: \"Its README at tag 23.0.1 documents commands that write text files from CSV input: schema writes a JSON Schema file, and sniff, sortcheck and validate write JSON with their JSON options. Commands with randomized output take a --seed option \\\"for reproducibility\\\". The README names no Typed Standards record, and the signing it describes covers its prebuilt binary archives (zipsign).\"\n  ring: 3\n  name: qsv\n  publisher: datHere\n  pin:\n    fetchedAt: \"2026-09-22T19:20:30Z\"\n    bytes: 81584\n    httpStatus: 200\n    basis: tag 23.0.1, the latest release (2026-09-13)\n    licence: MIT (COPYING and Cargo.toml at the tag)\n  curation:\n    seed: kept\n    reason: Restates map/edges/qsv.yaml from the pinned README alone. That edge's could-emit relation rested on an issue thread that is not pinned.\n",
+    "trace": {
+      "resourceSpans": []
+    },
+    "summary": "map/edges/qsv-2.yaml: qsv writes-recordable-output typedstandards.org. The file's exact UTF-8 bytes (1604 bytes) are this record's output under raw-bytes/v1, so contentHash.sha256 is the file's ordinary SHA-256. The 2 source digests in queries are signed assertions that no check recomputes. The signer is a self-certifying did:key; it shows which key signed, not who holds it.",
+    "extensions": {
+      "io.github.npstorey.core-satellite-example": {
+        "role": "map-edge",
+        "edgeId": "typedstandards.org/map/qsv-2",
+        "repository": "https://github.com/npstorey/typedstandards-core-satellite-example",
+        "file": {
+          "path": "map/edges/qsv-2.yaml",
+          "sha256": "ff54e304e151780dadcd7c4fa0f7359097b83ab01fbc36f3492e6e57ea17f6bf",
+          "bytes": 1604
+        },
+        "writer": {
+          "path": "corpus/pin.mjs",
+          "sha256": "7cc1863dc74709a17224381785e56f133b2bfa6b02f73f9597e9a2853c098e28"
+        },
+        "writerInputs": [
+          {
+            "path": "corpus/sources.json",
+            "sha256": "2f11818ce690781d79d687b86dfbae33741ba0d0b8f42944bc4e12318de364c5"
+          },
+          {
+            "path": "corpus/manifest.json",
+            "sha256": "2c23dafb122ed6dd7f1acb5f82296ccce65079417a29a898589aa9fcbba77980"
+          }
+        ],
+        "pinnedAt": "2026-09-22T19:20:31Z",
+        "sourcesCited": {
+          "pinned": 2,
+          "unpinned": 0
+        },
+        "model": {
+          "title": "The Core-Satellite Model",
+          "publisher": "SciOS",
+          "location": "https://scios.tech/thoughts",
+          "dated": "2026-06-30",
+          "readAt": "2026-09-22"
+        }
+      }
+    },
+    "contentHash": {
+      "sha256": "ff54e304e151780dadcd7c4fa0f7359097b83ab01fbc36f3492e6e57ea17f6bf"
+    }
+  }
+}

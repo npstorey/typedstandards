@@ -1,0 +1,848 @@
+{
+  "version": 1,
+  "$comment": "The records this host serves, in the order they were signed. Written by package/build.mjs from the bundles and the build log, never by hand; node package/build.mjs check fails when this file differs from a fresh derivation. status is verify-core's verifyLifecycleChain reading of the withdrawals each view carries.",
+  "host": "https://core-satellite.typedstandards.org/",
+  "trustRegistryUrl": "https://core-satellite.typedstandards.org/.well-known/typed-publisher.json",
+  "records": [
+    {
+      "name": "core",
+      "bundle": "bundles/core.bundle.json",
+      "packageHash": "a9623ef408e4dc1b1f3833c3bf1dc5e4aff6dfd96139f088c0493975ce8f0a93",
+      "createdAt": "2026-09-22T19:25:30.535Z",
+      "type": "content/analysis/v1",
+      "signer": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "status": "active",
+      "extensions": {
+        "file": "core.md",
+        "role": "core",
+        "edgeId": null,
+        "step": 1
+      }
+    },
+    {
+      "name": "map",
+      "bundle": "bundles/map.bundle.json",
+      "packageHash": "7f1c14cd34919dfe540f75c6de041133f17cfebd59e607596a8e610827cf2911",
+      "createdAt": "2026-09-22T19:25:30.536Z",
+      "type": "content/analysis/v1",
+      "signer": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "status": "active",
+      "extensions": {
+        "file": "map.yaml",
+        "role": "map-v1",
+        "edgeId": null,
+        "step": 1
+      }
+    },
+    {
+      "name": "map/header",
+      "bundle": "bundles/map/header.bundle.json",
+      "packageHash": "9736a500e4a945202b80d4e8645a16fa9719592702b998e46b27b0daba2876fd",
+      "createdAt": "2026-09-23T12:44:17.005Z",
+      "type": "content/analysis/v1",
+      "signer": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "status": "withdrawn",
+      "withdrawn": {
+        "at": "2026-09-24T01:52:28.996Z",
+        "reason": "Restated as map/header-2.yaml, whose relations and ring 3 describe only what a project's pinned bytes show. This header defined could-emit, and described adjacent and ring 3 in terms of intent."
+      },
+      "extensions": {
+        "file": "map/header.yaml",
+        "role": "map-header",
+        "edgeId": null,
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/w3c-prov-o",
+      "bundle": "bundles/map/edges/w3c-prov-o.bundle.json",
+      "packageHash": "3167d2912199da262d600a4d0c8f6d53fb0650ff2f7eae28f2196a5d0b0fe30e",
+      "createdAt": "2026-09-23T12:44:17.016Z",
+      "type": "content/analysis/v1",
+      "signer": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "status": "active",
+      "extensions": {
+        "file": "map/edges/w3c-prov-o.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/w3c-prov-o",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/in-toto-attestation",
+      "bundle": "bundles/map/edges/in-toto-attestation.bundle.json",
+      "packageHash": "9a89122cad07ca4bde999ae12368b1ad4463871228273d486c9d78bcf7b5d6e6",
+      "createdAt": "2026-09-23T12:44:17.018Z",
+      "type": "content/analysis/v1",
+      "signer": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "status": "active",
+      "extensions": {
+        "file": "map/edges/in-toto-attestation.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/in-toto-attestation",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/sigstore-rekor",
+      "bundle": "bundles/map/edges/sigstore-rekor.bundle.json",
+      "packageHash": "76ac329be1e443cfa23d8c1ad5fe984b69b0657e09c37b207b0b3d42644482ca",
+      "createdAt": "2026-09-23T12:44:17.020Z",
+      "type": "content/analysis/v1",
+      "signer": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "status": "withdrawn",
+      "withdrawn": {
+        "at": "2026-09-24T01:52:29.234Z",
+        "reason": "Its basis said records submit hashedrekord entries; the pinned specification says a package SHOULD carry a Rekor inclusion proof (§8.3.2). Restated as map/edges/sigstore-rekor-2.yaml."
+      },
+      "extensions": {
+        "file": "map/edges/sigstore-rekor.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/sigstore-rekor",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/rfc-3161",
+      "bundle": "bundles/map/edges/rfc-3161.bundle.json",
+      "packageHash": "9a064095b691fec1a0942513a0f5d4f1395037ff1bfff77fc9103cc6fb1b32e2",
+      "createdAt": "2026-09-23T12:44:17.022Z",
+      "type": "content/analysis/v1",
+      "signer": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "status": "withdrawn",
+      "withdrawn": {
+        "at": "2026-09-24T01:52:29.348Z",
+        "reason": "Its basis said records carry RFC 3161 timestamp tokens; the pinned specification says a package SHOULD carry one (§8.3.2). Restated as map/edges/rfc-3161-2.yaml."
+      },
+      "extensions": {
+        "file": "map/edges/rfc-3161.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/rfc-3161",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/rfc-8785",
+      "bundle": "bundles/map/edges/rfc-8785.bundle.json",
+      "packageHash": "1edcd62d04675c1a4b20973c0a6f105c24d26aed3590cfb9ca3051dcfa6bd2ea",
+      "createdAt": "2026-09-23T12:44:17.023Z",
+      "type": "content/analysis/v1",
+      "signer": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "status": "active",
+      "extensions": {
+        "file": "map/edges/rfc-8785.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/rfc-8785",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/rfc-8032",
+      "bundle": "bundles/map/edges/rfc-8032.bundle.json",
+      "packageHash": "7ade72677f97e161b34000aea2d2d53a8fc654383cdb9c131e4d38b9665d6e96",
+      "createdAt": "2026-09-23T12:44:17.025Z",
+      "type": "content/analysis/v1",
+      "signer": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "status": "withdrawn",
+      "withdrawn": {
+        "at": "2026-09-24T01:52:29.465Z",
+        "reason": "Its curation note counted this example's records as two; it was signed as one of 37. Restated as map/edges/rfc-8032-2.yaml."
+      },
+      "extensions": {
+        "file": "map/edges/rfc-8032.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/rfc-8032",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/did-key",
+      "bundle": "bundles/map/edges/did-key.bundle.json",
+      "packageHash": "b6c5b3100494dccc52097c5f78724dd8fb4efb3f409d8cd2eb889282040e982c",
+      "createdAt": "2026-09-23T12:44:17.026Z",
+      "type": "content/analysis/v1",
+      "signer": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "status": "withdrawn",
+      "withdrawn": {
+        "at": "2026-09-24T01:52:29.579Z",
+        "reason": "Its basis counted this example's records as two; it was signed as one of 37. Restated as map/edges/did-key-2.yaml."
+      },
+      "extensions": {
+        "file": "map/edges/did-key.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/did-key",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/discourse-graphs",
+      "bundle": "bundles/map/edges/discourse-graphs.bundle.json",
+      "packageHash": "9825fc6444eaef93eebf4c20dd63950da3c0cb5d10595fe5eb8c4083bb5c6547",
+      "createdAt": "2026-09-23T12:44:17.028Z",
+      "type": "content/analysis/v1",
+      "signer": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "status": "withdrawn",
+      "withdrawn": {
+        "at": "2026-09-24T01:52:29.698Z",
+        "reason": "The pinned specification lists Discourse Graphs as an informative reference (§14.2) and reserves the pattern's content types by name only (§7.4), so builds-on is not shown. Restated as complements, map/edges/discourse-graphs-2.yaml."
+      },
+      "extensions": {
+        "file": "map/edges/discourse-graphs.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/discourse-graphs",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/c2pa",
+      "bundle": "bundles/map/edges/c2pa.bundle.json",
+      "packageHash": "5646f9ae71881a88337a4acd4bf6130882cd55301a44e78ee59fbac8177d0098",
+      "createdAt": "2026-09-23T12:44:17.029Z",
+      "type": "content/analysis/v1",
+      "signer": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "status": "active",
+      "extensions": {
+        "file": "map/edges/c2pa.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/c2pa",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/w3c-vc-2",
+      "bundle": "bundles/map/edges/w3c-vc-2.bundle.json",
+      "packageHash": "31458a33fe5f696bc604043f6e0f4ebe31a9d706e29c760812a6f7fd352a3428",
+      "createdAt": "2026-09-23T12:44:17.031Z",
+      "type": "content/analysis/v1",
+      "signer": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "status": "active",
+      "extensions": {
+        "file": "map/edges/w3c-vc-2.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/w3c-vc-2",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/ietf-scitt",
+      "bundle": "bundles/map/edges/ietf-scitt.bundle.json",
+      "packageHash": "de76366213032b802af4dc3642dc82c20b9ec2e55391ba94692b1fb37bbdb9ce",
+      "createdAt": "2026-09-23T12:44:17.033Z",
+      "type": "content/analysis/v1",
+      "signer": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "status": "active",
+      "extensions": {
+        "file": "map/edges/ietf-scitt.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/ietf-scitt",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/slsa",
+      "bundle": "bundles/map/edges/slsa.bundle.json",
+      "packageHash": "be5fe8ca6fe0aa0d3476271d4e6ed1a15dcdedec933c670a1566bea292f277d6",
+      "createdAt": "2026-09-23T12:44:17.034Z",
+      "type": "content/analysis/v1",
+      "signer": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "status": "active",
+      "extensions": {
+        "file": "map/edges/slsa.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/slsa",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/nanopublications",
+      "bundle": "bundles/map/edges/nanopublications.bundle.json",
+      "packageHash": "2387896720878bc91cfea139aeae778cc015abe5bf73f4e1eea4cd8b6a3572f6",
+      "createdAt": "2026-09-23T12:44:17.036Z",
+      "type": "content/analysis/v1",
+      "signer": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "status": "withdrawn",
+      "withdrawn": {
+        "at": "2026-09-24T01:52:29.817Z",
+        "reason": "Its basis called the assertion atomic, which the pinned guidelines do not, and said consuming one as the other is not built, where the pinned specification calls consuming Typed Standards claims as nanopublications \"a plausible bridge but requires a separate effort\". Restated as map/edges/nanopublications-2.yaml."
+      },
+      "extensions": {
+        "file": "map/edges/nanopublications.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/nanopublications",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/proof-of-control",
+      "bundle": "bundles/map/edges/proof-of-control.bundle.json",
+      "packageHash": "67885d44f6923d2e7a7c0b76e81d49af8e9f562f3f1c64fa6cf879da96434bbc",
+      "createdAt": "2026-09-23T12:44:17.038Z",
+      "type": "content/analysis/v1",
+      "signer": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "status": "withdrawn",
+      "withdrawn": {
+        "at": "2026-09-24T01:52:29.937Z",
+        "reason": "The pinned frontispiece shows neither the evidence-token format nor the pointer to SLSA and in-toto that its basis names. Restated from the frontispiece as adjacent, map/edges/proof-of-control-2.yaml."
+      },
+      "extensions": {
+        "file": "map/edges/proof-of-control.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/proof-of-control",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/proof-of-insight",
+      "bundle": "bundles/map/edges/proof-of-insight.bundle.json",
+      "packageHash": "146deb172cb8e6d1c7da96975a3a0e5bfdc2c44d2f94916c799d3fccac627218",
+      "createdAt": "2026-09-23T12:44:17.039Z",
+      "type": "content/analysis/v1",
+      "signer": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "status": "active",
+      "extensions": {
+        "file": "map/edges/proof-of-insight.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/proof-of-insight",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/nanda-agentfacts",
+      "bundle": "bundles/map/edges/nanda-agentfacts.bundle.json",
+      "packageHash": "428bec9a3a6de0e0323e36fa803c1e00cbae3909f84a2144ddccae21fd968e97",
+      "createdAt": "2026-09-23T12:44:17.041Z",
+      "type": "content/analysis/v1",
+      "signer": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "status": "withdrawn",
+      "withdrawn": {
+        "at": "2026-09-24T01:52:30.060Z",
+        "reason": "Its basis said the schema is used for discovery and routing; the pinned schema has routing fields but does not mention discovery. Restated as map/edges/nanda-agentfacts-2.yaml."
+      },
+      "extensions": {
+        "file": "map/edges/nanda-agentfacts.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/nanda-agentfacts",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/mcp-sep-3094",
+      "bundle": "bundles/map/edges/mcp-sep-3094.bundle.json",
+      "packageHash": "5109df3930150eb1861c05dd324f2b2dd774861dba9b5080cbc71cb78b8cac8e",
+      "createdAt": "2026-09-23T12:44:17.042Z",
+      "type": "content/analysis/v1",
+      "signer": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "status": "active",
+      "extensions": {
+        "file": "map/edges/mcp-sep-3094.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/mcp-sep-3094",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/atproto-lexicon",
+      "bundle": "bundles/map/edges/atproto-lexicon.bundle.json",
+      "packageHash": "52f817328721f6a9b2433f835b9a37780e3683bc99cf24476c6b7a8b2cf8db7a",
+      "createdAt": "2026-09-23T12:44:17.044Z",
+      "type": "content/analysis/v1",
+      "signer": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "status": "withdrawn",
+      "withdrawn": {
+        "at": "2026-09-24T01:52:30.183Z",
+        "reason": "Its basis said the SciOS paper names Lexicon as a model for its schema; the paper likens its schema to one. Restated as map/edges/atproto-lexicon-2.yaml."
+      },
+      "extensions": {
+        "file": "map/edges/atproto-lexicon.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/atproto-lexicon",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/google-okf",
+      "bundle": "bundles/map/edges/google-okf.bundle.json",
+      "packageHash": "76541f4b15d7d71d2ee1f62d4d34bcb73d9e04335548008d633f08090c92e51a",
+      "createdAt": "2026-09-23T12:44:17.045Z",
+      "type": "content/analysis/v1",
+      "signer": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "status": "withdrawn",
+      "withdrawn": {
+        "at": "2026-09-24T01:52:30.306Z",
+        "reason": "Its basis said the SciOS paper names OKF as a model, where the paper likens its schema to it, and that a raw-bytes/v1 record can sign any such file, where the pinned specification admits raw-bytes/v1 only for program-computed content. Restated as map/edges/google-okf-2.yaml."
+      },
+      "extensions": {
+        "file": "map/edges/google-okf.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/google-okf",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/w3c-dcat-3",
+      "bundle": "bundles/map/edges/w3c-dcat-3.bundle.json",
+      "packageHash": "3d544f60cf5b764addb2199fe46f2550ee00ee710bc4ce2a6203a007add494c3",
+      "createdAt": "2026-09-23T12:44:17.047Z",
+      "type": "content/analysis/v1",
+      "signer": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "status": "active",
+      "extensions": {
+        "file": "map/edges/w3c-dcat-3.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/w3c-dcat-3",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/ro-crate",
+      "bundle": "bundles/map/edges/ro-crate.bundle.json",
+      "packageHash": "0c89c80858497cfc2659ebaa389b3d5d6d30bc08690eab547767edf7c90ae725",
+      "createdAt": "2026-09-23T12:44:17.048Z",
+      "type": "content/analysis/v1",
+      "signer": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "status": "active",
+      "extensions": {
+        "file": "map/edges/ro-crate.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/ro-crate",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/workflow-run-crate",
+      "bundle": "bundles/map/edges/workflow-run-crate.bundle.json",
+      "packageHash": "9717d02579571bc3341d548a4411a416f25f37be4794f7b11adc25f24ee851b8",
+      "createdAt": "2026-09-23T12:44:17.050Z",
+      "type": "content/analysis/v1",
+      "signer": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "status": "active",
+      "extensions": {
+        "file": "map/edges/workflow-run-crate.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/workflow-run-crate",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/mira-schema",
+      "bundle": "bundles/map/edges/mira-schema.bundle.json",
+      "packageHash": "76ef42b5e2eba8ebda28f08b86bbd448238a64bed6c1bc58dfe24d3a43cbc019",
+      "createdAt": "2026-09-23T12:44:17.051Z",
+      "type": "content/analysis/v1",
+      "signer": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "status": "withdrawn",
+      "withdrawn": {
+        "at": "2026-09-24T01:52:30.428Z",
+        "reason": "Its name and basis called the schema a draft and LinkML; the pinned file says neither. Restated as map/edges/mira-schema-2.yaml."
+      },
+      "extensions": {
+        "file": "map/edges/mira-schema.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/mira-schema",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/civicaitools-org",
+      "bundle": "bundles/map/edges/civicaitools-org.bundle.json",
+      "packageHash": "2b6c31f47224a14872a2d6184b7b8cfddd0bc57b7bdd07886b4cb96aae981fd7",
+      "createdAt": "2026-09-23T12:44:17.053Z",
+      "type": "content/analysis/v1",
+      "signer": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "status": "active",
+      "extensions": {
+        "file": "map/edges/civicaitools-org.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/civicaitools-org",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/socrata-mcp-server",
+      "bundle": "bundles/map/edges/socrata-mcp-server.bundle.json",
+      "packageHash": "2b90437826a5c233a86b56bbb27a83512561ca51ff822a64161b8bb5b812df1f",
+      "createdAt": "2026-09-23T12:44:17.054Z",
+      "type": "content/analysis/v1",
+      "signer": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "status": "active",
+      "extensions": {
+        "file": "map/edges/socrata-mcp-server.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/socrata-mcp-server",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/typedstandards-verifier",
+      "bundle": "bundles/map/edges/typedstandards-verifier.bundle.json",
+      "packageHash": "5215573c4f9b05e89cfea8b223290797fa47f598ada5fab024491f379e59b6f0",
+      "createdAt": "2026-09-23T12:44:17.055Z",
+      "type": "content/analysis/v1",
+      "signer": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "status": "active",
+      "extensions": {
+        "file": "map/edges/typedstandards-verifier.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/typedstandards-verifier",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/eval-run-example",
+      "bundle": "bundles/map/edges/eval-run-example.bundle.json",
+      "packageHash": "8d5c079d807582a333799dcce8154559466b130c565bce4fd61bd8d5f1ea12d9",
+      "createdAt": "2026-09-23T12:44:17.057Z",
+      "type": "content/analysis/v1",
+      "signer": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "status": "active",
+      "extensions": {
+        "file": "map/edges/eval-run-example.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/eval-run-example",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/qsv",
+      "bundle": "bundles/map/edges/qsv.bundle.json",
+      "packageHash": "7516613440e37bf084389daeea2467336c33a0a8b7f1496330cf67e880c425c0",
+      "createdAt": "2026-09-23T12:44:17.058Z",
+      "type": "content/analysis/v1",
+      "signer": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "status": "withdrawn",
+      "withdrawn": {
+        "at": "2026-09-24T01:52:29.118Z",
+        "reason": "Its could-emit relation rested on an issue thread that is not pinned. Restated from the pinned README as map/edges/qsv-2.yaml."
+      },
+      "extensions": {
+        "file": "map/edges/qsv.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/qsv",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/verikan",
+      "bundle": "bundles/map/edges/verikan.bundle.json",
+      "packageHash": "fd93ba04ffd5506c3aeefb5e8e01165596aaed250564366b1e11ce2044ce5d48",
+      "createdAt": "2026-09-23T12:44:17.060Z",
+      "type": "content/analysis/v1",
+      "signer": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "status": "withdrawn",
+      "withdrawn": {
+        "at": "2026-09-24T01:52:30.551Z",
+        "reason": "Its basis named a specification revision that the pinned README does not. Restated as map/edges/verikan-2.yaml."
+      },
+      "extensions": {
+        "file": "map/edges/verikan.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/verikan",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/okfn-ckan-mcp",
+      "bundle": "bundles/map/edges/okfn-ckan-mcp.bundle.json",
+      "packageHash": "f5b679997e1c75172ecb7f6846dba0bf0d1a3e59eda2a0c939330936c1e7a9b6",
+      "createdAt": "2026-09-23T12:44:17.061Z",
+      "type": "content/analysis/v1",
+      "signer": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "status": "withdrawn",
+      "withdrawn": {
+        "at": "2026-09-24T01:52:30.677Z",
+        "reason": "Its name and basis said CKAN; the pinned README does not. Restated as map/edges/okfn-mcp-server.yaml."
+      },
+      "extensions": {
+        "file": "map/edges/okfn-ckan-mcp.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/okfn-ckan-mcp",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/humane-intelligence-red-teaming",
+      "bundle": "bundles/map/edges/humane-intelligence-red-teaming.bundle.json",
+      "packageHash": "bec05fcfc02896d23e52e75e3356e132c5799704bcbcc69d8cda53564a17e31a",
+      "createdAt": "2026-09-23T12:44:17.063Z",
+      "type": "content/analysis/v1",
+      "signer": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "status": "active",
+      "extensions": {
+        "file": "map/edges/humane-intelligence-red-teaming.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/humane-intelligence-red-teaming",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/strands-agents",
+      "bundle": "bundles/map/edges/strands-agents.bundle.json",
+      "packageHash": "745ed38b19b0f745fb8af49e07632534276a02f61c882e6d216fad35c811bca9",
+      "createdAt": "2026-09-23T12:44:17.064Z",
+      "type": "content/analysis/v1",
+      "signer": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "status": "active",
+      "extensions": {
+        "file": "map/edges/strands-agents.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/strands-agents",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/microsoft-agent-framework",
+      "bundle": "bundles/map/edges/microsoft-agent-framework.bundle.json",
+      "packageHash": "3ab9a111d34b9c5d9f144f870571f247634daed0d4f9f4caaf77343832c84a70",
+      "createdAt": "2026-09-23T12:44:17.065Z",
+      "type": "content/analysis/v1",
+      "signer": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "status": "active",
+      "extensions": {
+        "file": "map/edges/microsoft-agent-framework.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/microsoft-agent-framework",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/mila-mozilla-foundation-layer",
+      "bundle": "bundles/map/edges/mila-mozilla-foundation-layer.bundle.json",
+      "packageHash": "22c3994b35da559cc1ae11e9df7d598f8c2aab3e170736da4064623fdad8bd2b",
+      "createdAt": "2026-09-23T12:44:17.067Z",
+      "type": "content/analysis/v1",
+      "signer": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "status": "active",
+      "extensions": {
+        "file": "map/edges/mila-mozilla-foundation-layer.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/mila-mozilla-foundation-layer",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/header-2",
+      "bundle": "bundles/map/header-2.bundle.json",
+      "packageHash": "a30ad67384d1485853573ed24ed6fc70fd126af665cf85e77a0b46347f7d16af",
+      "createdAt": "2026-09-24T01:52:31.397Z",
+      "type": "content/analysis/v1",
+      "signer": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "status": "active",
+      "extensions": {
+        "file": "map/header-2.yaml",
+        "role": "map-header",
+        "edgeId": null,
+        "step": 3
+      }
+    },
+    {
+      "name": "map/edges/sigstore-rekor-2",
+      "bundle": "bundles/map/edges/sigstore-rekor-2.bundle.json",
+      "packageHash": "edd3f873d76e2e71ca8b9412ccc3f03b3e8b4934cc06f5c75b7e942f01a89f8e",
+      "createdAt": "2026-09-24T01:52:31.400Z",
+      "type": "content/analysis/v1",
+      "signer": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "status": "active",
+      "extensions": {
+        "file": "map/edges/sigstore-rekor-2.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/sigstore-rekor-2",
+        "step": 3
+      }
+    },
+    {
+      "name": "map/edges/rfc-3161-2",
+      "bundle": "bundles/map/edges/rfc-3161-2.bundle.json",
+      "packageHash": "f7a8ac7257b7ac2f38feda9c8f7c0284f14d8bb5de8001c2fdcac3bd3e219a00",
+      "createdAt": "2026-09-24T01:52:31.401Z",
+      "type": "content/analysis/v1",
+      "signer": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "status": "active",
+      "extensions": {
+        "file": "map/edges/rfc-3161-2.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/rfc-3161-2",
+        "step": 3
+      }
+    },
+    {
+      "name": "map/edges/rfc-8032-2",
+      "bundle": "bundles/map/edges/rfc-8032-2.bundle.json",
+      "packageHash": "29b5ba00bd2678c79a30760dda985e37be582319da6142aafae254e628f7a8d2",
+      "createdAt": "2026-09-24T01:52:31.403Z",
+      "type": "content/analysis/v1",
+      "signer": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "status": "active",
+      "extensions": {
+        "file": "map/edges/rfc-8032-2.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/rfc-8032-2",
+        "step": 3
+      }
+    },
+    {
+      "name": "map/edges/did-key-2",
+      "bundle": "bundles/map/edges/did-key-2.bundle.json",
+      "packageHash": "967da9fce339be6a1472c004c2d2e19e441345ea017879e08c2db195d9abf0f7",
+      "createdAt": "2026-09-24T01:52:31.404Z",
+      "type": "content/analysis/v1",
+      "signer": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "status": "active",
+      "extensions": {
+        "file": "map/edges/did-key-2.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/did-key-2",
+        "step": 3
+      }
+    },
+    {
+      "name": "map/edges/discourse-graphs-2",
+      "bundle": "bundles/map/edges/discourse-graphs-2.bundle.json",
+      "packageHash": "32e2126fa11ef9434b9db8b4e36347b5f0c3f7f5dc4728262352eb664028d22c",
+      "createdAt": "2026-09-24T01:52:31.405Z",
+      "type": "content/analysis/v1",
+      "signer": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "status": "active",
+      "extensions": {
+        "file": "map/edges/discourse-graphs-2.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/discourse-graphs-2",
+        "step": 3
+      }
+    },
+    {
+      "name": "map/edges/nanopublications-2",
+      "bundle": "bundles/map/edges/nanopublications-2.bundle.json",
+      "packageHash": "355e597eec401a66aa6fa5f7087a591cefabb58f30beef78054ab86f4733c39d",
+      "createdAt": "2026-09-24T01:52:31.407Z",
+      "type": "content/analysis/v1",
+      "signer": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "status": "active",
+      "extensions": {
+        "file": "map/edges/nanopublications-2.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/nanopublications-2",
+        "step": 3
+      }
+    },
+    {
+      "name": "map/edges/proof-of-control-2",
+      "bundle": "bundles/map/edges/proof-of-control-2.bundle.json",
+      "packageHash": "5fa2c0af422fdd3e78538a765f9e3e616573df0e1871e4ee6d0535ce8fa358c8",
+      "createdAt": "2026-09-24T01:52:31.408Z",
+      "type": "content/analysis/v1",
+      "signer": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "status": "active",
+      "extensions": {
+        "file": "map/edges/proof-of-control-2.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/proof-of-control-2",
+        "step": 3
+      }
+    },
+    {
+      "name": "map/edges/nanda-agentfacts-2",
+      "bundle": "bundles/map/edges/nanda-agentfacts-2.bundle.json",
+      "packageHash": "e63c2c090ce4e94677eed483d21252c635b799b983984b78504f9bb42bcca50e",
+      "createdAt": "2026-09-24T01:52:31.410Z",
+      "type": "content/analysis/v1",
+      "signer": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "status": "active",
+      "extensions": {
+        "file": "map/edges/nanda-agentfacts-2.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/nanda-agentfacts-2",
+        "step": 3
+      }
+    },
+    {
+      "name": "map/edges/atproto-lexicon-2",
+      "bundle": "bundles/map/edges/atproto-lexicon-2.bundle.json",
+      "packageHash": "ae9302945cba77cd3fbe682d558d60446064a976136098f0913c37907e1b400a",
+      "createdAt": "2026-09-24T01:52:31.411Z",
+      "type": "content/analysis/v1",
+      "signer": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "status": "active",
+      "extensions": {
+        "file": "map/edges/atproto-lexicon-2.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/atproto-lexicon-2",
+        "step": 3
+      }
+    },
+    {
+      "name": "map/edges/google-okf-2",
+      "bundle": "bundles/map/edges/google-okf-2.bundle.json",
+      "packageHash": "3b0d211ddfeb4950fe74345da4a05b79719b28b28b65a0bd39ed8b9dd78d7b4d",
+      "createdAt": "2026-09-24T01:52:31.412Z",
+      "type": "content/analysis/v1",
+      "signer": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "status": "active",
+      "extensions": {
+        "file": "map/edges/google-okf-2.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/google-okf-2",
+        "step": 3
+      }
+    },
+    {
+      "name": "map/edges/mira-schema-2",
+      "bundle": "bundles/map/edges/mira-schema-2.bundle.json",
+      "packageHash": "1983f90991ea2e64423c5ca7166ae06190701487726e7cc1f91118781032f37b",
+      "createdAt": "2026-09-24T01:52:31.414Z",
+      "type": "content/analysis/v1",
+      "signer": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "status": "active",
+      "extensions": {
+        "file": "map/edges/mira-schema-2.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/mira-schema-2",
+        "step": 3
+      }
+    },
+    {
+      "name": "map/edges/qsv-2",
+      "bundle": "bundles/map/edges/qsv-2.bundle.json",
+      "packageHash": "df171a53a17fb8c2faf8ab5e6adb8fc5870bb9d77290e26ce81cd0175c04c7ee",
+      "createdAt": "2026-09-24T01:52:31.415Z",
+      "type": "content/analysis/v1",
+      "signer": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "status": "active",
+      "extensions": {
+        "file": "map/edges/qsv-2.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/qsv-2",
+        "step": 3
+      }
+    },
+    {
+      "name": "map/edges/verikan-2",
+      "bundle": "bundles/map/edges/verikan-2.bundle.json",
+      "packageHash": "ce505860778fc7be463c00f65e25830569f1e0a1bd1213cc07667f70222e3340",
+      "createdAt": "2026-09-24T01:52:31.417Z",
+      "type": "content/analysis/v1",
+      "signer": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "status": "active",
+      "extensions": {
+        "file": "map/edges/verikan-2.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/verikan-2",
+        "step": 3
+      }
+    },
+    {
+      "name": "map/edges/okfn-mcp-server",
+      "bundle": "bundles/map/edges/okfn-mcp-server.bundle.json",
+      "packageHash": "35b1e393e8bd60c99407cb19b8ecf49fb774c8375ef754434c8c38cbc184dd98",
+      "createdAt": "2026-09-24T01:52:31.418Z",
+      "type": "content/analysis/v1",
+      "signer": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "status": "active",
+      "extensions": {
+        "file": "map/edges/okfn-mcp-server.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/okfn-mcp-server",
+        "step": 3
+      }
+    }
+  ]
+}

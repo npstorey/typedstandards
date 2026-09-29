@@ -1,0 +1,30 @@
+{
+  "node": {
+    "metadata": {
+      "schemaVersion": "0.1.0",
+      "packageId": "85b178da-5c48-4c79-ad7a-fb5ab6bc27e1",
+      "createdAt": "2026-09-24T01:52:30.677Z",
+      "signingKeyId": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH"
+    },
+    "type": "attestation/withdraws/v1",
+    "signer": {
+      "bindingTier": "pseudonymous",
+      "identifier": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "displayName": "typedstandards-core-satellite-example (self-certifying example key)"
+    },
+    "targetNodeId": "f5b679997e1c75172ecb7f6846dba0bf0d1a3e59eda2a0c939330936c1e7a9b6",
+    "contentCanonicalization": "https://typedstandards.org/canonicalization/legacy-json/v1",
+    "reason": "Its name and basis said CKAN; the pinned README does not. Restated as map/edges/okfn-mcp-server.yaml.",
+    "effectiveAt": "2026-09-24T01:52:30.677Z",
+    "contentHash": {
+      "sha256": "b35ce7f5767f81531c2dca949450ff83f8dca764afdf2285d737f67392b76f77"
+    }
+  },
+  "nodeId": "9853229b4da829ca9527beb5bf9df649e6df667620eef8ed9027da8ad41c4913",
+  "signature": {
+    "signature": "Hl/npuEiquOTDdL/GHaYfAL7N/o0r/YZvSW3R7LQ+mIzMdrv1WjFHyiTRB19xLO9q+fucXJviUNEPRKiapHXBw==",
+    "publicKey": "MCowBQYDK2VwAyEA+BmmxJyxU0vnC2LLuSu0xcr1wwevoOLpcCFjnbnTUYQ=",
+    "algorithm": "Ed25519ph",
+    "kid": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH"
+  }
+}

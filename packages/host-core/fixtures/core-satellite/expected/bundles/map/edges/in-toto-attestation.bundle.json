@@ -1,0 +1,196 @@
+{
+  "protocolVersion": "0.1.0",
+  "packageHash": "9a89122cad07ca4bde999ae12368b1ad4463871228273d486c9d78bcf7b5d6e6",
+  "visibility": "public",
+  "captureMethod": "script-run",
+  "contentProfile": "default",
+  "producerProfile": "scripted-recomputation/core-satellite-example",
+  "type": "content/analysis/v1",
+  "signer": {
+    "bindingTier": "pseudonymous",
+    "identifier": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+    "displayName": "typedstandards-core-satellite-example (self-certifying example key)"
+  },
+  "contentHash": {
+    "sha256": "6a2e08cd8bd55f67b2f7726fe88e835279acde9695fad1535b3662b82506ab05"
+  },
+  "contentCanonicalization": "https://typedstandards.org/canonicalization/raw-bytes/v1",
+  "signature": {
+    "signature": "gSybOCEAMcEWiN1xV6ILPYsOQp2HFGj6vdlVt54aCeyEqYOqeVEPP4UuUW+I2Ol2hy8yeRFEGWzmtX0Pi3/lDA==",
+    "publicKey": "MCowBQYDK2VwAyEA+BmmxJyxU0vnC2LLuSu0xcr1wwevoOLpcCFjnbnTUYQ=",
+    "algorithm": "Ed25519ph",
+    "kid": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH"
+  },
+  "trustRegistryUrl": "https://core-satellite.typedstandards.org/.well-known/typed-publisher.json",
+  "subjectTitle": "map/edges/in-toto-attestation.yaml: typedstandards.org builds-on in-toto Attestation Framework (DigestSet)",
+  "subjectSummary": "map/edges/in-toto-attestation.yaml: typedstandards.org builds-on in-toto Attestation Framework (DigestSet). The file's exact UTF-8 bytes (1402 bytes) are this record's output under raw-bytes/v1, so contentHash.sha256 is the file's ordinary SHA-256. The 2 source digests in queries are signed assertions that no check recomputes. The signer is a self-certifying did:key; it shows which key signed, not who holds it.",
+  "trustRegistry": {
+    "$comment": "The example publisher's own statement about its signing key, served at https://core-satellite.typedstandards.org/.well-known/typed-publisher.json. It is not a Typed Standards record, and not an endorsement by the Typed Standards specification or by typedstandards.org, although this host is a subdomain of it. activatedAt is the earliest createdAt in package/build-log.json: the first record signed under the key, as the signer states it.",
+    "keys": [
+      {
+        "kid": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+        "publicKey": "MCowBQYDK2VwAyEA+BmmxJyxU0vnC2LLuSu0xcr1wwevoOLpcCFjnbnTUYQ=",
+        "status": "active",
+        "activatedAt": "2026-09-22T19:25:30.535Z",
+        "deprecatedAt": null,
+        "revokedAt": null,
+        "signerIdentity": {
+          "bindingTier": "pseudonymous",
+          "identifier": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+          "displayName": "typedstandards-core-satellite-example (self-certifying example key)"
+        }
+      }
+    ]
+  },
+  "package": {
+    "metadata": {
+      "schemaVersion": "0.1.0",
+      "packageId": "3e7e9109-4b98-466e-a635-262ac521c9c9",
+      "createdAt": "2026-09-23T12:44:17.018Z",
+      "signingKeyId": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "captureMethod": "script-run"
+    },
+    "producerProfile": "scripted-recomputation/core-satellite-example",
+    "type": "content/analysis/v1",
+    "signer": {
+      "bindingTier": "pseudonymous",
+      "identifier": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "displayName": "typedstandards-core-satellite-example (self-certifying example key)"
+    },
+    "contentCanonicalization": "https://typedstandards.org/canonicalization/raw-bytes/v1",
+    "prompt": {
+      "hash": "9d633b729e3be3eb8ebf6ee83c1ba469c7fbf3360cd5f90a03a968a35c4fd384",
+      "visibility": "full_text",
+      "text": "Package the file map/edges/in-toto-attestation.yaml, one edge of the map of Typed Standards relations to public projects: typedstandards.org builds-on in-toto Attestation Framework (DigestSet), ring 1, as the output of a scripted-recomputation record under raw-bytes/v1. corpus/pin.mjs wrote the file from corpus/sources.json, corpus/manifest.json; this program read it from disk."
+    },
+    "queries": [
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md",
+          "sha256": "0e3b54b39e6877a076c495b82afd7295aefac09c70054c02e9832147037ff3f5",
+          "bytes": 294146,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:25Z",
+          "licence": "CC BY 4.0, as the document states (§3)"
+        },
+        "datasetId": "ts-spec"
+      },
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://raw.githubusercontent.com/in-toto/attestation/df02077bf97218a8860a5c534eff1f1381f56984/spec/v1/digest_set.md",
+          "sha256": "0b1889fdea7f6d623b41555632aedf04ee4398cf02a32002060608c75ebb038e",
+          "bytes": 8873,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:27Z",
+          "licence": "Apache-2.0 (repository LICENSE notice)"
+        },
+        "datasetId": "in-toto-attestation"
+      },
+      {
+        "tool": "corpus/pin.mjs",
+        "operationType": "script-run",
+        "arguments": {
+          "command": "node corpus/pin.mjs",
+          "scriptSha256": "094d6fe92ed15262e5f53b2437988d73f410e81fd889aeb9e7266a1d358dd42e",
+          "inputs": [
+            {
+              "path": "corpus/sources.json",
+              "sha256": "72337b854d073159d8d67c5ab16f2cc52c70e6d74649cb1d59b0d1378b20edbe"
+            },
+            {
+              "path": "corpus/manifest.json",
+              "sha256": "2c23dafb122ed6dd7f1acb5f82296ccce65079417a29a898589aa9fcbba77980"
+            }
+          ],
+          "output": {
+            "path": "map/edges/in-toto-attestation.yaml",
+            "sha256": "6a2e08cd8bd55f67b2f7726fe88e835279acde9695fad1535b3662b82506ab05",
+            "bytes": 1402
+          }
+        }
+      },
+      {
+        "tool": "package/build.mjs",
+        "operationType": "package-file",
+        "arguments": {
+          "command": "node package/build.mjs sign",
+          "scriptSha256": "ed15926462300ec6a3051d16b58797b058a6f01a9c746239022c655b877cf21c",
+          "inputFile": "map/edges/in-toto-attestation.yaml",
+          "inputSha256": "6a2e08cd8bd55f67b2f7726fe88e835279acde9695fad1535b3662b82506ab05"
+        }
+      }
+    ],
+    "dataSources": [
+      {
+        "sourceId": "ts-spec",
+        "catalogType": "github-raw-at-sha",
+        "portalUrl": "https://raw.githubusercontent.com",
+        "datasetId": "ts-spec",
+        "datasetUrl": "https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md",
+        "accessTimestamp": "2026-09-22T19:20:25Z"
+      },
+      {
+        "sourceId": "in-toto-attestation",
+        "catalogType": "github-raw-at-sha",
+        "portalUrl": "https://raw.githubusercontent.com",
+        "datasetId": "in-toto-attestation",
+        "datasetUrl": "https://raw.githubusercontent.com/in-toto/attestation/df02077bf97218a8860a5c534eff1f1381f56984/spec/v1/digest_set.md",
+        "accessTimestamp": "2026-09-22T19:20:27Z"
+      }
+    ],
+    "cost": {
+      "model": "none"
+    },
+    "skillMetadata": {},
+    "output": "# One edge of the map whose header is map/header.yaml. Written by corpus/pin.mjs; this file's exact bytes\n# are the output of one signed Typed Standards record in package/.\nid: typedstandards.org/map/in-toto-attestation\ncreatedAt: \"2026-09-22\"\nsubject:\n  id: typedstandards.org\n  ref:\n    location: https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md\n    sha256: 0e3b54b39e6877a076c495b82afd7295aefac09c70054c02e9832147037ff3f5\nobject:\n  id: github.com/in-toto/attestation\n  ref:\n    location: https://raw.githubusercontent.com/in-toto/attestation/df02077bf97218a8860a5c534eff1f1381f56984/spec/v1/digest_set.md\n    sha256: 0b1889fdea7f6d623b41555632aedf04ee4398cf02a32002060608c75ebb038e\nx-typedstandards:\n  relation: builds-on\n  basis: \"The contentHash field uses the in-toto DigestSet convention (algorithm name to hex digest), and the type URIs follow the pattern of in-toto's predicateType (specification §5.5).\"\n  ring: 1\n  name: in-toto Attestation Framework (DigestSet)\n  publisher: in-toto project\n  pin:\n    fetchedAt: \"2026-09-22T19:20:27Z\"\n    bytes: 8873\n    httpStatus: 200\n    basis: tag v1.2.0, the latest release (2026-03-18)\n    licence: Apache-2.0 (repository LICENSE notice)\n  curation: { seed: kept, reason: \"Kept for in-toto. DSSE, listed beside it, is dropped (see the header).\" }\n",
+    "trace": {
+      "resourceSpans": []
+    },
+    "summary": "map/edges/in-toto-attestation.yaml: typedstandards.org builds-on in-toto Attestation Framework (DigestSet). The file's exact UTF-8 bytes (1402 bytes) are this record's output under raw-bytes/v1, so contentHash.sha256 is the file's ordinary SHA-256. The 2 source digests in queries are signed assertions that no check recomputes. The signer is a self-certifying did:key; it shows which key signed, not who holds it.",
+    "extensions": {
+      "io.github.npstorey.core-satellite-example": {
+        "role": "map-edge",
+        "edgeId": "typedstandards.org/map/in-toto-attestation",
+        "repository": "https://github.com/npstorey/typedstandards-core-satellite-example",
+        "file": {
+          "path": "map/edges/in-toto-attestation.yaml",
+          "sha256": "6a2e08cd8bd55f67b2f7726fe88e835279acde9695fad1535b3662b82506ab05",
+          "bytes": 1402
+        },
+        "writer": {
+          "path": "corpus/pin.mjs",
+          "sha256": "094d6fe92ed15262e5f53b2437988d73f410e81fd889aeb9e7266a1d358dd42e"
+        },
+        "writerInputs": [
+          {
+            "path": "corpus/sources.json",
+            "sha256": "72337b854d073159d8d67c5ab16f2cc52c70e6d74649cb1d59b0d1378b20edbe"
+          },
+          {
+            "path": "corpus/manifest.json",
+            "sha256": "2c23dafb122ed6dd7f1acb5f82296ccce65079417a29a898589aa9fcbba77980"
+          }
+        ],
+        "pinnedAt": "2026-09-22T19:20:31Z",
+        "sourcesCited": {
+          "pinned": 2,
+          "unpinned": 0
+        },
+        "model": {
+          "title": "The Core-Satellite Model",
+          "publisher": "SciOS",
+          "location": "https://scios.tech/thoughts",
+          "dated": "2026-06-30",
+          "readAt": "2026-09-22"
+        }
+      }
+    },
+    "contentHash": {
+      "sha256": "6a2e08cd8bd55f67b2f7726fe88e835279acde9695fad1535b3662b82506ab05"
+    }
+  }
+}

@@ -1,0 +1,196 @@
+{
+  "protocolVersion": "0.1.0",
+  "packageHash": "ae9302945cba77cd3fbe682d558d60446064a976136098f0913c37907e1b400a",
+  "visibility": "public",
+  "captureMethod": "script-run",
+  "contentProfile": "default",
+  "producerProfile": "scripted-recomputation/core-satellite-example",
+  "type": "content/analysis/v1",
+  "signer": {
+    "bindingTier": "pseudonymous",
+    "identifier": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+    "displayName": "typedstandards-core-satellite-example (self-certifying example key)"
+  },
+  "contentHash": {
+    "sha256": "52179402bf64d5e8084a5e365a8b3d459d9211086e3836135ed6a5d735f34ada"
+  },
+  "contentCanonicalization": "https://typedstandards.org/canonicalization/raw-bytes/v1",
+  "signature": {
+    "signature": "s3vi2FDuR26Ij0thgywxmeK89EkG1mwSqimuVDXyH1DukKzi2pP3g9nOL1PJ48q+v5pIgb15gGGPRG1LucElDQ==",
+    "publicKey": "MCowBQYDK2VwAyEA+BmmxJyxU0vnC2LLuSu0xcr1wwevoOLpcCFjnbnTUYQ=",
+    "algorithm": "Ed25519ph",
+    "kid": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH"
+  },
+  "trustRegistryUrl": "https://core-satellite.typedstandards.org/.well-known/typed-publisher.json",
+  "subjectTitle": "map/edges/atproto-lexicon-2.yaml: typedstandards.org adjacent ATProto Lexicon",
+  "subjectSummary": "map/edges/atproto-lexicon-2.yaml: typedstandards.org adjacent ATProto Lexicon. The file's exact UTF-8 bytes (1524 bytes) are this record's output under raw-bytes/v1, so contentHash.sha256 is the file's ordinary SHA-256. The 2 source digests in queries are signed assertions that no check recomputes. The signer is a self-certifying did:key; it shows which key signed, not who holds it.",
+  "trustRegistry": {
+    "$comment": "The example publisher's own statement about its signing key, served at https://core-satellite.typedstandards.org/.well-known/typed-publisher.json. It is not a Typed Standards record, and not an endorsement by the Typed Standards specification or by typedstandards.org, although this host is a subdomain of it. activatedAt is the earliest createdAt in package/build-log.json: the first record signed under the key, as the signer states it.",
+    "keys": [
+      {
+        "kid": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+        "publicKey": "MCowBQYDK2VwAyEA+BmmxJyxU0vnC2LLuSu0xcr1wwevoOLpcCFjnbnTUYQ=",
+        "status": "active",
+        "activatedAt": "2026-09-22T19:25:30.535Z",
+        "deprecatedAt": null,
+        "revokedAt": null,
+        "signerIdentity": {
+          "bindingTier": "pseudonymous",
+          "identifier": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+          "displayName": "typedstandards-core-satellite-example (self-certifying example key)"
+        }
+      }
+    ]
+  },
+  "package": {
+    "metadata": {
+      "schemaVersion": "0.1.0",
+      "packageId": "7f6fb425-b5f2-45b3-9607-1bbf44a687bb",
+      "createdAt": "2026-09-24T01:52:31.411Z",
+      "signingKeyId": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "captureMethod": "script-run"
+    },
+    "producerProfile": "scripted-recomputation/core-satellite-example",
+    "type": "content/analysis/v1",
+    "signer": {
+      "bindingTier": "pseudonymous",
+      "identifier": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "displayName": "typedstandards-core-satellite-example (self-certifying example key)"
+    },
+    "contentCanonicalization": "https://typedstandards.org/canonicalization/raw-bytes/v1",
+    "prompt": {
+      "hash": "93306c848fc143761be27637964b4fecb43410de5f024e646d58e25e3cf5167b",
+      "visibility": "full_text",
+      "text": "Package the file map/edges/atproto-lexicon-2.yaml, one edge of the map of Typed Standards relations to public projects: typedstandards.org adjacent ATProto Lexicon, ring 2, as the output of a scripted-recomputation record under raw-bytes/v1. corpus/pin.mjs wrote the file from corpus/sources.json, corpus/manifest.json; this program read it from disk."
+    },
+    "queries": [
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md",
+          "sha256": "0e3b54b39e6877a076c495b82afd7295aefac09c70054c02e9832147037ff3f5",
+          "bytes": 294146,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:25Z",
+          "licence": "CC BY 4.0, as the document states (§3)"
+        },
+        "datasetId": "ts-spec"
+      },
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://raw.githubusercontent.com/bluesky-social/atproto-website/7a6cdd6c7b48d2aa8d93293827374e0c4fdbb305/src/app/%5Blocale%5D/specs/lexicon/en.mdx",
+          "sha256": "3c893eb2eb94c50c12ad491d9b75f3965af49d8328be5140bea628126969be55",
+          "bytes": 35613,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:30Z",
+          "licence": "CC BY 4.0 for documentation text and specifications (README)"
+        },
+        "datasetId": "atproto-lexicon"
+      },
+      {
+        "tool": "corpus/pin.mjs",
+        "operationType": "script-run",
+        "arguments": {
+          "command": "node corpus/pin.mjs",
+          "scriptSha256": "7cc1863dc74709a17224381785e56f133b2bfa6b02f73f9597e9a2853c098e28",
+          "inputs": [
+            {
+              "path": "corpus/sources.json",
+              "sha256": "2f11818ce690781d79d687b86dfbae33741ba0d0b8f42944bc4e12318de364c5"
+            },
+            {
+              "path": "corpus/manifest.json",
+              "sha256": "2c23dafb122ed6dd7f1acb5f82296ccce65079417a29a898589aa9fcbba77980"
+            }
+          ],
+          "output": {
+            "path": "map/edges/atproto-lexicon-2.yaml",
+            "sha256": "52179402bf64d5e8084a5e365a8b3d459d9211086e3836135ed6a5d735f34ada",
+            "bytes": 1524
+          }
+        }
+      },
+      {
+        "tool": "package/build.mjs",
+        "operationType": "package-file",
+        "arguments": {
+          "command": "node package/build.mjs sign",
+          "scriptSha256": "5ce0251a76a818431dea09e2d7b95c3ed23edccff29758a50de0b579c820b268",
+          "inputFile": "map/edges/atproto-lexicon-2.yaml",
+          "inputSha256": "52179402bf64d5e8084a5e365a8b3d459d9211086e3836135ed6a5d735f34ada"
+        }
+      }
+    ],
+    "dataSources": [
+      {
+        "sourceId": "ts-spec",
+        "catalogType": "github-raw-at-sha",
+        "portalUrl": "https://raw.githubusercontent.com",
+        "datasetId": "ts-spec",
+        "datasetUrl": "https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md",
+        "accessTimestamp": "2026-09-22T19:20:25Z"
+      },
+      {
+        "sourceId": "atproto-lexicon",
+        "catalogType": "github-raw-at-sha",
+        "portalUrl": "https://raw.githubusercontent.com",
+        "datasetId": "atproto-lexicon",
+        "datasetUrl": "https://raw.githubusercontent.com/bluesky-social/atproto-website/7a6cdd6c7b48d2aa8d93293827374e0c4fdbb305/src/app/%5Blocale%5D/specs/lexicon/en.mdx",
+        "accessTimestamp": "2026-09-22T19:20:30Z"
+      }
+    ],
+    "cost": {
+      "model": "none"
+    },
+    "skillMetadata": {},
+    "output": "# One edge of the map whose header is map/header-2.yaml. Written by corpus/pin.mjs; this file's exact bytes\n# are the output of one signed Typed Standards record in package/.\nid: typedstandards.org/map/atproto-lexicon-2\ncreatedAt: \"2026-09-22\"\nsubject:\n  id: typedstandards.org\n  ref:\n    location: https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md\n    sha256: 0e3b54b39e6877a076c495b82afd7295aefac09c70054c02e9832147037ff3f5\nobject:\n  id: atproto.com/specs/lexicon\n  ref:\n    location: \"https://raw.githubusercontent.com/bluesky-social/atproto-website/7a6cdd6c7b48d2aa8d93293827374e0c4fdbb305/src/app/%5Blocale%5D/specs/lexicon/en.mdx\"\n    sha256: 3c893eb2eb94c50c12ad491d9b75f3965af49d8328be5140bea628126969be55\nx-typedstandards:\n  relation: adjacent\n  basis: A schema language for typed records in the AT Protocol. The SciOS paper likens its common schema to an ATProto Lexicon. Neither depends on the other.\n  ring: 2\n  name: ATProto Lexicon\n  publisher: Bluesky Social PBC (AT Protocol)\n  pin:\n    fetchedAt: \"2026-09-22T19:20:30Z\"\n    bytes: 35613\n    httpStatus: 200\n    basis: \"main HEAD on 2026-09-22 (the repository has no tags); the source of atproto.com/specs/lexicon\"\n    licence: CC BY 4.0 for documentation text and specifications (README)\n  curation:\n    seed: kept\n    reason: Restates map/edges/atproto-lexicon.yaml, which said the paper names Lexicon as a model. The paper says its schema is akin to one.\n",
+    "trace": {
+      "resourceSpans": []
+    },
+    "summary": "map/edges/atproto-lexicon-2.yaml: typedstandards.org adjacent ATProto Lexicon. The file's exact UTF-8 bytes (1524 bytes) are this record's output under raw-bytes/v1, so contentHash.sha256 is the file's ordinary SHA-256. The 2 source digests in queries are signed assertions that no check recomputes. The signer is a self-certifying did:key; it shows which key signed, not who holds it.",
+    "extensions": {
+      "io.github.npstorey.core-satellite-example": {
+        "role": "map-edge",
+        "edgeId": "typedstandards.org/map/atproto-lexicon-2",
+        "repository": "https://github.com/npstorey/typedstandards-core-satellite-example",
+        "file": {
+          "path": "map/edges/atproto-lexicon-2.yaml",
+          "sha256": "52179402bf64d5e8084a5e365a8b3d459d9211086e3836135ed6a5d735f34ada",
+          "bytes": 1524
+        },
+        "writer": {
+          "path": "corpus/pin.mjs",
+          "sha256": "7cc1863dc74709a17224381785e56f133b2bfa6b02f73f9597e9a2853c098e28"
+        },
+        "writerInputs": [
+          {
+            "path": "corpus/sources.json",
+            "sha256": "2f11818ce690781d79d687b86dfbae33741ba0d0b8f42944bc4e12318de364c5"
+          },
+          {
+            "path": "corpus/manifest.json",
+            "sha256": "2c23dafb122ed6dd7f1acb5f82296ccce65079417a29a898589aa9fcbba77980"
+          }
+        ],
+        "pinnedAt": "2026-09-22T19:20:31Z",
+        "sourcesCited": {
+          "pinned": 2,
+          "unpinned": 0
+        },
+        "model": {
+          "title": "The Core-Satellite Model",
+          "publisher": "SciOS",
+          "location": "https://scios.tech/thoughts",
+          "dated": "2026-06-30",
+          "readAt": "2026-09-22"
+        }
+      }
+    },
+    "contentHash": {
+      "sha256": "52179402bf64d5e8084a5e365a8b3d459d9211086e3836135ed6a5d735f34ada"
+    }
+  }
+}

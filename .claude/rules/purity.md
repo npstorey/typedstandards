@@ -63,13 +63,13 @@ Three checks, and they are not redundant: each covers something another does not
 
 Per rule, per package (`src/`):
 
-| Rule | produce-core | verify-core | cli |
-|---|---|---|---|
-| no Node built-in import | typecheck, lint, browser-safety test | typecheck, browser-safety test | typecheck |
-| no `process` read | typecheck, lint | typecheck | typecheck |
-| no `Buffer` | typecheck, lint, browser-safety test | typecheck, browser-safety test | typecheck |
-| no clock, no RNG | browser-safety test | not a verify-core rule | not a cli rule (both arrive through `Io`) |
-| no direct network call | nothing mechanical | nothing mechanical | nothing mechanical; its tests assert no call |
+| Rule | produce-core | verify-core | cli | host-core |
+|---|---|---|---|---|
+| no Node built-in import | typecheck, lint, browser-safety test | typecheck, browser-safety test | typecheck | typecheck, purity test |
+| no `process` read | typecheck, lint | typecheck | typecheck | typecheck, purity test |
+| no `Buffer` | typecheck, lint, browser-safety test | typecheck, browser-safety test | typecheck | typecheck, purity test |
+| no clock, no RNG | browser-safety test | not a verify-core rule | not a cli rule (both arrive through `Io`) | not a host-core rule (it reads neither) |
+| no direct network call | nothing mechanical | nothing mechanical | nothing mechanical; its tests assert no call | nothing mechanical; `verify` blocks and counts both fetches |
 
 The CLI's Node entry is held instead to its pin: its program is `node/main.ts`
 alone, importing only `node:fs`, `node:process`, `node:util` and `#core`.

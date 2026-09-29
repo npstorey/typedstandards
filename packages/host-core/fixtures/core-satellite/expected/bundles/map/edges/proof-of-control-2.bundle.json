@@ -1,0 +1,196 @@
+{
+  "protocolVersion": "0.1.0",
+  "packageHash": "5fa2c0af422fdd3e78538a765f9e3e616573df0e1871e4ee6d0535ce8fa358c8",
+  "visibility": "public",
+  "captureMethod": "script-run",
+  "contentProfile": "default",
+  "producerProfile": "scripted-recomputation/core-satellite-example",
+  "type": "content/analysis/v1",
+  "signer": {
+    "bindingTier": "pseudonymous",
+    "identifier": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+    "displayName": "typedstandards-core-satellite-example (self-certifying example key)"
+  },
+  "contentHash": {
+    "sha256": "9c5c3c434f717a01a793cf23e28626657fbcc0d6c02429b6a19ac98c764268ad"
+  },
+  "contentCanonicalization": "https://typedstandards.org/canonicalization/raw-bytes/v1",
+  "signature": {
+    "signature": "61F2rd86jkkgefP+lplnjj33QA4tY305ux/7LeAcOxPGC5tuU39R+tGVpuYDWuFUZ4wFiuqnm/WA5ppt0/Z9Cw==",
+    "publicKey": "MCowBQYDK2VwAyEA+BmmxJyxU0vnC2LLuSu0xcr1wwevoOLpcCFjnbnTUYQ=",
+    "algorithm": "Ed25519ph",
+    "kid": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH"
+  },
+  "trustRegistryUrl": "https://core-satellite.typedstandards.org/.well-known/typed-publisher.json",
+  "subjectTitle": "map/edges/proof-of-control-2.yaml: typedstandards.org adjacent Open Verification: the Proof-of-Control Standard for Agents",
+  "subjectSummary": "map/edges/proof-of-control-2.yaml: typedstandards.org adjacent Open Verification: the Proof-of-Control Standard for Agents. The file's exact UTF-8 bytes (1940 bytes) are this record's output under raw-bytes/v1, so contentHash.sha256 is the file's ordinary SHA-256. The 2 source digests in queries are signed assertions that no check recomputes. The signer is a self-certifying did:key; it shows which key signed, not who holds it.",
+  "trustRegistry": {
+    "$comment": "The example publisher's own statement about its signing key, served at https://core-satellite.typedstandards.org/.well-known/typed-publisher.json. It is not a Typed Standards record, and not an endorsement by the Typed Standards specification or by typedstandards.org, although this host is a subdomain of it. activatedAt is the earliest createdAt in package/build-log.json: the first record signed under the key, as the signer states it.",
+    "keys": [
+      {
+        "kid": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+        "publicKey": "MCowBQYDK2VwAyEA+BmmxJyxU0vnC2LLuSu0xcr1wwevoOLpcCFjnbnTUYQ=",
+        "status": "active",
+        "activatedAt": "2026-09-22T19:25:30.535Z",
+        "deprecatedAt": null,
+        "revokedAt": null,
+        "signerIdentity": {
+          "bindingTier": "pseudonymous",
+          "identifier": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+          "displayName": "typedstandards-core-satellite-example (self-certifying example key)"
+        }
+      }
+    ]
+  },
+  "package": {
+    "metadata": {
+      "schemaVersion": "0.1.0",
+      "packageId": "b7fb01c4-931d-414e-b0a9-a19d126650a9",
+      "createdAt": "2026-09-24T01:52:31.408Z",
+      "signingKeyId": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "captureMethod": "script-run"
+    },
+    "producerProfile": "scripted-recomputation/core-satellite-example",
+    "type": "content/analysis/v1",
+    "signer": {
+      "bindingTier": "pseudonymous",
+      "identifier": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "displayName": "typedstandards-core-satellite-example (self-certifying example key)"
+    },
+    "contentCanonicalization": "https://typedstandards.org/canonicalization/raw-bytes/v1",
+    "prompt": {
+      "hash": "e4103adbde2fc2a9c217175c28a3e2b2317aaf981759d0a8d0cc959e23894cfa",
+      "visibility": "full_text",
+      "text": "Package the file map/edges/proof-of-control-2.yaml, one edge of the map of Typed Standards relations to public projects: typedstandards.org adjacent Open Verification: the Proof-of-Control Standard for Agents, ring 2, as the output of a scripted-recomputation record under raw-bytes/v1. corpus/pin.mjs wrote the file from corpus/sources.json, corpus/manifest.json; this program read it from disk."
+    },
+    "queries": [
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md",
+          "sha256": "0e3b54b39e6877a076c495b82afd7295aefac09c70054c02e9832147037ff3f5",
+          "bytes": 294146,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:25Z",
+          "licence": "CC BY 4.0, as the document states (§3)"
+        },
+        "datasetId": "ts-spec"
+      },
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://raw.githubusercontent.com/LFDT-ProofOfControl/ov-poc-standard/22c7b625be459f5eee7dd8690afd080b5141b8c6/0.1/en/0x01-Frontispiece.md",
+          "sha256": "28323b575b63255c6636c62ef748fb694455f86d56fa81bf28b6fc31c20b3eb5",
+          "bytes": 3503,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:29Z",
+          "licence": "Apache-2.0 (LICENSE.md, which changed from CC BY 4.0 in the commit of 2026-09-19)"
+        },
+        "datasetId": "proof-of-control"
+      },
+      {
+        "tool": "corpus/pin.mjs",
+        "operationType": "script-run",
+        "arguments": {
+          "command": "node corpus/pin.mjs",
+          "scriptSha256": "7cc1863dc74709a17224381785e56f133b2bfa6b02f73f9597e9a2853c098e28",
+          "inputs": [
+            {
+              "path": "corpus/sources.json",
+              "sha256": "2f11818ce690781d79d687b86dfbae33741ba0d0b8f42944bc4e12318de364c5"
+            },
+            {
+              "path": "corpus/manifest.json",
+              "sha256": "2c23dafb122ed6dd7f1acb5f82296ccce65079417a29a898589aa9fcbba77980"
+            }
+          ],
+          "output": {
+            "path": "map/edges/proof-of-control-2.yaml",
+            "sha256": "9c5c3c434f717a01a793cf23e28626657fbcc0d6c02429b6a19ac98c764268ad",
+            "bytes": 1940
+          }
+        }
+      },
+      {
+        "tool": "package/build.mjs",
+        "operationType": "package-file",
+        "arguments": {
+          "command": "node package/build.mjs sign",
+          "scriptSha256": "5ce0251a76a818431dea09e2d7b95c3ed23edccff29758a50de0b579c820b268",
+          "inputFile": "map/edges/proof-of-control-2.yaml",
+          "inputSha256": "9c5c3c434f717a01a793cf23e28626657fbcc0d6c02429b6a19ac98c764268ad"
+        }
+      }
+    ],
+    "dataSources": [
+      {
+        "sourceId": "ts-spec",
+        "catalogType": "github-raw-at-sha",
+        "portalUrl": "https://raw.githubusercontent.com",
+        "datasetId": "ts-spec",
+        "datasetUrl": "https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md",
+        "accessTimestamp": "2026-09-22T19:20:25Z"
+      },
+      {
+        "sourceId": "proof-of-control",
+        "catalogType": "github-raw-at-sha",
+        "portalUrl": "https://raw.githubusercontent.com",
+        "datasetId": "proof-of-control",
+        "datasetUrl": "https://raw.githubusercontent.com/LFDT-ProofOfControl/ov-poc-standard/22c7b625be459f5eee7dd8690afd080b5141b8c6/0.1/en/0x01-Frontispiece.md",
+        "accessTimestamp": "2026-09-22T19:20:29Z"
+      }
+    ],
+    "cost": {
+      "model": "none"
+    },
+    "skillMetadata": {},
+    "output": "# One edge of the map whose header is map/header-2.yaml. Written by corpus/pin.mjs; this file's exact bytes\n# are the output of one signed Typed Standards record in package/.\nid: typedstandards.org/map/proof-of-control-2\ncreatedAt: \"2026-09-22\"\nsubject:\n  id: typedstandards.org\n  ref:\n    location: https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md\n    sha256: 0e3b54b39e6877a076c495b82afd7295aefac09c70054c02e9832147037ff3f5\nobject:\n  id: github.com/LFDT-ProofOfControl/ov-poc-standard\n  ref:\n    location: https://raw.githubusercontent.com/LFDT-ProofOfControl/ov-poc-standard/22c7b625be459f5eee7dd8690afd080b5141b8c6/0.1/en/0x01-Frontispiece.md\n    sha256: 28323b575b63255c6636c62ef748fb694455f86d56fa81bf28b6fc31c20b3eb5\nx-typedstandards:\n  relation: adjacent\n  basis: A working-draft standard for agents, v1.0. Its pinned frontispiece names the normative core as definitions, six domains, evidence properties, Verifiability Tiers, a binary threshold and conformance requirements, and lists a schema, test vectors and an audit checklist. It says nothing about Typed Standards or about records of how an analysis was produced.\n  ring: 2\n  name: \"Open Verification: the Proof-of-Control Standard for Agents\"\n  publisher: Advanced AI Society (steward), in the LFDT-ProofOfControl GitHub organization\n  pin:\n    fetchedAt: \"2026-09-22T19:20:29Z\"\n    bytes: 3503\n    httpStatus: 200\n    basis: \"master HEAD on 2026-09-22 (the repository has no tags); the document states v1.0, a working draft for public comment until 2026-10-30\"\n    licence: Apache-2.0 (LICENSE.md, which changed from CC BY 4.0 in the commit of 2026-09-19)\n  curation:\n    seed: kept\n    reason: Restates map/edges/proof-of-control.yaml from the pinned frontispiece alone, which shows neither an evidence-token format nor a pointer to SLSA or in-toto. Relabelled adjacent.\n",
+    "trace": {
+      "resourceSpans": []
+    },
+    "summary": "map/edges/proof-of-control-2.yaml: typedstandards.org adjacent Open Verification: the Proof-of-Control Standard for Agents. The file's exact UTF-8 bytes (1940 bytes) are this record's output under raw-bytes/v1, so contentHash.sha256 is the file's ordinary SHA-256. The 2 source digests in queries are signed assertions that no check recomputes. The signer is a self-certifying did:key; it shows which key signed, not who holds it.",
+    "extensions": {
+      "io.github.npstorey.core-satellite-example": {
+        "role": "map-edge",
+        "edgeId": "typedstandards.org/map/proof-of-control-2",
+        "repository": "https://github.com/npstorey/typedstandards-core-satellite-example",
+        "file": {
+          "path": "map/edges/proof-of-control-2.yaml",
+          "sha256": "9c5c3c434f717a01a793cf23e28626657fbcc0d6c02429b6a19ac98c764268ad",
+          "bytes": 1940
+        },
+        "writer": {
+          "path": "corpus/pin.mjs",
+          "sha256": "7cc1863dc74709a17224381785e56f133b2bfa6b02f73f9597e9a2853c098e28"
+        },
+        "writerInputs": [
+          {
+            "path": "corpus/sources.json",
+            "sha256": "2f11818ce690781d79d687b86dfbae33741ba0d0b8f42944bc4e12318de364c5"
+          },
+          {
+            "path": "corpus/manifest.json",
+            "sha256": "2c23dafb122ed6dd7f1acb5f82296ccce65079417a29a898589aa9fcbba77980"
+          }
+        ],
+        "pinnedAt": "2026-09-22T19:20:31Z",
+        "sourcesCited": {
+          "pinned": 2,
+          "unpinned": 0
+        },
+        "model": {
+          "title": "The Core-Satellite Model",
+          "publisher": "SciOS",
+          "location": "https://scios.tech/thoughts",
+          "dated": "2026-06-30",
+          "readAt": "2026-09-22"
+        }
+      }
+    },
+    "contentHash": {
+      "sha256": "9c5c3c434f717a01a793cf23e28626657fbcc0d6c02429b6a19ac98c764268ad"
+    }
+  }
+}

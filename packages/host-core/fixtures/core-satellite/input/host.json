@@ -1,0 +1,666 @@
+{
+  "origin": "https://core-satellite.typedstandards.org",
+  "visibility": "public",
+  "registry": {
+    "$comment": "The example publisher's own statement about its signing key, served at https://core-satellite.typedstandards.org/.well-known/typed-publisher.json. It is not a Typed Standards record, and not an endorsement by the Typed Standards specification or by typedstandards.org, although this host is a subdomain of it. activatedAt is the earliest createdAt in package/build-log.json: the first record signed under the key, as the signer states it."
+  },
+  "index": {
+    "$comment": "The records this host serves, in the order they were signed. Written by package/build.mjs from the bundles and the build log, never by hand; node package/build.mjs check fails when this file differs from a fresh derivation. status is verify-core's verifyLifecycleChain reading of the withdrawals each view carries."
+  },
+  "records": [
+    {
+      "name": "core",
+      "signed": "signed/core.signed.json",
+      "attestations": [],
+      "title": "core.md: Typed Standards in the core-record shape",
+      "extensions": {
+        "file": "core.md",
+        "role": "core",
+        "edgeId": null,
+        "step": 1
+      }
+    },
+    {
+      "name": "map",
+      "signed": "signed/map.signed.json",
+      "attestations": [],
+      "title": "map.yaml: Typed Standards relations to public projects",
+      "extensions": {
+        "file": "map.yaml",
+        "role": "map-v1",
+        "edgeId": null,
+        "step": 1
+      }
+    },
+    {
+      "name": "map/header",
+      "signed": "signed/map/header.signed.json",
+      "attestations": [
+        "withdrawals/map/header.withdrawal.json"
+      ],
+      "title": "map/header.yaml: the header of the map of Typed Standards relations to public projects",
+      "extensions": {
+        "file": "map/header.yaml",
+        "role": "map-header",
+        "edgeId": null,
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/w3c-prov-o",
+      "signed": "signed/map/edges/w3c-prov-o.signed.json",
+      "attestations": [],
+      "title": "map/edges/w3c-prov-o.yaml: typedstandards.org builds-on W3C PROV-O",
+      "extensions": {
+        "file": "map/edges/w3c-prov-o.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/w3c-prov-o",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/in-toto-attestation",
+      "signed": "signed/map/edges/in-toto-attestation.signed.json",
+      "attestations": [],
+      "title": "map/edges/in-toto-attestation.yaml: typedstandards.org builds-on in-toto Attestation Framework (DigestSet)",
+      "extensions": {
+        "file": "map/edges/in-toto-attestation.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/in-toto-attestation",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/sigstore-rekor",
+      "signed": "signed/map/edges/sigstore-rekor.signed.json",
+      "attestations": [
+        "withdrawals/map/edges/sigstore-rekor.withdrawal.json"
+      ],
+      "title": "map/edges/sigstore-rekor.yaml: typedstandards.org builds-on Sigstore Rekor (hashedrekord)",
+      "extensions": {
+        "file": "map/edges/sigstore-rekor.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/sigstore-rekor",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/rfc-3161",
+      "signed": "signed/map/edges/rfc-3161.signed.json",
+      "attestations": [
+        "withdrawals/map/edges/rfc-3161.withdrawal.json"
+      ],
+      "title": "map/edges/rfc-3161.yaml: typedstandards.org builds-on RFC 3161 Time-Stamp Protocol",
+      "extensions": {
+        "file": "map/edges/rfc-3161.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/rfc-3161",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/rfc-8785",
+      "signed": "signed/map/edges/rfc-8785.signed.json",
+      "attestations": [],
+      "title": "map/edges/rfc-8785.yaml: typedstandards.org builds-on RFC 8785 JSON Canonicalization Scheme",
+      "extensions": {
+        "file": "map/edges/rfc-8785.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/rfc-8785",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/rfc-8032",
+      "signed": "signed/map/edges/rfc-8032.signed.json",
+      "attestations": [
+        "withdrawals/map/edges/rfc-8032.withdrawal.json"
+      ],
+      "title": "map/edges/rfc-8032.yaml: typedstandards.org builds-on RFC 8032 EdDSA (Ed25519ph)",
+      "extensions": {
+        "file": "map/edges/rfc-8032.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/rfc-8032",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/did-key",
+      "signed": "signed/map/edges/did-key.signed.json",
+      "attestations": [
+        "withdrawals/map/edges/did-key.withdrawal.json"
+      ],
+      "title": "map/edges/did-key.yaml: typedstandards.org builds-on The did:key Method v0.9",
+      "extensions": {
+        "file": "map/edges/did-key.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/did-key",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/discourse-graphs",
+      "signed": "signed/map/edges/discourse-graphs.signed.json",
+      "attestations": [
+        "withdrawals/map/edges/discourse-graphs.withdrawal.json"
+      ],
+      "title": "map/edges/discourse-graphs.yaml: typedstandards.org builds-on Discourse Graphs",
+      "extensions": {
+        "file": "map/edges/discourse-graphs.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/discourse-graphs",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/c2pa",
+      "signed": "signed/map/edges/c2pa.signed.json",
+      "attestations": [],
+      "title": "map/edges/c2pa.yaml: typedstandards.org complements C2PA Technical Specification 2.3",
+      "extensions": {
+        "file": "map/edges/c2pa.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/c2pa",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/w3c-vc-2",
+      "signed": "signed/map/edges/w3c-vc-2.signed.json",
+      "attestations": [],
+      "title": "map/edges/w3c-vc-2.yaml: typedstandards.org adjacent W3C Verifiable Credentials Data Model v2.0",
+      "extensions": {
+        "file": "map/edges/w3c-vc-2.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/w3c-vc-2",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/ietf-scitt",
+      "signed": "signed/map/edges/ietf-scitt.signed.json",
+      "attestations": [],
+      "title": "map/edges/ietf-scitt.yaml: typedstandards.org complements IETF SCITT architecture (RFC 9943)",
+      "extensions": {
+        "file": "map/edges/ietf-scitt.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/ietf-scitt",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/slsa",
+      "signed": "signed/map/edges/slsa.signed.json",
+      "attestations": [],
+      "title": "map/edges/slsa.yaml: typedstandards.org adjacent SLSA Build Provenance v1.2",
+      "extensions": {
+        "file": "map/edges/slsa.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/slsa",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/nanopublications",
+      "signed": "signed/map/edges/nanopublications.signed.json",
+      "attestations": [
+        "withdrawals/map/edges/nanopublications.withdrawal.json"
+      ],
+      "title": "map/edges/nanopublications.yaml: typedstandards.org adjacent Nanopublication Guidelines",
+      "extensions": {
+        "file": "map/edges/nanopublications.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/nanopublications",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/proof-of-control",
+      "signed": "signed/map/edges/proof-of-control.signed.json",
+      "attestations": [
+        "withdrawals/map/edges/proof-of-control.withdrawal.json"
+      ],
+      "title": "map/edges/proof-of-control.yaml: typedstandards.org complements Open Verification: the Proof-of-Control Standard for Agents",
+      "extensions": {
+        "file": "map/edges/proof-of-control.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/proof-of-control",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/proof-of-insight",
+      "signed": "signed/map/edges/proof-of-insight.signed.json",
+      "attestations": [],
+      "title": "map/edges/proof-of-insight.yaml: typedstandards.org adjacent The Proof of Insight Protocol",
+      "extensions": {
+        "file": "map/edges/proof-of-insight.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/proof-of-insight",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/nanda-agentfacts",
+      "signed": "signed/map/edges/nanda-agentfacts.signed.json",
+      "attestations": [
+        "withdrawals/map/edges/nanda-agentfacts.withdrawal.json"
+      ],
+      "title": "map/edges/nanda-agentfacts.yaml: typedstandards.org adjacent Project NANDA AgentFacts",
+      "extensions": {
+        "file": "map/edges/nanda-agentfacts.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/nanda-agentfacts",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/mcp-sep-3094",
+      "signed": "signed/map/edges/mcp-sep-3094.signed.json",
+      "attestations": [],
+      "title": "map/edges/mcp-sep-3094.yaml: typedstandards.org complements MCP SEP-3094: Granular Citations Format (draft)",
+      "extensions": {
+        "file": "map/edges/mcp-sep-3094.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/mcp-sep-3094",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/atproto-lexicon",
+      "signed": "signed/map/edges/atproto-lexicon.signed.json",
+      "attestations": [
+        "withdrawals/map/edges/atproto-lexicon.withdrawal.json"
+      ],
+      "title": "map/edges/atproto-lexicon.yaml: typedstandards.org adjacent ATProto Lexicon",
+      "extensions": {
+        "file": "map/edges/atproto-lexicon.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/atproto-lexicon",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/google-okf",
+      "signed": "signed/map/edges/google-okf.signed.json",
+      "attestations": [
+        "withdrawals/map/edges/google-okf.withdrawal.json"
+      ],
+      "title": "map/edges/google-okf.yaml: typedstandards.org complements Open Knowledge Format v0.2",
+      "extensions": {
+        "file": "map/edges/google-okf.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/google-okf",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/w3c-dcat-3",
+      "signed": "signed/map/edges/w3c-dcat-3.signed.json",
+      "attestations": [],
+      "title": "map/edges/w3c-dcat-3.yaml: typedstandards.org complements W3C DCAT 3",
+      "extensions": {
+        "file": "map/edges/w3c-dcat-3.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/w3c-dcat-3",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/ro-crate",
+      "signed": "signed/map/edges/ro-crate.signed.json",
+      "attestations": [],
+      "title": "map/edges/ro-crate.yaml: typedstandards.org adjacent RO-Crate 1.3",
+      "extensions": {
+        "file": "map/edges/ro-crate.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/ro-crate",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/workflow-run-crate",
+      "signed": "signed/map/edges/workflow-run-crate.signed.json",
+      "attestations": [],
+      "title": "map/edges/workflow-run-crate.yaml: typedstandards.org adjacent Workflow Run RO-Crate 0.6",
+      "extensions": {
+        "file": "map/edges/workflow-run-crate.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/workflow-run-crate",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/mira-schema",
+      "signed": "signed/map/edges/mira-schema.signed.json",
+      "attestations": [
+        "withdrawals/map/edges/mira-schema.withdrawal.json"
+      ],
+      "title": "map/edges/mira-schema.yaml: typedstandards.org adjacent MIRA schema (draft)",
+      "extensions": {
+        "file": "map/edges/mira-schema.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/mira-schema",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/civicaitools-org",
+      "signed": "signed/map/edges/civicaitools-org.signed.json",
+      "attestations": [],
+      "title": "map/edges/civicaitools-org.yaml: civicaitools.org builds-on typedstandards.org",
+      "extensions": {
+        "file": "map/edges/civicaitools-org.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/civicaitools-org",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/socrata-mcp-server",
+      "signed": "signed/map/edges/socrata-mcp-server.signed.json",
+      "attestations": [],
+      "title": "map/edges/socrata-mcp-server.yaml: socrata-mcp-server complements typedstandards.org",
+      "extensions": {
+        "file": "map/edges/socrata-mcp-server.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/socrata-mcp-server",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/typedstandards-verifier",
+      "signed": "signed/map/edges/typedstandards-verifier.signed.json",
+      "attestations": [],
+      "title": "map/edges/typedstandards-verifier.yaml: typedstandards.org verifier builds-on typedstandards.org",
+      "extensions": {
+        "file": "map/edges/typedstandards-verifier.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/typedstandards-verifier",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/eval-run-example",
+      "signed": "signed/map/edges/eval-run-example.signed.json",
+      "attestations": [],
+      "title": "map/edges/eval-run-example.yaml: typedstandards-eval-run-example builds-on typedstandards.org",
+      "extensions": {
+        "file": "map/edges/eval-run-example.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/eval-run-example",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/qsv",
+      "signed": "signed/map/edges/qsv.signed.json",
+      "attestations": [
+        "withdrawals/map/edges/qsv.withdrawal.json"
+      ],
+      "title": "map/edges/qsv.yaml: qsv could-emit typedstandards.org",
+      "extensions": {
+        "file": "map/edges/qsv.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/qsv",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/verikan",
+      "signed": "signed/map/edges/verikan.signed.json",
+      "attestations": [
+        "withdrawals/map/edges/verikan.withdrawal.json"
+      ],
+      "title": "map/edges/verikan.yaml: Verikan builds-on typedstandards.org",
+      "extensions": {
+        "file": "map/edges/verikan.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/verikan",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/okfn-ckan-mcp",
+      "signed": "signed/map/edges/okfn-ckan-mcp.signed.json",
+      "attestations": [
+        "withdrawals/map/edges/okfn-ckan-mcp.withdrawal.json"
+      ],
+      "title": "map/edges/okfn-ckan-mcp.yaml: typedstandards.org adjacent MCP for CKAN (okfn/mcp-server)",
+      "extensions": {
+        "file": "map/edges/okfn-ckan-mcp.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/okfn-ckan-mcp",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/humane-intelligence-red-teaming",
+      "signed": "signed/map/edges/humane-intelligence-red-teaming.signed.json",
+      "attestations": [],
+      "title": "map/edges/humane-intelligence-red-teaming.yaml: typedstandards.org adjacent hi-oss-ai-red-teaming",
+      "extensions": {
+        "file": "map/edges/humane-intelligence-red-teaming.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/humane-intelligence-red-teaming",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/strands-agents",
+      "signed": "signed/map/edges/strands-agents.signed.json",
+      "attestations": [],
+      "title": "map/edges/strands-agents.yaml: typedstandards.org adjacent Strands Agents (Python SDK)",
+      "extensions": {
+        "file": "map/edges/strands-agents.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/strands-agents",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/microsoft-agent-framework",
+      "signed": "signed/map/edges/microsoft-agent-framework.signed.json",
+      "attestations": [],
+      "title": "map/edges/microsoft-agent-framework.yaml: typedstandards.org adjacent Microsoft Agent Framework",
+      "extensions": {
+        "file": "map/edges/microsoft-agent-framework.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/microsoft-agent-framework",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/edges/mila-mozilla-foundation-layer",
+      "signed": "signed/map/edges/mila-mozilla-foundation-layer.signed.json",
+      "attestations": [],
+      "title": "map/edges/mila-mozilla-foundation-layer.yaml: typedstandards.org adjacent Open-source AI foundation layer (Mila and Mozilla initiative)",
+      "extensions": {
+        "file": "map/edges/mila-mozilla-foundation-layer.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/mila-mozilla-foundation-layer",
+        "step": 2
+      }
+    },
+    {
+      "name": "map/header-2",
+      "signed": "signed/map/header-2.signed.json",
+      "attestations": [],
+      "title": "map/header-2.yaml: the header of the map of Typed Standards relations to public projects",
+      "extensions": {
+        "file": "map/header-2.yaml",
+        "role": "map-header",
+        "edgeId": null,
+        "step": 3
+      }
+    },
+    {
+      "name": "map/edges/sigstore-rekor-2",
+      "signed": "signed/map/edges/sigstore-rekor-2.signed.json",
+      "attestations": [],
+      "title": "map/edges/sigstore-rekor-2.yaml: typedstandards.org builds-on Sigstore Rekor (hashedrekord)",
+      "extensions": {
+        "file": "map/edges/sigstore-rekor-2.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/sigstore-rekor-2",
+        "step": 3
+      }
+    },
+    {
+      "name": "map/edges/rfc-3161-2",
+      "signed": "signed/map/edges/rfc-3161-2.signed.json",
+      "attestations": [],
+      "title": "map/edges/rfc-3161-2.yaml: typedstandards.org builds-on RFC 3161 Time-Stamp Protocol",
+      "extensions": {
+        "file": "map/edges/rfc-3161-2.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/rfc-3161-2",
+        "step": 3
+      }
+    },
+    {
+      "name": "map/edges/rfc-8032-2",
+      "signed": "signed/map/edges/rfc-8032-2.signed.json",
+      "attestations": [],
+      "title": "map/edges/rfc-8032-2.yaml: typedstandards.org builds-on RFC 8032 EdDSA (Ed25519ph)",
+      "extensions": {
+        "file": "map/edges/rfc-8032-2.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/rfc-8032-2",
+        "step": 3
+      }
+    },
+    {
+      "name": "map/edges/did-key-2",
+      "signed": "signed/map/edges/did-key-2.signed.json",
+      "attestations": [],
+      "title": "map/edges/did-key-2.yaml: typedstandards.org builds-on The did:key Method v0.9",
+      "extensions": {
+        "file": "map/edges/did-key-2.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/did-key-2",
+        "step": 3
+      }
+    },
+    {
+      "name": "map/edges/discourse-graphs-2",
+      "signed": "signed/map/edges/discourse-graphs-2.signed.json",
+      "attestations": [],
+      "title": "map/edges/discourse-graphs-2.yaml: typedstandards.org complements Discourse Graphs",
+      "extensions": {
+        "file": "map/edges/discourse-graphs-2.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/discourse-graphs-2",
+        "step": 3
+      }
+    },
+    {
+      "name": "map/edges/nanopublications-2",
+      "signed": "signed/map/edges/nanopublications-2.signed.json",
+      "attestations": [],
+      "title": "map/edges/nanopublications-2.yaml: typedstandards.org adjacent Nanopublication Guidelines",
+      "extensions": {
+        "file": "map/edges/nanopublications-2.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/nanopublications-2",
+        "step": 3
+      }
+    },
+    {
+      "name": "map/edges/proof-of-control-2",
+      "signed": "signed/map/edges/proof-of-control-2.signed.json",
+      "attestations": [],
+      "title": "map/edges/proof-of-control-2.yaml: typedstandards.org adjacent Open Verification: the Proof-of-Control Standard for Agents",
+      "extensions": {
+        "file": "map/edges/proof-of-control-2.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/proof-of-control-2",
+        "step": 3
+      }
+    },
+    {
+      "name": "map/edges/nanda-agentfacts-2",
+      "signed": "signed/map/edges/nanda-agentfacts-2.signed.json",
+      "attestations": [],
+      "title": "map/edges/nanda-agentfacts-2.yaml: typedstandards.org adjacent Project NANDA AgentFacts",
+      "extensions": {
+        "file": "map/edges/nanda-agentfacts-2.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/nanda-agentfacts-2",
+        "step": 3
+      }
+    },
+    {
+      "name": "map/edges/atproto-lexicon-2",
+      "signed": "signed/map/edges/atproto-lexicon-2.signed.json",
+      "attestations": [],
+      "title": "map/edges/atproto-lexicon-2.yaml: typedstandards.org adjacent ATProto Lexicon",
+      "extensions": {
+        "file": "map/edges/atproto-lexicon-2.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/atproto-lexicon-2",
+        "step": 3
+      }
+    },
+    {
+      "name": "map/edges/google-okf-2",
+      "signed": "signed/map/edges/google-okf-2.signed.json",
+      "attestations": [],
+      "title": "map/edges/google-okf-2.yaml: typedstandards.org complements Open Knowledge Format v0.2",
+      "extensions": {
+        "file": "map/edges/google-okf-2.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/google-okf-2",
+        "step": 3
+      }
+    },
+    {
+      "name": "map/edges/mira-schema-2",
+      "signed": "signed/map/edges/mira-schema-2.signed.json",
+      "attestations": [],
+      "title": "map/edges/mira-schema-2.yaml: typedstandards.org adjacent MIRA schema",
+      "extensions": {
+        "file": "map/edges/mira-schema-2.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/mira-schema-2",
+        "step": 3
+      }
+    },
+    {
+      "name": "map/edges/qsv-2",
+      "signed": "signed/map/edges/qsv-2.signed.json",
+      "attestations": [],
+      "title": "map/edges/qsv-2.yaml: qsv writes-recordable-output typedstandards.org",
+      "extensions": {
+        "file": "map/edges/qsv-2.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/qsv-2",
+        "step": 3
+      }
+    },
+    {
+      "name": "map/edges/verikan-2",
+      "signed": "signed/map/edges/verikan-2.signed.json",
+      "attestations": [],
+      "title": "map/edges/verikan-2.yaml: Verikan builds-on typedstandards.org",
+      "extensions": {
+        "file": "map/edges/verikan-2.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/verikan-2",
+        "step": 3
+      }
+    },
+    {
+      "name": "map/edges/okfn-mcp-server",
+      "signed": "signed/map/edges/okfn-mcp-server.signed.json",
+      "attestations": [],
+      "title": "map/edges/okfn-mcp-server.yaml: typedstandards.org adjacent Simple MCP Server (okfn/mcp-server)",
+      "extensions": {
+        "file": "map/edges/okfn-mcp-server.yaml",
+        "role": "edge",
+        "edgeId": "typedstandards.org/map/okfn-mcp-server",
+        "step": 3
+      }
+    }
+  ]
+}

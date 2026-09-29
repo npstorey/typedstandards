@@ -1,0 +1,30 @@
+{
+  "node": {
+    "metadata": {
+      "schemaVersion": "0.1.0",
+      "packageId": "92ea38f8-2078-41e0-b41a-9b4cc8121f68",
+      "createdAt": "2026-09-24T01:52:30.306Z",
+      "signingKeyId": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH"
+    },
+    "type": "attestation/withdraws/v1",
+    "signer": {
+      "bindingTier": "pseudonymous",
+      "identifier": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "displayName": "typedstandards-core-satellite-example (self-certifying example key)"
+    },
+    "targetNodeId": "76541f4b15d7d71d2ee1f62d4d34bcb73d9e04335548008d633f08090c92e51a",
+    "contentCanonicalization": "https://typedstandards.org/canonicalization/legacy-json/v1",
+    "reason": "Its basis said the SciOS paper names OKF as a model, where the paper likens its schema to it, and that a raw-bytes/v1 record can sign any such file, where the pinned specification admits raw-bytes/v1 only for program-computed content. Restated as map/edges/google-okf-2.yaml.",
+    "effectiveAt": "2026-09-24T01:52:30.306Z",
+    "contentHash": {
+      "sha256": "598b5e8e98b1093eddf0eb651cc1b4aaced4d68d55e06d86247f8f3e403e2978"
+    }
+  },
+  "nodeId": "3baae0c68b7e11afa7c57c910b781f0279377f2897981bc384041f168689fc77",
+  "signature": {
+    "signature": "B8/zZOAZhFPBdUB/UAJnygiE43fvsRpLfs6s44xDZfQUcEp42zc3h2wk0eY+8ku9VJl7cFPEwJpIT24t0OUODA==",
+    "publicKey": "MCowBQYDK2VwAyEA+BmmxJyxU0vnC2LLuSu0xcr1wwevoOLpcCFjnbnTUYQ=",
+    "algorithm": "Ed25519ph",
+    "kid": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH"
+  }
+}

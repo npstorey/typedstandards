@@ -1,0 +1,30 @@
+{
+  "node": {
+    "metadata": {
+      "schemaVersion": "0.1.0",
+      "packageId": "77b9bbb5-95e2-4fb2-9d0f-20fc7441d94f",
+      "createdAt": "2026-09-24T01:52:29.234Z",
+      "signingKeyId": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH"
+    },
+    "type": "attestation/withdraws/v1",
+    "signer": {
+      "bindingTier": "pseudonymous",
+      "identifier": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "displayName": "typedstandards-core-satellite-example (self-certifying example key)"
+    },
+    "targetNodeId": "76ac329be1e443cfa23d8c1ad5fe984b69b0657e09c37b207b0b3d42644482ca",
+    "contentCanonicalization": "https://typedstandards.org/canonicalization/legacy-json/v1",
+    "reason": "Its basis said records submit hashedrekord entries; the pinned specification says a package SHOULD carry a Rekor inclusion proof (§8.3.2). Restated as map/edges/sigstore-rekor-2.yaml.",
+    "effectiveAt": "2026-09-24T01:52:29.234Z",
+    "contentHash": {
+      "sha256": "d902e06597b9553bab1d9ca52702705f62fe498a5b849b075cde199e8d69598b"
+    }
+  },
+  "nodeId": "a4f5cd9b12d549c82e545b1c9081dc0285541cf2ee39f76d4c8dc493f4e11d29",
+  "signature": {
+    "signature": "22MsSMyBZ9Fz7ew7APk/WPDjLgMI17RXaObUHSfgCjiZ1l54bXNSUNZq2O7pAC5n7bK7KXizEiqUkPr8lrEuBQ==",
+    "publicKey": "MCowBQYDK2VwAyEA+BmmxJyxU0vnC2LLuSu0xcr1wwevoOLpcCFjnbnTUYQ=",
+    "algorithm": "Ed25519ph",
+    "kid": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH"
+  }
+}

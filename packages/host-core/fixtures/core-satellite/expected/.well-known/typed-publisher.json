@@ -1,0 +1,18 @@
+{
+  "$comment": "The example publisher's own statement about its signing key, served at https://core-satellite.typedstandards.org/.well-known/typed-publisher.json. It is not a Typed Standards record, and not an endorsement by the Typed Standards specification or by typedstandards.org, although this host is a subdomain of it. activatedAt is the earliest createdAt in package/build-log.json: the first record signed under the key, as the signer states it.",
+  "keys": [
+    {
+      "kid": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "publicKey": "MCowBQYDK2VwAyEA+BmmxJyxU0vnC2LLuSu0xcr1wwevoOLpcCFjnbnTUYQ=",
+      "status": "active",
+      "activatedAt": "2026-09-22T19:25:30.535Z",
+      "deprecatedAt": null,
+      "revokedAt": null,
+      "signerIdentity": {
+        "bindingTier": "pseudonymous",
+        "identifier": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+        "displayName": "typedstandards-core-satellite-example (self-certifying example key)"
+      }
+    }
+  ]
+}

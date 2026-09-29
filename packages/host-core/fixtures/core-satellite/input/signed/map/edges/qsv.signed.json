@@ -1,0 +1,160 @@
+{
+  "package": {
+    "metadata": {
+      "schemaVersion": "0.1.0",
+      "packageId": "0cc993a7-69ac-4e9c-a500-cd0e5375c956",
+      "createdAt": "2026-09-23T12:44:17.058Z",
+      "signingKeyId": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "captureMethod": "script-run"
+    },
+    "producerProfile": "scripted-recomputation/core-satellite-example",
+    "type": "content/analysis/v1",
+    "signer": {
+      "bindingTier": "pseudonymous",
+      "identifier": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "displayName": "typedstandards-core-satellite-example (self-certifying example key)"
+    },
+    "contentCanonicalization": "https://typedstandards.org/canonicalization/raw-bytes/v1",
+    "prompt": {
+      "hash": "bd8368b59d80d70e56dc243457023a67dcdeef2c8e2cb51e00884f1d174d7f6f",
+      "visibility": "full_text",
+      "text": "Package the file map/edges/qsv.yaml, one edge of the map of Typed Standards relations to public projects: qsv could-emit typedstandards.org, ring 3, as the output of a scripted-recomputation record under raw-bytes/v1. corpus/pin.mjs wrote the file from corpus/sources.json, corpus/manifest.json; this program read it from disk."
+    },
+    "queries": [
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://raw.githubusercontent.com/dathere/qsv/7c43b6bc77b22556220328eef22f29b9fac6d24b/README.md",
+          "sha256": "1541ba978efb0231096072c945df32e282dda499fb6a919bee13a987c3efb639",
+          "bytes": 81584,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:30Z",
+          "licence": "MIT (COPYING and Cargo.toml at the tag)"
+        },
+        "datasetId": "qsv"
+      },
+      {
+        "tool": "curl",
+        "operationType": "retrieve",
+        "arguments": {
+          "url": "https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md",
+          "sha256": "0e3b54b39e6877a076c495b82afd7295aefac09c70054c02e9832147037ff3f5",
+          "bytes": 294146,
+          "httpStatus": 200,
+          "fetchedAt": "2026-09-22T19:20:25Z",
+          "licence": "CC BY 4.0, as the document states (§3)"
+        },
+        "datasetId": "ts-spec"
+      },
+      {
+        "tool": "corpus/pin.mjs",
+        "operationType": "script-run",
+        "arguments": {
+          "command": "node corpus/pin.mjs",
+          "scriptSha256": "094d6fe92ed15262e5f53b2437988d73f410e81fd889aeb9e7266a1d358dd42e",
+          "inputs": [
+            {
+              "path": "corpus/sources.json",
+              "sha256": "72337b854d073159d8d67c5ab16f2cc52c70e6d74649cb1d59b0d1378b20edbe"
+            },
+            {
+              "path": "corpus/manifest.json",
+              "sha256": "2c23dafb122ed6dd7f1acb5f82296ccce65079417a29a898589aa9fcbba77980"
+            }
+          ],
+          "output": {
+            "path": "map/edges/qsv.yaml",
+            "sha256": "e982dbe69d87665d8ee0ccbaea30ce755acca96bd8d65e507c465912632e7970",
+            "bytes": 2117
+          }
+        }
+      },
+      {
+        "tool": "package/build.mjs",
+        "operationType": "package-file",
+        "arguments": {
+          "command": "node package/build.mjs sign",
+          "scriptSha256": "ed15926462300ec6a3051d16b58797b058a6f01a9c746239022c655b877cf21c",
+          "inputFile": "map/edges/qsv.yaml",
+          "inputSha256": "e982dbe69d87665d8ee0ccbaea30ce755acca96bd8d65e507c465912632e7970"
+        }
+      }
+    ],
+    "dataSources": [
+      {
+        "sourceId": "qsv",
+        "catalogType": "github-raw-at-sha",
+        "portalUrl": "https://raw.githubusercontent.com",
+        "datasetId": "qsv",
+        "datasetUrl": "https://raw.githubusercontent.com/dathere/qsv/7c43b6bc77b22556220328eef22f29b9fac6d24b/README.md",
+        "accessTimestamp": "2026-09-22T19:20:30Z"
+      },
+      {
+        "sourceId": "ts-spec",
+        "catalogType": "github-raw-at-sha",
+        "portalUrl": "https://raw.githubusercontent.com",
+        "datasetId": "ts-spec",
+        "datasetUrl": "https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md",
+        "accessTimestamp": "2026-09-22T19:20:25Z"
+      }
+    ],
+    "cost": {
+      "model": "none"
+    },
+    "skillMetadata": {},
+    "output": "# One edge of the map whose header is map/header.yaml. Written by corpus/pin.mjs; this file's exact bytes\n# are the output of one signed Typed Standards record in package/.\nid: typedstandards.org/map/qsv\ncreatedAt: \"2026-09-22\"\nsubject:\n  id: github.com/dathere/qsv\n  ref:\n    location: https://raw.githubusercontent.com/dathere/qsv/7c43b6bc77b22556220328eef22f29b9fac6d24b/README.md\n    sha256: 1541ba978efb0231096072c945df32e282dda499fb6a919bee13a987c3efb639\nobject:\n  id: typedstandards.org\n  ref:\n    location: https://raw.githubusercontent.com/npstorey/civic-ai-tools/cfdb210cdae865a872ff30f7c86c5fdcd74e9886/docs/architecture/typed-standards-specification.md\n    sha256: 0e3b54b39e6877a076c495b82afd7295aefac09c70054c02e9832147037ff3f5\nx-typedstandards:\n  relation: could-emit\n  basis: An open issue on the project's own tracker, titled with the intent, and a plan comment posted from the maintainer account describe emitting JCS envelopes and Ed25519ph signatures for the Data Schematic output. The issue is open and labelled revisit-later.\n  ring: 3\n  name: qsv\n  publisher: datHere\n  intent:\n    readAt: \"2026-09-22\"\n    state: \"open; labels include revisit-later, added 2026-09-13\"\n    statedIn:\n      - url: https://github.com/dathere/qsv/issues/4448\n        date: \"2026-08-20\"\n        quote: \"Data Schematic: Replace Provenance free-text info with TypedStandards cryptographic signature\"\n      - url: \"https://github.com/dathere/qsv/issues/4448#issuecomment-5440060941\"\n        date: \"2026-08-27\"\n        quote: \"Phase 2 (signing) — Ed25519ph via --sign-key; signature envelope embedded in the HTML + sidecar\"\n      - url: \"https://github.com/dathere/qsv/issues/4448#issuecomment-5649582321\"\n        date: \"2026-09-13\"\n        quote: Revisit once TypedStandards supports something like Decentralized Identifiers\n  pin:\n    fetchedAt: \"2026-09-22T19:20:30Z\"\n    bytes: 81584\n    httpStatus: 200\n    basis: tag 23.0.1, the latest release (2026-09-13)\n    licence: MIT (COPYING and Cargo.toml at the tag)\n  curation: { seed: kept, reason: The one Ring 3 intent stated on the project's own public record. }\n",
+    "trace": {
+      "resourceSpans": []
+    },
+    "summary": "map/edges/qsv.yaml: qsv could-emit typedstandards.org. The file's exact UTF-8 bytes (2117 bytes) are this record's output under raw-bytes/v1, so contentHash.sha256 is the file's ordinary SHA-256. The 2 source digests in queries are signed assertions that no check recomputes. The signer is a self-certifying did:key; it shows which key signed, not who holds it.",
+    "extensions": {
+      "io.github.npstorey.core-satellite-example": {
+        "role": "map-edge",
+        "edgeId": "typedstandards.org/map/qsv",
+        "repository": "https://github.com/npstorey/typedstandards-core-satellite-example",
+        "file": {
+          "path": "map/edges/qsv.yaml",
+          "sha256": "e982dbe69d87665d8ee0ccbaea30ce755acca96bd8d65e507c465912632e7970",
+          "bytes": 2117
+        },
+        "writer": {
+          "path": "corpus/pin.mjs",
+          "sha256": "094d6fe92ed15262e5f53b2437988d73f410e81fd889aeb9e7266a1d358dd42e"
+        },
+        "writerInputs": [
+          {
+            "path": "corpus/sources.json",
+            "sha256": "72337b854d073159d8d67c5ab16f2cc52c70e6d74649cb1d59b0d1378b20edbe"
+          },
+          {
+            "path": "corpus/manifest.json",
+            "sha256": "2c23dafb122ed6dd7f1acb5f82296ccce65079417a29a898589aa9fcbba77980"
+          }
+        ],
+        "pinnedAt": "2026-09-22T19:20:31Z",
+        "sourcesCited": {
+          "pinned": 2,
+          "unpinned": 0
+        },
+        "model": {
+          "title": "The Core-Satellite Model",
+          "publisher": "SciOS",
+          "location": "https://scios.tech/thoughts",
+          "dated": "2026-06-30",
+          "readAt": "2026-09-22"
+        }
+      }
+    },
+    "contentHash": {
+      "sha256": "e982dbe69d87665d8ee0ccbaea30ce755acca96bd8d65e507c465912632e7970"
+    }
+  },
+  "envelopeHash": "7516613440e37bf084389daeea2467336c33a0a8b7f1496330cf67e880c425c0",
+  "signature": {
+    "signature": "iCBgeetg3+iLibJaqaEeNv+rTq5LIV36cA6qzawyTSddC0Ta07N24vplwLOabad5qFCHTOA0pORKA9avIttGDQ==",
+    "publicKey": "MCowBQYDK2VwAyEA+BmmxJyxU0vnC2LLuSu0xcr1wwevoOLpcCFjnbnTUYQ=",
+    "algorithm": "Ed25519ph",
+    "kid": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH"
+  }
+}

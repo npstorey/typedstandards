@@ -1,0 +1,30 @@
+{
+  "node": {
+    "metadata": {
+      "schemaVersion": "0.1.0",
+      "packageId": "579a8148-bc73-40fc-8896-3e7fde3b1596",
+      "createdAt": "2026-09-24T01:52:30.183Z",
+      "signingKeyId": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH"
+    },
+    "type": "attestation/withdraws/v1",
+    "signer": {
+      "bindingTier": "pseudonymous",
+      "identifier": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "displayName": "typedstandards-core-satellite-example (self-certifying example key)"
+    },
+    "targetNodeId": "52f817328721f6a9b2433f835b9a37780e3683bc99cf24476c6b7a8b2cf8db7a",
+    "contentCanonicalization": "https://typedstandards.org/canonicalization/legacy-json/v1",
+    "reason": "Its basis said the SciOS paper names Lexicon as a model for its schema; the paper likens its schema to one. Restated as map/edges/atproto-lexicon-2.yaml.",
+    "effectiveAt": "2026-09-24T01:52:30.183Z",
+    "contentHash": {
+      "sha256": "487fe524f649cb119370d6ce00acbb64fbac679d9298056d15c71aadfa6a4241"
+    }
+  },
+  "nodeId": "c5f51fa4d32aa09abcb3044d049bf604bfa410216a5bcd0cbedc660b410df961",
+  "signature": {
+    "signature": "rIW7oOCLAJB2YWG4T688Jn3mlGBOU6EAhfq0r7//T93Mhomk760jWFQ8Pnk/1oZapmoJSjUk/IoaOcsbEYJqBA==",
+    "publicKey": "MCowBQYDK2VwAyEA+BmmxJyxU0vnC2LLuSu0xcr1wwevoOLpcCFjnbnTUYQ=",
+    "algorithm": "Ed25519ph",
+    "kid": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH"
+  }
+}

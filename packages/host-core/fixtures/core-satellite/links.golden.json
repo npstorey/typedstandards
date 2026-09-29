@@ -1,0 +1,368 @@
+{
+  "records": [
+    {
+      "name": "core",
+      "url": "https://core-satellite.typedstandards.org/bundles/core.bundle.json",
+      "verify": "https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fcore.bundle.json",
+      "html": "<a href=\"https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fcore.bundle.json\">\n  <img src=\"https://typedstandards.org/badge/typed-standards-verify.svg\" alt=\"Verify this record with Typed Standards\" width=\"248\" height=\"30\" />\n</a>",
+      "markdown": "[![Verify this record with Typed Standards](https://typedstandards.org/badge/typed-standards-verify.svg)](<https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fcore.bundle.json>)"
+    },
+    {
+      "name": "map",
+      "url": "https://core-satellite.typedstandards.org/bundles/map.bundle.json",
+      "verify": "https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap.bundle.json",
+      "html": "<a href=\"https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap.bundle.json\">\n  <img src=\"https://typedstandards.org/badge/typed-standards-verify.svg\" alt=\"Verify this record with Typed Standards\" width=\"248\" height=\"30\" />\n</a>",
+      "markdown": "[![Verify this record with Typed Standards](https://typedstandards.org/badge/typed-standards-verify.svg)](<https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap.bundle.json>)"
+    },
+    {
+      "name": "map/header",
+      "url": "https://core-satellite.typedstandards.org/bundles/map/header.bundle.json",
+      "verify": "https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fheader.bundle.json",
+      "html": "<a href=\"https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fheader.bundle.json\">\n  <img src=\"https://typedstandards.org/badge/typed-standards-verify.svg\" alt=\"Verify this record with Typed Standards\" width=\"248\" height=\"30\" />\n</a>",
+      "markdown": "[![Verify this record with Typed Standards](https://typedstandards.org/badge/typed-standards-verify.svg)](<https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fheader.bundle.json>)"
+    },
+    {
+      "name": "map/edges/w3c-prov-o",
+      "url": "https://core-satellite.typedstandards.org/bundles/map/edges/w3c-prov-o.bundle.json",
+      "verify": "https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fw3c-prov-o.bundle.json",
+      "html": "<a href=\"https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fw3c-prov-o.bundle.json\">\n  <img src=\"https://typedstandards.org/badge/typed-standards-verify.svg\" alt=\"Verify this record with Typed Standards\" width=\"248\" height=\"30\" />\n</a>",
+      "markdown": "[![Verify this record with Typed Standards](https://typedstandards.org/badge/typed-standards-verify.svg)](<https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fw3c-prov-o.bundle.json>)"
+    },
+    {
+      "name": "map/edges/in-toto-attestation",
+      "url": "https://core-satellite.typedstandards.org/bundles/map/edges/in-toto-attestation.bundle.json",
+      "verify": "https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fin-toto-attestation.bundle.json",
+      "html": "<a href=\"https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fin-toto-attestation.bundle.json\">\n  <img src=\"https://typedstandards.org/badge/typed-standards-verify.svg\" alt=\"Verify this record with Typed Standards\" width=\"248\" height=\"30\" />\n</a>",
+      "markdown": "[![Verify this record with Typed Standards](https://typedstandards.org/badge/typed-standards-verify.svg)](<https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fin-toto-attestation.bundle.json>)"
+    },
+    {
+      "name": "map/edges/sigstore-rekor",
+      "url": "https://core-satellite.typedstandards.org/bundles/map/edges/sigstore-rekor.bundle.json",
+      "verify": "https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fsigstore-rekor.bundle.json",
+      "html": "<a href=\"https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fsigstore-rekor.bundle.json\">\n  <img src=\"https://typedstandards.org/badge/typed-standards-verify.svg\" alt=\"Verify this record with Typed Standards\" width=\"248\" height=\"30\" />\n</a>",
+      "markdown": "[![Verify this record with Typed Standards](https://typedstandards.org/badge/typed-standards-verify.svg)](<https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fsigstore-rekor.bundle.json>)"
+    },
+    {
+      "name": "map/edges/rfc-3161",
+      "url": "https://core-satellite.typedstandards.org/bundles/map/edges/rfc-3161.bundle.json",
+      "verify": "https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Frfc-3161.bundle.json",
+      "html": "<a href=\"https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Frfc-3161.bundle.json\">\n  <img src=\"https://typedstandards.org/badge/typed-standards-verify.svg\" alt=\"Verify this record with Typed Standards\" width=\"248\" height=\"30\" />\n</a>",
+      "markdown": "[![Verify this record with Typed Standards](https://typedstandards.org/badge/typed-standards-verify.svg)](<https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Frfc-3161.bundle.json>)"
+    },
+    {
+      "name": "map/edges/rfc-8785",
+      "url": "https://core-satellite.typedstandards.org/bundles/map/edges/rfc-8785.bundle.json",
+      "verify": "https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Frfc-8785.bundle.json",
+      "html": "<a href=\"https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Frfc-8785.bundle.json\">\n  <img src=\"https://typedstandards.org/badge/typed-standards-verify.svg\" alt=\"Verify this record with Typed Standards\" width=\"248\" height=\"30\" />\n</a>",
+      "markdown": "[![Verify this record with Typed Standards](https://typedstandards.org/badge/typed-standards-verify.svg)](<https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Frfc-8785.bundle.json>)"
+    },
+    {
+      "name": "map/edges/rfc-8032",
+      "url": "https://core-satellite.typedstandards.org/bundles/map/edges/rfc-8032.bundle.json",
+      "verify": "https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Frfc-8032.bundle.json",
+      "html": "<a href=\"https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Frfc-8032.bundle.json\">\n  <img src=\"https://typedstandards.org/badge/typed-standards-verify.svg\" alt=\"Verify this record with Typed Standards\" width=\"248\" height=\"30\" />\n</a>",
+      "markdown": "[![Verify this record with Typed Standards](https://typedstandards.org/badge/typed-standards-verify.svg)](<https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Frfc-8032.bundle.json>)"
+    },
+    {
+      "name": "map/edges/did-key",
+      "url": "https://core-satellite.typedstandards.org/bundles/map/edges/did-key.bundle.json",
+      "verify": "https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fdid-key.bundle.json",
+      "html": "<a href=\"https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fdid-key.bundle.json\">\n  <img src=\"https://typedstandards.org/badge/typed-standards-verify.svg\" alt=\"Verify this record with Typed Standards\" width=\"248\" height=\"30\" />\n</a>",
+      "markdown": "[![Verify this record with Typed Standards](https://typedstandards.org/badge/typed-standards-verify.svg)](<https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fdid-key.bundle.json>)"
+    },
+    {
+      "name": "map/edges/discourse-graphs",
+      "url": "https://core-satellite.typedstandards.org/bundles/map/edges/discourse-graphs.bundle.json",
+      "verify": "https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fdiscourse-graphs.bundle.json",
+      "html": "<a href=\"https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fdiscourse-graphs.bundle.json\">\n  <img src=\"https://typedstandards.org/badge/typed-standards-verify.svg\" alt=\"Verify this record with Typed Standards\" width=\"248\" height=\"30\" />\n</a>",
+      "markdown": "[![Verify this record with Typed Standards](https://typedstandards.org/badge/typed-standards-verify.svg)](<https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fdiscourse-graphs.bundle.json>)"
+    },
+    {
+      "name": "map/edges/c2pa",
+      "url": "https://core-satellite.typedstandards.org/bundles/map/edges/c2pa.bundle.json",
+      "verify": "https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fc2pa.bundle.json",
+      "html": "<a href=\"https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fc2pa.bundle.json\">\n  <img src=\"https://typedstandards.org/badge/typed-standards-verify.svg\" alt=\"Verify this record with Typed Standards\" width=\"248\" height=\"30\" />\n</a>",
+      "markdown": "[![Verify this record with Typed Standards](https://typedstandards.org/badge/typed-standards-verify.svg)](<https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fc2pa.bundle.json>)"
+    },
+    {
+      "name": "map/edges/w3c-vc-2",
+      "url": "https://core-satellite.typedstandards.org/bundles/map/edges/w3c-vc-2.bundle.json",
+      "verify": "https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fw3c-vc-2.bundle.json",
+      "html": "<a href=\"https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fw3c-vc-2.bundle.json\">\n  <img src=\"https://typedstandards.org/badge/typed-standards-verify.svg\" alt=\"Verify this record with Typed Standards\" width=\"248\" height=\"30\" />\n</a>",
+      "markdown": "[![Verify this record with Typed Standards](https://typedstandards.org/badge/typed-standards-verify.svg)](<https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fw3c-vc-2.bundle.json>)"
+    },
+    {
+      "name": "map/edges/ietf-scitt",
+      "url": "https://core-satellite.typedstandards.org/bundles/map/edges/ietf-scitt.bundle.json",
+      "verify": "https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fietf-scitt.bundle.json",
+      "html": "<a href=\"https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fietf-scitt.bundle.json\">\n  <img src=\"https://typedstandards.org/badge/typed-standards-verify.svg\" alt=\"Verify this record with Typed Standards\" width=\"248\" height=\"30\" />\n</a>",
+      "markdown": "[![Verify this record with Typed Standards](https://typedstandards.org/badge/typed-standards-verify.svg)](<https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fietf-scitt.bundle.json>)"
+    },
+    {
+      "name": "map/edges/slsa",
+      "url": "https://core-satellite.typedstandards.org/bundles/map/edges/slsa.bundle.json",
+      "verify": "https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fslsa.bundle.json",
+      "html": "<a href=\"https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fslsa.bundle.json\">\n  <img src=\"https://typedstandards.org/badge/typed-standards-verify.svg\" alt=\"Verify this record with Typed Standards\" width=\"248\" height=\"30\" />\n</a>",
+      "markdown": "[![Verify this record with Typed Standards](https://typedstandards.org/badge/typed-standards-verify.svg)](<https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fslsa.bundle.json>)"
+    },
+    {
+      "name": "map/edges/nanopublications",
+      "url": "https://core-satellite.typedstandards.org/bundles/map/edges/nanopublications.bundle.json",
+      "verify": "https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fnanopublications.bundle.json",
+      "html": "<a href=\"https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fnanopublications.bundle.json\">\n  <img src=\"https://typedstandards.org/badge/typed-standards-verify.svg\" alt=\"Verify this record with Typed Standards\" width=\"248\" height=\"30\" />\n</a>",
+      "markdown": "[![Verify this record with Typed Standards](https://typedstandards.org/badge/typed-standards-verify.svg)](<https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fnanopublications.bundle.json>)"
+    },
+    {
+      "name": "map/edges/proof-of-control",
+      "url": "https://core-satellite.typedstandards.org/bundles/map/edges/proof-of-control.bundle.json",
+      "verify": "https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fproof-of-control.bundle.json",
+      "html": "<a href=\"https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fproof-of-control.bundle.json\">\n  <img src=\"https://typedstandards.org/badge/typed-standards-verify.svg\" alt=\"Verify this record with Typed Standards\" width=\"248\" height=\"30\" />\n</a>",
+      "markdown": "[![Verify this record with Typed Standards](https://typedstandards.org/badge/typed-standards-verify.svg)](<https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fproof-of-control.bundle.json>)"
+    },
+    {
+      "name": "map/edges/proof-of-insight",
+      "url": "https://core-satellite.typedstandards.org/bundles/map/edges/proof-of-insight.bundle.json",
+      "verify": "https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fproof-of-insight.bundle.json",
+      "html": "<a href=\"https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fproof-of-insight.bundle.json\">\n  <img src=\"https://typedstandards.org/badge/typed-standards-verify.svg\" alt=\"Verify this record with Typed Standards\" width=\"248\" height=\"30\" />\n</a>",
+      "markdown": "[![Verify this record with Typed Standards](https://typedstandards.org/badge/typed-standards-verify.svg)](<https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fproof-of-insight.bundle.json>)"
+    },
+    {
+      "name": "map/edges/nanda-agentfacts",
+      "url": "https://core-satellite.typedstandards.org/bundles/map/edges/nanda-agentfacts.bundle.json",
+      "verify": "https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fnanda-agentfacts.bundle.json",
+      "html": "<a href=\"https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fnanda-agentfacts.bundle.json\">\n  <img src=\"https://typedstandards.org/badge/typed-standards-verify.svg\" alt=\"Verify this record with Typed Standards\" width=\"248\" height=\"30\" />\n</a>",
+      "markdown": "[![Verify this record with Typed Standards](https://typedstandards.org/badge/typed-standards-verify.svg)](<https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fnanda-agentfacts.bundle.json>)"
+    },
+    {
+      "name": "map/edges/mcp-sep-3094",
+      "url": "https://core-satellite.typedstandards.org/bundles/map/edges/mcp-sep-3094.bundle.json",
+      "verify": "https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fmcp-sep-3094.bundle.json",
+      "html": "<a href=\"https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fmcp-sep-3094.bundle.json\">\n  <img src=\"https://typedstandards.org/badge/typed-standards-verify.svg\" alt=\"Verify this record with Typed Standards\" width=\"248\" height=\"30\" />\n</a>",
+      "markdown": "[![Verify this record with Typed Standards](https://typedstandards.org/badge/typed-standards-verify.svg)](<https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fmcp-sep-3094.bundle.json>)"
+    },
+    {
+      "name": "map/edges/atproto-lexicon",
+      "url": "https://core-satellite.typedstandards.org/bundles/map/edges/atproto-lexicon.bundle.json",
+      "verify": "https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fatproto-lexicon.bundle.json",
+      "html": "<a href=\"https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fatproto-lexicon.bundle.json\">\n  <img src=\"https://typedstandards.org/badge/typed-standards-verify.svg\" alt=\"Verify this record with Typed Standards\" width=\"248\" height=\"30\" />\n</a>",
+      "markdown": "[![Verify this record with Typed Standards](https://typedstandards.org/badge/typed-standards-verify.svg)](<https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fatproto-lexicon.bundle.json>)"
+    },
+    {
+      "name": "map/edges/google-okf",
+      "url": "https://core-satellite.typedstandards.org/bundles/map/edges/google-okf.bundle.json",
+      "verify": "https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fgoogle-okf.bundle.json",
+      "html": "<a href=\"https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fgoogle-okf.bundle.json\">\n  <img src=\"https://typedstandards.org/badge/typed-standards-verify.svg\" alt=\"Verify this record with Typed Standards\" width=\"248\" height=\"30\" />\n</a>",
+      "markdown": "[![Verify this record with Typed Standards](https://typedstandards.org/badge/typed-standards-verify.svg)](<https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fgoogle-okf.bundle.json>)"
+    },
+    {
+      "name": "map/edges/w3c-dcat-3",
+      "url": "https://core-satellite.typedstandards.org/bundles/map/edges/w3c-dcat-3.bundle.json",
+      "verify": "https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fw3c-dcat-3.bundle.json",
+      "html": "<a href=\"https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fw3c-dcat-3.bundle.json\">\n  <img src=\"https://typedstandards.org/badge/typed-standards-verify.svg\" alt=\"Verify this record with Typed Standards\" width=\"248\" height=\"30\" />\n</a>",
+      "markdown": "[![Verify this record with Typed Standards](https://typedstandards.org/badge/typed-standards-verify.svg)](<https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fw3c-dcat-3.bundle.json>)"
+    },
+    {
+      "name": "map/edges/ro-crate",
+      "url": "https://core-satellite.typedstandards.org/bundles/map/edges/ro-crate.bundle.json",
+      "verify": "https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fro-crate.bundle.json",
+      "html": "<a href=\"https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fro-crate.bundle.json\">\n  <img src=\"https://typedstandards.org/badge/typed-standards-verify.svg\" alt=\"Verify this record with Typed Standards\" width=\"248\" height=\"30\" />\n</a>",
+      "markdown": "[![Verify this record with Typed Standards](https://typedstandards.org/badge/typed-standards-verify.svg)](<https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fro-crate.bundle.json>)"
+    },
+    {
+      "name": "map/edges/workflow-run-crate",
+      "url": "https://core-satellite.typedstandards.org/bundles/map/edges/workflow-run-crate.bundle.json",
+      "verify": "https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fworkflow-run-crate.bundle.json",
+      "html": "<a href=\"https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fworkflow-run-crate.bundle.json\">\n  <img src=\"https://typedstandards.org/badge/typed-standards-verify.svg\" alt=\"Verify this record with Typed Standards\" width=\"248\" height=\"30\" />\n</a>",
+      "markdown": "[![Verify this record with Typed Standards](https://typedstandards.org/badge/typed-standards-verify.svg)](<https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fworkflow-run-crate.bundle.json>)"
+    },
+    {
+      "name": "map/edges/mira-schema",
+      "url": "https://core-satellite.typedstandards.org/bundles/map/edges/mira-schema.bundle.json",
+      "verify": "https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fmira-schema.bundle.json",
+      "html": "<a href=\"https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fmira-schema.bundle.json\">\n  <img src=\"https://typedstandards.org/badge/typed-standards-verify.svg\" alt=\"Verify this record with Typed Standards\" width=\"248\" height=\"30\" />\n</a>",
+      "markdown": "[![Verify this record with Typed Standards](https://typedstandards.org/badge/typed-standards-verify.svg)](<https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fmira-schema.bundle.json>)"
+    },
+    {
+      "name": "map/edges/civicaitools-org",
+      "url": "https://core-satellite.typedstandards.org/bundles/map/edges/civicaitools-org.bundle.json",
+      "verify": "https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fcivicaitools-org.bundle.json",
+      "html": "<a href=\"https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fcivicaitools-org.bundle.json\">\n  <img src=\"https://typedstandards.org/badge/typed-standards-verify.svg\" alt=\"Verify this record with Typed Standards\" width=\"248\" height=\"30\" />\n</a>",
+      "markdown": "[![Verify this record with Typed Standards](https://typedstandards.org/badge/typed-standards-verify.svg)](<https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fcivicaitools-org.bundle.json>)"
+    },
+    {
+      "name": "map/edges/socrata-mcp-server",
+      "url": "https://core-satellite.typedstandards.org/bundles/map/edges/socrata-mcp-server.bundle.json",
+      "verify": "https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fsocrata-mcp-server.bundle.json",
+      "html": "<a href=\"https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fsocrata-mcp-server.bundle.json\">\n  <img src=\"https://typedstandards.org/badge/typed-standards-verify.svg\" alt=\"Verify this record with Typed Standards\" width=\"248\" height=\"30\" />\n</a>",
+      "markdown": "[![Verify this record with Typed Standards](https://typedstandards.org/badge/typed-standards-verify.svg)](<https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fsocrata-mcp-server.bundle.json>)"
+    },
+    {
+      "name": "map/edges/typedstandards-verifier",
+      "url": "https://core-satellite.typedstandards.org/bundles/map/edges/typedstandards-verifier.bundle.json",
+      "verify": "https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Ftypedstandards-verifier.bundle.json",
+      "html": "<a href=\"https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Ftypedstandards-verifier.bundle.json\">\n  <img src=\"https://typedstandards.org/badge/typed-standards-verify.svg\" alt=\"Verify this record with Typed Standards\" width=\"248\" height=\"30\" />\n</a>",
+      "markdown": "[![Verify this record with Typed Standards](https://typedstandards.org/badge/typed-standards-verify.svg)](<https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Ftypedstandards-verifier.bundle.json>)"
+    },
+    {
+      "name": "map/edges/eval-run-example",
+      "url": "https://core-satellite.typedstandards.org/bundles/map/edges/eval-run-example.bundle.json",
+      "verify": "https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Feval-run-example.bundle.json",
+      "html": "<a href=\"https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Feval-run-example.bundle.json\">\n  <img src=\"https://typedstandards.org/badge/typed-standards-verify.svg\" alt=\"Verify this record with Typed Standards\" width=\"248\" height=\"30\" />\n</a>",
+      "markdown": "[![Verify this record with Typed Standards](https://typedstandards.org/badge/typed-standards-verify.svg)](<https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Feval-run-example.bundle.json>)"
+    },
+    {
+      "name": "map/edges/qsv",
+      "url": "https://core-satellite.typedstandards.org/bundles/map/edges/qsv.bundle.json",
+      "verify": "https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fqsv.bundle.json",
+      "html": "<a href=\"https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fqsv.bundle.json\">\n  <img src=\"https://typedstandards.org/badge/typed-standards-verify.svg\" alt=\"Verify this record with Typed Standards\" width=\"248\" height=\"30\" />\n</a>",
+      "markdown": "[![Verify this record with Typed Standards](https://typedstandards.org/badge/typed-standards-verify.svg)](<https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fqsv.bundle.json>)"
+    },
+    {
+      "name": "map/edges/verikan",
+      "url": "https://core-satellite.typedstandards.org/bundles/map/edges/verikan.bundle.json",
+      "verify": "https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fverikan.bundle.json",
+      "html": "<a href=\"https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fverikan.bundle.json\">\n  <img src=\"https://typedstandards.org/badge/typed-standards-verify.svg\" alt=\"Verify this record with Typed Standards\" width=\"248\" height=\"30\" />\n</a>",
+      "markdown": "[![Verify this record with Typed Standards](https://typedstandards.org/badge/typed-standards-verify.svg)](<https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fverikan.bundle.json>)"
+    },
+    {
+      "name": "map/edges/okfn-ckan-mcp",
+      "url": "https://core-satellite.typedstandards.org/bundles/map/edges/okfn-ckan-mcp.bundle.json",
+      "verify": "https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fokfn-ckan-mcp.bundle.json",
+      "html": "<a href=\"https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fokfn-ckan-mcp.bundle.json\">\n  <img src=\"https://typedstandards.org/badge/typed-standards-verify.svg\" alt=\"Verify this record with Typed Standards\" width=\"248\" height=\"30\" />\n</a>",
+      "markdown": "[![Verify this record with Typed Standards](https://typedstandards.org/badge/typed-standards-verify.svg)](<https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fokfn-ckan-mcp.bundle.json>)"
+    },
+    {
+      "name": "map/edges/humane-intelligence-red-teaming",
+      "url": "https://core-satellite.typedstandards.org/bundles/map/edges/humane-intelligence-red-teaming.bundle.json",
+      "verify": "https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fhumane-intelligence-red-teaming.bundle.json",
+      "html": "<a href=\"https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fhumane-intelligence-red-teaming.bundle.json\">\n  <img src=\"https://typedstandards.org/badge/typed-standards-verify.svg\" alt=\"Verify this record with Typed Standards\" width=\"248\" height=\"30\" />\n</a>",
+      "markdown": "[![Verify this record with Typed Standards](https://typedstandards.org/badge/typed-standards-verify.svg)](<https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fhumane-intelligence-red-teaming.bundle.json>)"
+    },
+    {
+      "name": "map/edges/strands-agents",
+      "url": "https://core-satellite.typedstandards.org/bundles/map/edges/strands-agents.bundle.json",
+      "verify": "https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fstrands-agents.bundle.json",
+      "html": "<a href=\"https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fstrands-agents.bundle.json\">\n  <img src=\"https://typedstandards.org/badge/typed-standards-verify.svg\" alt=\"Verify this record with Typed Standards\" width=\"248\" height=\"30\" />\n</a>",
+      "markdown": "[![Verify this record with Typed Standards](https://typedstandards.org/badge/typed-standards-verify.svg)](<https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fstrands-agents.bundle.json>)"
+    },
+    {
+      "name": "map/edges/microsoft-agent-framework",
+      "url": "https://core-satellite.typedstandards.org/bundles/map/edges/microsoft-agent-framework.bundle.json",
+      "verify": "https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fmicrosoft-agent-framework.bundle.json",
+      "html": "<a href=\"https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fmicrosoft-agent-framework.bundle.json\">\n  <img src=\"https://typedstandards.org/badge/typed-standards-verify.svg\" alt=\"Verify this record with Typed Standards\" width=\"248\" height=\"30\" />\n</a>",
+      "markdown": "[![Verify this record with Typed Standards](https://typedstandards.org/badge/typed-standards-verify.svg)](<https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fmicrosoft-agent-framework.bundle.json>)"
+    },
+    {
+      "name": "map/edges/mila-mozilla-foundation-layer",
+      "url": "https://core-satellite.typedstandards.org/bundles/map/edges/mila-mozilla-foundation-layer.bundle.json",
+      "verify": "https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fmila-mozilla-foundation-layer.bundle.json",
+      "html": "<a href=\"https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fmila-mozilla-foundation-layer.bundle.json\">\n  <img src=\"https://typedstandards.org/badge/typed-standards-verify.svg\" alt=\"Verify this record with Typed Standards\" width=\"248\" height=\"30\" />\n</a>",
+      "markdown": "[![Verify this record with Typed Standards](https://typedstandards.org/badge/typed-standards-verify.svg)](<https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fmila-mozilla-foundation-layer.bundle.json>)"
+    },
+    {
+      "name": "map/header-2",
+      "url": "https://core-satellite.typedstandards.org/bundles/map/header-2.bundle.json",
+      "verify": "https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fheader-2.bundle.json",
+      "html": "<a href=\"https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fheader-2.bundle.json\">\n  <img src=\"https://typedstandards.org/badge/typed-standards-verify.svg\" alt=\"Verify this record with Typed Standards\" width=\"248\" height=\"30\" />\n</a>",
+      "markdown": "[![Verify this record with Typed Standards](https://typedstandards.org/badge/typed-standards-verify.svg)](<https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fheader-2.bundle.json>)"
+    },
+    {
+      "name": "map/edges/sigstore-rekor-2",
+      "url": "https://core-satellite.typedstandards.org/bundles/map/edges/sigstore-rekor-2.bundle.json",
+      "verify": "https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fsigstore-rekor-2.bundle.json",
+      "html": "<a href=\"https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fsigstore-rekor-2.bundle.json\">\n  <img src=\"https://typedstandards.org/badge/typed-standards-verify.svg\" alt=\"Verify this record with Typed Standards\" width=\"248\" height=\"30\" />\n</a>",
+      "markdown": "[![Verify this record with Typed Standards](https://typedstandards.org/badge/typed-standards-verify.svg)](<https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fsigstore-rekor-2.bundle.json>)"
+    },
+    {
+      "name": "map/edges/rfc-3161-2",
+      "url": "https://core-satellite.typedstandards.org/bundles/map/edges/rfc-3161-2.bundle.json",
+      "verify": "https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Frfc-3161-2.bundle.json",
+      "html": "<a href=\"https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Frfc-3161-2.bundle.json\">\n  <img src=\"https://typedstandards.org/badge/typed-standards-verify.svg\" alt=\"Verify this record with Typed Standards\" width=\"248\" height=\"30\" />\n</a>",
+      "markdown": "[![Verify this record with Typed Standards](https://typedstandards.org/badge/typed-standards-verify.svg)](<https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Frfc-3161-2.bundle.json>)"
+    },
+    {
+      "name": "map/edges/rfc-8032-2",
+      "url": "https://core-satellite.typedstandards.org/bundles/map/edges/rfc-8032-2.bundle.json",
+      "verify": "https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Frfc-8032-2.bundle.json",
+      "html": "<a href=\"https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Frfc-8032-2.bundle.json\">\n  <img src=\"https://typedstandards.org/badge/typed-standards-verify.svg\" alt=\"Verify this record with Typed Standards\" width=\"248\" height=\"30\" />\n</a>",
+      "markdown": "[![Verify this record with Typed Standards](https://typedstandards.org/badge/typed-standards-verify.svg)](<https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Frfc-8032-2.bundle.json>)"
+    },
+    {
+      "name": "map/edges/did-key-2",
+      "url": "https://core-satellite.typedstandards.org/bundles/map/edges/did-key-2.bundle.json",
+      "verify": "https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fdid-key-2.bundle.json",
+      "html": "<a href=\"https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fdid-key-2.bundle.json\">\n  <img src=\"https://typedstandards.org/badge/typed-standards-verify.svg\" alt=\"Verify this record with Typed Standards\" width=\"248\" height=\"30\" />\n</a>",
+      "markdown": "[![Verify this record with Typed Standards](https://typedstandards.org/badge/typed-standards-verify.svg)](<https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fdid-key-2.bundle.json>)"
+    },
+    {
+      "name": "map/edges/discourse-graphs-2",
+      "url": "https://core-satellite.typedstandards.org/bundles/map/edges/discourse-graphs-2.bundle.json",
+      "verify": "https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fdiscourse-graphs-2.bundle.json",
+      "html": "<a href=\"https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fdiscourse-graphs-2.bundle.json\">\n  <img src=\"https://typedstandards.org/badge/typed-standards-verify.svg\" alt=\"Verify this record with Typed Standards\" width=\"248\" height=\"30\" />\n</a>",
+      "markdown": "[![Verify this record with Typed Standards](https://typedstandards.org/badge/typed-standards-verify.svg)](<https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fdiscourse-graphs-2.bundle.json>)"
+    },
+    {
+      "name": "map/edges/nanopublications-2",
+      "url": "https://core-satellite.typedstandards.org/bundles/map/edges/nanopublications-2.bundle.json",
+      "verify": "https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fnanopublications-2.bundle.json",
+      "html": "<a href=\"https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fnanopublications-2.bundle.json\">\n  <img src=\"https://typedstandards.org/badge/typed-standards-verify.svg\" alt=\"Verify this record with Typed Standards\" width=\"248\" height=\"30\" />\n</a>",
+      "markdown": "[![Verify this record with Typed Standards](https://typedstandards.org/badge/typed-standards-verify.svg)](<https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fnanopublications-2.bundle.json>)"
+    },
+    {
+      "name": "map/edges/proof-of-control-2",
+      "url": "https://core-satellite.typedstandards.org/bundles/map/edges/proof-of-control-2.bundle.json",
+      "verify": "https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fproof-of-control-2.bundle.json",
+      "html": "<a href=\"https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fproof-of-control-2.bundle.json\">\n  <img src=\"https://typedstandards.org/badge/typed-standards-verify.svg\" alt=\"Verify this record with Typed Standards\" width=\"248\" height=\"30\" />\n</a>",
+      "markdown": "[![Verify this record with Typed Standards](https://typedstandards.org/badge/typed-standards-verify.svg)](<https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fproof-of-control-2.bundle.json>)"
+    },
+    {
+      "name": "map/edges/nanda-agentfacts-2",
+      "url": "https://core-satellite.typedstandards.org/bundles/map/edges/nanda-agentfacts-2.bundle.json",
+      "verify": "https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fnanda-agentfacts-2.bundle.json",
+      "html": "<a href=\"https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fnanda-agentfacts-2.bundle.json\">\n  <img src=\"https://typedstandards.org/badge/typed-standards-verify.svg\" alt=\"Verify this record with Typed Standards\" width=\"248\" height=\"30\" />\n</a>",
+      "markdown": "[![Verify this record with Typed Standards](https://typedstandards.org/badge/typed-standards-verify.svg)](<https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fnanda-agentfacts-2.bundle.json>)"
+    },
+    {
+      "name": "map/edges/atproto-lexicon-2",
+      "url": "https://core-satellite.typedstandards.org/bundles/map/edges/atproto-lexicon-2.bundle.json",
+      "verify": "https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fatproto-lexicon-2.bundle.json",
+      "html": "<a href=\"https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fatproto-lexicon-2.bundle.json\">\n  <img src=\"https://typedstandards.org/badge/typed-standards-verify.svg\" alt=\"Verify this record with Typed Standards\" width=\"248\" height=\"30\" />\n</a>",
+      "markdown": "[![Verify this record with Typed Standards](https://typedstandards.org/badge/typed-standards-verify.svg)](<https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fatproto-lexicon-2.bundle.json>)"
+    },
+    {
+      "name": "map/edges/google-okf-2",
+      "url": "https://core-satellite.typedstandards.org/bundles/map/edges/google-okf-2.bundle.json",
+      "verify": "https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fgoogle-okf-2.bundle.json",
+      "html": "<a href=\"https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fgoogle-okf-2.bundle.json\">\n  <img src=\"https://typedstandards.org/badge/typed-standards-verify.svg\" alt=\"Verify this record with Typed Standards\" width=\"248\" height=\"30\" />\n</a>",
+      "markdown": "[![Verify this record with Typed Standards](https://typedstandards.org/badge/typed-standards-verify.svg)](<https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fgoogle-okf-2.bundle.json>)"
+    },
+    {
+      "name": "map/edges/mira-schema-2",
+      "url": "https://core-satellite.typedstandards.org/bundles/map/edges/mira-schema-2.bundle.json",
+      "verify": "https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fmira-schema-2.bundle.json",
+      "html": "<a href=\"https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fmira-schema-2.bundle.json\">\n  <img src=\"https://typedstandards.org/badge/typed-standards-verify.svg\" alt=\"Verify this record with Typed Standards\" width=\"248\" height=\"30\" />\n</a>",
+      "markdown": "[![Verify this record with Typed Standards](https://typedstandards.org/badge/typed-standards-verify.svg)](<https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fmira-schema-2.bundle.json>)"
+    },
+    {
+      "name": "map/edges/qsv-2",
+      "url": "https://core-satellite.typedstandards.org/bundles/map/edges/qsv-2.bundle.json",
+      "verify": "https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fqsv-2.bundle.json",
+      "html": "<a href=\"https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fqsv-2.bundle.json\">\n  <img src=\"https://typedstandards.org/badge/typed-standards-verify.svg\" alt=\"Verify this record with Typed Standards\" width=\"248\" height=\"30\" />\n</a>",
+      "markdown": "[![Verify this record with Typed Standards](https://typedstandards.org/badge/typed-standards-verify.svg)](<https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fqsv-2.bundle.json>)"
+    },
+    {
+      "name": "map/edges/verikan-2",
+      "url": "https://core-satellite.typedstandards.org/bundles/map/edges/verikan-2.bundle.json",
+      "verify": "https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fverikan-2.bundle.json",
+      "html": "<a href=\"https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fverikan-2.bundle.json\">\n  <img src=\"https://typedstandards.org/badge/typed-standards-verify.svg\" alt=\"Verify this record with Typed Standards\" width=\"248\" height=\"30\" />\n</a>",
+      "markdown": "[![Verify this record with Typed Standards](https://typedstandards.org/badge/typed-standards-verify.svg)](<https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fverikan-2.bundle.json>)"
+    },
+    {
+      "name": "map/edges/okfn-mcp-server",
+      "url": "https://core-satellite.typedstandards.org/bundles/map/edges/okfn-mcp-server.bundle.json",
+      "verify": "https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fokfn-mcp-server.bundle.json",
+      "html": "<a href=\"https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fokfn-mcp-server.bundle.json\">\n  <img src=\"https://typedstandards.org/badge/typed-standards-verify.svg\" alt=\"Verify this record with Typed Standards\" width=\"248\" height=\"30\" />\n</a>",
+      "markdown": "[![Verify this record with Typed Standards](https://typedstandards.org/badge/typed-standards-verify.svg)](<https://typedstandards.org/verify?url=https%3A%2F%2Fcore-satellite.typedstandards.org%2Fbundles%2Fmap%2Fedges%2Fokfn-mcp-server.bundle.json>)"
+    }
+  ]
+}

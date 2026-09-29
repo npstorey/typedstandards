@@ -1,0 +1,30 @@
+{
+  "node": {
+    "metadata": {
+      "schemaVersion": "0.1.0",
+      "packageId": "98f36e7e-941d-4fec-b7bc-205e73873344",
+      "createdAt": "2026-09-24T01:52:29.937Z",
+      "signingKeyId": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH"
+    },
+    "type": "attestation/withdraws/v1",
+    "signer": {
+      "bindingTier": "pseudonymous",
+      "identifier": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+      "displayName": "typedstandards-core-satellite-example (self-certifying example key)"
+    },
+    "targetNodeId": "67885d44f6923d2e7a7c0b76e81d49af8e9f562f3f1c64fa6cf879da96434bbc",
+    "contentCanonicalization": "https://typedstandards.org/canonicalization/legacy-json/v1",
+    "reason": "The pinned frontispiece shows neither the evidence-token format nor the pointer to SLSA and in-toto that its basis names. Restated from the frontispiece as adjacent, map/edges/proof-of-control-2.yaml.",
+    "effectiveAt": "2026-09-24T01:52:29.937Z",
+    "contentHash": {
+      "sha256": "ed7b02e6f1183d7b96fd7fdf78848ef2ecd04ad4761af5b6eca22a77c25b692c"
+    }
+  },
+  "nodeId": "08ab835ce18419d3f6395d84dcd24c4488aac96f59d46b5ca716809471c9024c",
+  "signature": {
+    "signature": "hc6TLDrgxAoMFjVKXRn36qCndH/rVYq6bLazgNJ5zaCN9QAjwocKrE4SgyGnb0aGCTIQRyL/DtdmxZsvw8OoCA==",
+    "publicKey": "MCowBQYDK2VwAyEA+BmmxJyxU0vnC2LLuSu0xcr1wwevoOLpcCFjnbnTUYQ=",
+    "algorithm": "Ed25519ph",
+    "kid": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH"
+  }
+}
