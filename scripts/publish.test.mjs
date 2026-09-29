@@ -177,8 +177,8 @@ test('the in-repo ranges the check reads are the seven: the five D12 names and h
 
 // ---- the package order ----
 
-test('the packages publish verify-core, then produce-core, then cli', () => {
-  assert.deepEqual(PACKAGES.map((p) => p.name), ['@typedstandards/verify-core', '@typedstandards/produce-core', '@typedstandards/cli']);
+test('the packages publish verify-core, then produce-core, then cli, then host-core', () => {
+  assert.deepEqual(PACKAGES.map((p) => p.name), ['@typedstandards/verify-core', '@typedstandards/produce-core', '@typedstandards/cli', '@typedstandards/host-core']);
   for (const p of PACKAGES) assert.equal(manifestOf(p.dir).name, p.name);
   assert.ok(Object.isFrozen(PACKAGES));
 });
