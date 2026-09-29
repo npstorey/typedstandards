@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 // Publish the packages PACKAGES lists (scripts/publish-lib.mjs), in its order:
 // @typedstandards/verify-core, then @typedstandards/produce-core, then
-// @typedstandards/cli (typedstandards#113 G0 D12; replaces
-// packages/cli/scripts/publish.mjs). The owner runs it from a detached worktree
-// at the release PR's merge commit:
+// @typedstandards/cli, then @typedstandards/host-core (typedstandards#113 G0 D12,
+// #125 D8; replaces packages/cli/scripts/publish.mjs). The owner runs it from a
+// detached worktree at the release PR's merge commit:
 //
 //   node scripts/publish.mjs --merged <sha> --dry-run
 //   node scripts/publish.mjs --merged <sha>
@@ -25,8 +25,8 @@
 //     never published again, so its heading keeps its own release date;
 //   - an in-repo range on a published package does not admit the version being
 //     published (under 0.x a caret range excludes the next minor): produce-core →
-//     verify-core; cli → produce-core, verify-core; apps/web → verify-core, and its
-//     devDependency → produce-core;
+//     verify-core; cli → produce-core, verify-core; host-core → produce-core,
+//     verify-core; apps/web → verify-core, and its devDependency → produce-core;
 //   - `npm whoami` fails;
 //   - `npm ci --ignore-scripts`, a clean build (in dependency order, verify-core's
 //     dist first) or a package's tests fail;

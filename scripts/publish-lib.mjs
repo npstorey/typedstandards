@@ -6,6 +6,7 @@ export const PACKAGES = Object.freeze([
   Object.freeze({ name: '@typedstandards/verify-core', dir: 'packages/verify-core' }),
   Object.freeze({ name: '@typedstandards/produce-core', dir: 'packages/produce-core' }),
   Object.freeze({ name: '@typedstandards/cli', dir: 'packages/cli' }),
+  Object.freeze({ name: '@typedstandards/host-core', dir: 'packages/host-core' }),
 ]);
 
 export const REGISTRY = 'https://registry.npmjs.org';
