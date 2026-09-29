@@ -1,0 +1,11 @@
+{
+  "$comment": "The generic part of the worked example's docs/host-policy.yaml at b40c30f, as JSON: signer, type, display[] and unmatched. Each rule's roles are under extensions.role, the index key the fixture's host.json assigns. The example's map, rings and fill stay with its site.",
+  "signer": "did:key:z6Mkw9jqif2wccYESfNW78Sv2YC2UG1zuN5a5gP1HNL3RxDH",
+  "type": "content/analysis/v1",
+  "display": [
+    { "status": "active", "extensions": { "role": ["core", "map-header", "edge"] }, "as": "current" },
+    { "status": "active", "extensions": { "role": ["map-v1"] }, "as": "version 1" },
+    { "status": "withdrawn", "extensions": { "role": ["core", "map-v1", "map-header", "edge"] }, "as": "withdrawn" }
+  ],
+  "unmatched": "refuse"
+}
