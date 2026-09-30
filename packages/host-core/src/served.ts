@@ -9,7 +9,10 @@
 // { name, bundle, packageHash, createdAt, type, signer, status,
 //   withdrawn?{at, reason}, superseded?{at, successorNodeId}, extensions? },
 // in the manifest's order. `status`, `withdrawn` and `superseded` are verify-core's
-// verifyLifecycleChain reading of the attestations each bundle carries.
+// verifyLifecycleChain reading of the attestations each bundle carries. `type` is
+// verify-core's resolvePackageType reading of the package: a package with no type is
+// listed as content/analysis/v1 (spec §8.8.1). build never writes an index this
+// module's parseIndex refuses.
 
 import { LIFECYCLE_STATUSES, type LifecycleStatus } from '@typedstandards/verify-core';
 import { HostError, isObject, type JsonObject } from './json.ts';

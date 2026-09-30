@@ -14,11 +14,11 @@
 // registryFor, bundleFor, recordsJsonFor), with the example-specific parts left out.
 
 import { buildCommitmentView, type SignerIdentity } from '@typedstandards/produce-core';
-import { validateRegistry } from '@typedstandards/verify-core';
+import { resolvePackageType, validateRegistry } from '@typedstandards/verify-core';
 import { HostError, isObject, parseJsonFile, serialize, utf8, type FileMap, type JsonObject } from './json.ts';
 import { parseManifest, type HostManifest } from './manifest.ts';
 import { normalizePath } from './paths.ts';
-import { checkCarriedNode, checkSignedDocument, indexLifecycleOf, lifecycleOf, signerOf, type CarriedNode, type SignedDocument } from './records.ts';
+import { checkCarriedNode, checkSignedDocument, indexLifecycleOf, lifecycleOf, signerIdentifierOf, signerOf, type CarriedNode, type SignedDocument } from './records.ts';
 import { INDEX_PATH, REGISTRY_PATH, bundlePathOf, type HostIndex, type IndexRecord } from './served.ts';
 
 export interface RegistryDocument {
@@ -39,6 +39,10 @@ interface Loaded {
   extensions?: JsonObject;
   signed: SignedDocument;
   carried: CarriedNode[];
+  /** The package's `metadata.createdAt`, which the index states. */
+  createdAt: string;
+  /** The package's `signer.identifier`, which the index states. */
+  signer: string;
 }
 
 function readInput(files: FileMap, path: string, where: string): unknown {
@@ -52,6 +56,12 @@ function load(manifest: HostManifest, files: FileMap): Loaded[] {
   return manifest.records.map((r) => {
     const where = `record ${r.name}`;
     const signed = checkSignedDocument(readInput(files, r.signed, where), `${where}: ${r.signed}`);
+    // The index states both, and parseIndex requires each to be a non-empty string:
+    // build refuses here, before any view is built, rather than list a record with ''.
+    const createdAt = isObject(signed.package['metadata']) ? signed.package['metadata']['createdAt'] : undefined;
+    if (typeof createdAt !== 'string' || createdAt === '') throw new HostError(`${where}: the package has no metadata.createdAt, which the index states`);
+    const signer = signerIdentifierOf(signed.package);
+    if (signer === '') throw new HostError(`${where}: the package has no signer.identifier, which the index states`);
     const other = seen.get(signed.envelopeHash);
     if (other !== undefined) throw new HostError(`${where}: ${r.signed} is the record ${other} already serves (envelopeHash ${signed.envelopeHash})`);
     seen.set(signed.envelopeHash, r.name);
@@ -62,7 +72,7 @@ function load(manifest: HostManifest, files: FileMap): Loaded[] {
       }
       return node;
     });
-    return { name: r.name, title: r.title, ...(r.extensions ? { extensions: r.extensions } : {}), signed, carried };
+    return { name: r.name, title: r.title, ...(r.extensions ? { extensions: r.extensions } : {}), signed, carried, createdAt, signer };
   });
 }
 
@@ -140,17 +150,21 @@ function bundleFor(r: Loaded, manifest: HostManifest, registry: RegistryDocument
   return registry ? { ...view, trustRegistry: registry, package: pkg } : { ...view, package: pkg };
 }
 
+/**
+ * A record's index entry. `type` is the type verify-core resolves for the package
+ * (`resolvePackageType`): a package signed with no `type`, on the legacy chain, is
+ * listed as `content/analysis/v1`, as spec §8.8.1 reads its absence.
+ */
 function indexRecordFor(r: Loaded): IndexRecord {
   const pkg = r.signed.package;
-  const metadata = isObject(pkg['metadata']) ? pkg['metadata'] : {};
   const life = lifecycleOf(r.carried, r.signed.envelopeHash, pkg, r.signed.signature);
   return {
     name: r.name,
     bundle: bundlePathOf(r.name),
     packageHash: r.signed.envelopeHash,
-    createdAt: optionalString(metadata['createdAt']) ?? '',
-    type: optionalString(pkg['type']) ?? '',
-    signer: optionalString(signerOf(pkg)?.['identifier']) ?? '',
+    createdAt: r.createdAt,
+    type: resolvePackageType(pkg).type,
+    signer: r.signer,
     ...indexLifecycleOf(life),
     ...(r.extensions ? { extensions: r.extensions } : {}),
   };

@@ -103,6 +103,15 @@ attestations each bundle carries, bound by the record's own signing key as the C
 binds them. They are never read from input. `$comment` and `trustRegistryUrl` are
 present when the manifest gives a comment and serves a registry.
 
+`type` is the type verify-core's `resolvePackageType` resolves for the package. A
+package signed with no `type`, on the legacy chain, is listed as
+`content/analysis/v1`: spec §8.8.1 says "Absence is interpreted as
+`content/analysis/v1`". A display rule naming `content/analysis/v1` therefore
+displays it, and `verify` compares the index's `type` with the same resolution.
+`createdAt` and `signer` are the package's `metadata.createdAt` and
+`signer.identifier`; `build` refuses a package that lacks either, naming the record
+and the field, so it never writes an index that its own `parseIndex` refuses.
+
 ## Commands
 
 ```
