@@ -2,9 +2,10 @@
 
 Typed Standards monorepo: the spec site (`apps/web`, typedstandards.org), the
 reference cores — `packages/verify-core` (the spec §9.2 verification suite) and
-`packages/produce-core` (the I/O-free producer core) — and `packages/cli`, the
-command line over both. npm workspaces; Node ≥ 22 at the root (the cores declare
-≥ 18, #110; the CLI ≥ 20.19); `npm ci` at the **repo root** installs everything.
+`packages/produce-core` (the I/O-free producer core) — `packages/cli`, the command
+line over both, and `packages/host-core`, which builds and checks what a static host
+serves. npm workspaces; Node ≥ 22 at the root (the cores declare ≥ 18, #110; the CLI
+≥ 20.19; host-core ≥ 22); `npm ci` at the **repo root** installs everything.
 
 ## Build / test
 
@@ -32,6 +33,13 @@ differs from ci.yml's steps in either direction or in order.
 - `npm run check:budgets` — an `OK` line per budgeted package, then
   `Dependency-budget check passed.`
 - `node --test scripts/claude-md-gate-list.test.mjs` — `# fail 0`.
+
+Vercel, also required on `main`, builds `apps/web` alone: its `prebuild` and
+`next build`, which type-checks every `**/*.ts` there, tests included. A web import
+of a workspace package that `apps/web/package.json` does not declare, or `prebuild`
+does not build, passes the gates above and fails only on Vercel (#83). Read the PR's
+`Vercel` check; reproduce with
+`rm -rf packages/*/dist && npm run build --workspace @typedstandards/web`.
 
 ## Purity discipline
 
@@ -93,5 +101,10 @@ guard's patterns unilaterally. Shapes: [`.claude/rules/fixtures.md`](.claude/rul
 - The owner publishes with `node scripts/publish.mjs --merged <merge SHA>` (#113), from a
   detached worktree at the release PR's merge commit: `--dry-run` first, `--readback-only`
   after a publish the registry has not shown yet.
-- CHANGELOGs are factual per-version records; a new export is a minor bump. Bump with
-  `npm version --workspace <name>`.
+- CHANGELOGs are factual per-version records; a new export is a minor bump. Under 0.x
+  `^0.13.0` excludes `0.14.0`, so at a minor every in-repo range naming the bumped
+  package moves with it (`scripts/publish.mjs` stops on one left behind). Bump with
+  `npm version minor --workspace <name> --no-git-tag-version --no-workspaces-update`
+  (without the last flag npm installs registry copies at once), edit the ranges, then
+  `npm install --package-lock-only --ignore-scripts`; each `@typedstandards/*` lock
+  entry stays a link.
