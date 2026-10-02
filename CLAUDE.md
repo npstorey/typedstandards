@@ -43,8 +43,8 @@ does not build, passes the gates above and fails only on Vercel (#83). Read the 
 
 ## Purity discipline
 
-Every published package stays browser-safe and I/O-free in shipped `src/` (the two
-cores and the CLI's command logic); test files are exempt. A Node program's I/O
+Every published package (each workspace under `packages/`) stays browser-safe and
+I/O-free in shipped `src/`; test files are exempt. A Node program's I/O
 lives in one entry outside `src/` whose config the guard pins (#109).
 Enumerated rules and enforcement: [`.claude/rules/purity.md`](.claude/rules/purity.md).
 Don't weaken any of it — and a diff touching produce-core's ESLint config, a build

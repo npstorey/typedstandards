@@ -6,8 +6,8 @@ paths:
 # Purity
 
 You are in shipped source of a published package: one of the two cores, or the
-command logic of a Node program (`packages/cli/src`). All of it is **browser-safe
-and I/O-free**; test files (`*.test.ts`) are exempt from all of it.
+logic of a Node program, whose I/O lives outside `src/` (below). All of it is
+**browser-safe and I/O-free**; test files (`*.test.ts`) are exempt from all of it.
 
 Every published package, in shipped `src/`:
 
@@ -33,10 +33,9 @@ stdout exist only there.
 
 `scripts/type-check-universe.test.mjs` pins each such config in `NODE_ENTRIES`:
 its program's source files exactly, and the Node built-ins those files may import.
-A second Node program (the planned host package, an I/O-free library over
-in-memory files with disk access only in its own `node/` entry) joins by adding
-its config there, in the diff that adds it; the pinned set is asserted exactly,
-both ways, so a core that adds a Node config fails. The ruling: #109, G0 D1.
+A further Node program joins by adding its config there, in the diff that adds it,
+as host-core's did (#125); the pinned set is asserted exactly, both ways, so a core
+that adds a Node config fails. The ruling: #109, G0 D1.
 
 ## What enforces it
 
@@ -71,8 +70,9 @@ Per rule, per package (`src/`):
 | no clock, no RNG | browser-safety test | not a verify-core rule | not a cli rule (both arrive through `Io`) | not a host-core rule (it reads neither) |
 | no direct network call | nothing mechanical | nothing mechanical | nothing mechanical; its tests assert no call | nothing mechanical; `verify` blocks and counts both fetches |
 
-The CLI's Node entry is held instead to its pin: its program is `node/main.ts`
-alone, importing only `node:fs`, `node:process`, `node:util` and `#core`.
+Each Node entry in `NODE_ENTRIES` is held instead to its pin: its program is its
+package's `node/main.ts` alone, importing only the Node built-ins pinned there and
+the package's own `#` imports.
 
 The build configs of `src/` keep the DOM lib, so the typecheck does not see `fetch`,
 `crypto.getRandomValues` or `Date`.
