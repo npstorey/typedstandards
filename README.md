@@ -11,9 +11,11 @@ maintained in the hub repo at
 
 This is an npm-workspaces monorepo.
 
-> **Repo status (as of the current `main`).** This monorepo now contains both
-> published packages — [`@typedstandards/verify-core`](packages/verify-core)
-> and [`@typedstandards/produce-core`](packages/produce-core) — **and** the
+> **Repo status (as of the current `main`).** This monorepo now contains the
+> published packages — [`@typedstandards/verify-core`](packages/verify-core),
+> [`@typedstandards/produce-core`](packages/produce-core),
+> [`@typedstandards/cli`](packages/cli) and
+> [`@typedstandards/host-core`](packages/host-core) — **and** the
 > typedstandards.org site at [`apps/web`](apps/web), which serves the
 > client-side `/verify` verifier, `/roadmap`, and the host directory at
 > `/.well-known/typed-host-directory.json`. The "later phase" note below
@@ -98,6 +100,7 @@ its own, and offers the roster to re-resolve it elsewhere in one click.
 | --- | --- |
 | [`packages/verify-core`](packages/verify-core) | [`@typedstandards/verify-core`](https://www.npmjs.com/package/@typedstandards/verify-core) — the portable, browser-safe §9.2 verification core. Published to npm so every consumer (civicaitools.org server, typedstandards.org browser client) depends on one versioned source that cannot drift. |
 | [`packages/produce-core`](packages/produce-core) | [`@typedstandards/produce-core`](https://www.npmjs.com/package/@typedstandards/produce-core) — the I/O-free **producer** core: envelope and attestation assembly (§8.1, §8.12), Ed25519ph signing (§8.3.1), RFC 3161 / Rekor proof codecs, and the §8.8.1 commitment view. Shares one canonicalization implementation with `verify-core`, so producer and verifier compute the same envelope hash by construction. |
+| [`packages/cli`](packages/cli) | [`@typedstandards/cli`](https://www.npmjs.com/package/@typedstandards/cli) — the `typedstandards` command: signs, withdraws, attests to, builds a commitment view for and verifies records, through `produce-core` and `verify-core`. JSON in, JSON out; the signing seed comes from one environment variable. |
 | [`packages/host-core`](packages/host-core) | [`@typedstandards/host-core`](https://www.npmjs.com/package/@typedstandards/host-core) — serve signed records from a static host: builds the bundles, the key registry and a versioned index from what the CLI's `sign` and `withdraw` print, checks and verifies what is served offline, prints verifier links and badge snippets, and applies a display policy. Holds no key. |
 
 Apps (the typedstandards.org Next.js site and its `/verify` client-side verifier)
