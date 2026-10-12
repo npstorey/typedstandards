@@ -47,19 +47,22 @@ export default function RootLayout({
       <body className={`${spaceGrotesk.variable} ${notoSans.variable} font-sans`}>
         <div className="flex min-h-dvh flex-col">
           <header className="border-b border-border">
-            <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
+            <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-6 py-4">
               <Link
                 href="/"
                 className="font-display text-lg font-semibold tracking-tight"
               >
                 Typed<span className="text-accent">Standards</span>
               </Link>
-              <nav className="flex items-center gap-6 text-sm">
+              <nav className="flex flex-wrap items-center justify-end gap-x-6 gap-y-1 text-sm">
                 <Link href="/verify" className="hover:text-accent">
                   Verify
                 </Link>
                 <Link href="/badge" className="hover:text-accent">
                   Badge
+                </Link>
+                <Link href="/examples" className="hover:text-accent">
+                  Examples
                 </Link>
                 <Link href="/roadmap" className="hover:text-accent">
                   Roadmap
