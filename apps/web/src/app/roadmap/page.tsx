@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
+import { SPECIFICATION } from "@/lib/site-config";
 
 export const metadata: Metadata = {
   title: "Roadmap",
@@ -18,14 +20,14 @@ type Milestone = {
   title: string;
   state: BuildState;
   quarter?: string;
-  body: string;
+  body: ReactNode;
 };
 
 /**
- * Milestones mirror the canonical civic-ai-tools public roadmap
- * (v2026.Q2.1) — the reference implementation's roadmap is the source of
- * truth; this page is the Typed Standards view of it. Quarter granularity
- * only on this public page.
+ * The standard's own milestones: the standard is the product, and Civic AI
+ * Tools, its civic reference implementation, is its first domain and keeps
+ * its own roadmap. Each built row is backed by a package release on npm or
+ * PyPI, or a specification tag. Quarter granularity only on this public page.
  */
 const MILESTONES: Milestone[] = [
   {
@@ -54,18 +56,65 @@ const MILESTONES: Milestone[] = [
   },
   {
     title: "Public specification",
-    state: "designed",
-    body: "The full Typed Standards specification exists and is in pre-launch private review. It is not published here yet.",
+    state: "built",
+    quarter: "2026 Q3",
+    body: (
+      <>
+        The{" "}
+        <a
+          href={SPECIFICATION.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline decoration-dotted hover:text-accent"
+        >
+          Typed Standards Specification
+        </a>{" "}
+        is public: a v0.1 working draft, open for external review, under CC
+        BY 4.0. Seven revisions were tagged in the quarter, v0.1.4 through{" "}
+        {SPECIFICATION.version}.
+      </>
+    ),
   },
   {
     title: "Lifecycle model and composite bundles",
-    state: "designed",
-    body: "An event-history model for the record lifecycle, and composite bundles that carry a package and its attestations as one content-addressable artifact — so third-party verifiers need not call a host's separate APIs.",
+    state: "built",
+    quarter: "2026 Q3",
+    body: "A record's lifecycle is a chain of signed events — withdrawn, reinstated, superseded, revised — that its bundle carries with the record. The verifier reads the status from that chain, counting an event only when its key is bound to the record's signer, and checks a bundle offline.",
   },
   {
-    title: "User-signed records and identity tiers",
+    title: "Author-held keys and third-party attestations",
+    state: "built",
+    quarter: "2026 Q3",
+    body: "A record can be signed with a key its author holds, named by a self-certifying did:key, with no registry needed. Anyone with a bound key can sign an attestation that corroborates or contradicts another's record. The verifier states each signing key's trust status, from self-certified to listed in a registry the record names.",
+  },
+  {
+    title: "Deterministic-output profile",
+    state: "built",
+    quarter: "2026 Q3",
+    body: "The scripted-recomputation Producer Profile records a script's run over deterministic tool output, and raw-bytes/v1 hashes a file's exact bytes (specification v0.1.9). A public AI benchmark evaluation run is signed under it as a worked example.",
+  },
+  {
+    title: "Command line",
+    state: "built",
+    quarter: "2026 Q3",
+    body: "@typedstandards/cli signs, views and verifies records from a terminal, and signs withdrawals and attestations. It verifies each record offline before printing it.",
+  },
+  {
+    title: "Host library and template",
+    state: "built",
+    quarter: "2026 Q3",
+    body: "@typedstandards/host-core builds what a static host serves — each record's bundle, the signing key and an index — and checks it. A template repository serves signed records from GitHub Pages with it.",
+  },
+  {
+    title: "Python and notebook publishing",
+    state: "built",
+    quarter: "2026 Q4",
+    body: "The typedstandards package on PyPI signs, views and verifies records from Python, and publishes a record from a notebook to a GitHub Pages host as one commit.",
+  },
+  {
+    title: "Graded identity",
     state: "upcoming",
-    body: "Moving from platform-signed to user-signed records with multi-signer attestations, and surfacing identity-strength tiers so readers can calibrate for themselves.",
+    body: "Signers bound to an identity above the pseudonymous rung — an OAuth account, an academic identifier, an institution's domain, a notary — surfaced as signals a reader can filter on, as the specification's identity ladder defines.",
   },
   {
     title: "Packages that travel",
@@ -89,17 +138,17 @@ export default function RoadmapPage() {
         Where the standard stands
       </h1>
       <p className="mt-4 max-w-2xl leading-relaxed text-muted">
-        Milestones for the Typed Standards work, at quarter granularity. They
-        mirror the public roadmap of{" "}
+        Milestones for the Typed Standards work, at quarter granularity.{" "}
         <a
-          href="https://civicaitools.org"
+          href="https://civicaitools.org/roadmap"
           target="_blank"
           rel="noopener noreferrer"
           className="underline decoration-dotted hover:text-accent"
         >
           Civic AI Tools
         </a>
-        , the civic reference implementation of Typed Standards.
+        , the civic reference implementation and the standard&apos;s first
+        domain, keeps its own roadmap.
       </p>
 
       {/* Build-state legend — shared vocabulary with civicaitools.org */}
