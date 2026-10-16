@@ -3,6 +3,20 @@
 Factual record of what changed per published version. Check numbers (#1–#16)
 refer to the Typed Standards specification §9.2 verification sequence.
 
+## Unreleased
+
+- **A JSON text that repeats a member name within an object is refused (typedstandards#145;
+  specification §8.2, §9.2 check #1).** `parseJsonFile`, host-core's one JSON reader, parses
+  with verify-core's `parseStrictJson`. The refusal covers every file host-core reads: the
+  manifest (`host.json`) and the signed documents and carried nodes `build` and `check` read,
+  and the bundles, registry and index (`records.json`) `verify` and `links` read. The
+  `HostError` reads `<file> is not I-JSON (RFC 7493): the member name "<name>" is repeated in
+  the object at JSON Pointer "<pointer>"`. `build` stops on such an input; `verifyServed`
+  fails the record whose bundle it is, before any hash is computed, and a registry or index
+  that repeats a name fails as an unreadable one does. host-core's own serialization never
+  writes one. A text with no repeated name is read exactly as before. It needs the
+  verify-core release that exports `parseStrictJson`.
+
 ## 0.1.1 — 2026-09-29
 
 A patch (typedstandards#125, HOST CORE P3 fix, finding F1): `buildHost` no longer

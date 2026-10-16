@@ -8,13 +8,32 @@ in).
 
 ## Unreleased
 
-**A minor bump**: a new export, and a type URI check #12 newly reads `ok`.
+**A minor bump**: new exports (`CONTENT_LAYOUT`; `parseStrictJson` and `RepeatedMemberNameError`), and a type URI check #12 newly reads `ok`.
 
 - **`content/layout/v1` is registered (hub ADR-0034; spec §8.14).** New export `CONTENT_LAYOUT`
   (`'content/layout/v1'`). `KNOWN_TYPE_URIS` holds eighteen entries: `content/analysis/v1`, then
   `content/layout/v1`, then the sixteen attestation sub-types in the §8.12.1 table order, unchanged.
   Check #12 reads `ok` for a layout node, where it read `unknown_type`. No payload check is added: a
   layout node's envelope verifies as any node's (§8.14.5).
+- **`parseStrictJson` and `RepeatedMemberNameError` (new exports; typedstandards#145,
+  specification §8.2 and §9.2 check #1).** `parseStrictJson(text: string | Uint8Array)`
+  refuses a JSON text that repeats a member name within an object, which is not I-JSON
+  (RFC 7493), the input RFC 8785 JCS requires. It throws `RepeatedMemberNameError`
+  (`name` `'RepeatedMemberNameError'`), carrying `memberName` (unescaped) and
+  `pointer`, the JSON Pointer (RFC 6901) of the object that holds it. Names compare
+  after unescaping; the same name in two different objects is not a repeat. A text with
+  no repeated name returns exactly what `JSON.parse` returns, and a text that is not
+  JSON throws what `JSON.parse` throws, unchanged. Bytes are decoded as UTF-8 with
+  `fatal`. The walk keeps its own stack, so nesting the platform parser accepts does
+  not overflow it. No dependency is added.
+- **`verifyRecord` is unchanged:** it takes a parsed package, so the refusal belongs to
+  whoever reads the text. `JSON.parse` keeps the last occurrence of a repeated name, and
+  the envelope hash is computed over the parsed object, so a caller that parses a
+  package with it accepts a text the specification refuses.
+- **A negative vector**, `src/__fixtures__/repeated-member-name.bundle.json` (not
+  published): the site's minted interop bundle with a second, earlier `summary` member in
+  its package, which under `JSON.parse` gives the signed package's envelope and content
+  hashes. Its provenance is in `src/__fixtures__/README.md`.
 
 ## 0.13.0 — 2026-09-27
 

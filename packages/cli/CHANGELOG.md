@@ -3,6 +3,19 @@
 Factual record of what changed per published version. Check numbers (#1–#16)
 refer to the Typed Standards specification §9.2 verification sequence.
 
+## Unreleased
+
+- **A JSON text that repeats a member name within an object is refused (typedstandards#145;
+  specification §8.2, §9.2 check #1).** `readJson`, the one reader of every JSON file the
+  commands take, parses with verify-core's `parseStrictJson`. The refusal covers
+  `verify --input` (the record or bundle), `view --signed` and each carried node it reads
+  (`--attestation`, `--withdrawal`), and the producer inputs of `sign`, `withdraw` and
+  `attest`, whose values would otherwise be signed with one occurrence dropped. It exits 2
+  with `<flag> <path> is not I-JSON (RFC 7493): the member name "<name>" is repeated in the
+  object at JSON Pointer "<pointer>"`; a record is not reported `altered`, since no hash is
+  computed. A text with no repeated name is read exactly as before. It needs the verify-core
+  release that exports `parseStrictJson`.
+
 ## 0.2.0 — 2026-09-27
 
 The core-minors release (typedstandards#113, shipped in #114, #115, #116, #117 and #118). **A minor
