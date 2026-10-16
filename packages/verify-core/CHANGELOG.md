@@ -6,9 +6,11 @@ references are to `npstorey/civic-ai-tools-website` (#119 is the offline-crypto
 hardening arc; #116 is the standalone-verifier arc this package was extracted
 in).
 
-## Unreleased
+## 0.14.0 — 2026-10-16
 
-**A minor bump**: new exports (`CONTENT_LAYOUT`; `parseStrictJson` and `RepeatedMemberNameError`), and a type URI check #12 newly reads `ok`.
+The W5 release (civic-ai-tools#260, shipped in #146 and #147). **A minor bump**: new exports
+(`CONTENT_LAYOUT`; `parseStrictJson` and `RepeatedMemberNameError`), and a type URI check #12 newly
+reads `ok`.
 
 - **`content/layout/v1` is registered (hub ADR-0034; spec §8.14).** New export `CONTENT_LAYOUT`
   (`'content/layout/v1'`). `KNOWN_TYPE_URIS` holds eighteen entries: `content/analysis/v1`, then
