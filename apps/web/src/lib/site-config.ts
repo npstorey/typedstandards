@@ -19,8 +19,8 @@ export const EXPRESS_INTEREST_URL = "mailto:civicaitools@metagov.org";
  * next spec tag.
  */
 export const SPECIFICATION = {
-  version: "v0.1.10",
-  url: "https://github.com/npstorey/civic-ai-tools/blob/v0.1.10-typed-standards-spec/docs/architecture/typed-standards-specification.md",
+  version: "v0.1.12",
+  url: "https://github.com/npstorey/civic-ai-tools/blob/v0.1.12-typed-standards-spec/docs/architecture/typed-standards-specification.md",
 } as const;
 
 /**
