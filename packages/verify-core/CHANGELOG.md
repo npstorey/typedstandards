@@ -6,6 +6,16 @@ references are to `npstorey/civic-ai-tools-website` (#119 is the offline-crypto
 hardening arc; #116 is the standalone-verifier arc this package was extracted
 in).
 
+## Unreleased
+
+**A minor bump**: a new export, and a type URI check #12 newly reads `ok`.
+
+- **`content/layout/v1` is registered (hub ADR-0034; spec §8.14).** New export `CONTENT_LAYOUT`
+  (`'content/layout/v1'`). `KNOWN_TYPE_URIS` holds eighteen entries: `content/analysis/v1`, then
+  `content/layout/v1`, then the sixteen attestation sub-types in the §8.12.1 table order, unchanged.
+  Check #12 reads `ok` for a layout node, where it read `unknown_type`. No payload check is added: a
+  layout node's envelope verifies as any node's (§8.14.5).
+
 ## 0.13.0 — 2026-09-27
 
 The core-minors release (typedstandards#113, shipped in #114, #115 and #118). **A minor bump** —

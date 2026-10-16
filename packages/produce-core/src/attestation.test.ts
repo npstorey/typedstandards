@@ -11,6 +11,7 @@ import { readFileSync } from 'node:fs';
 import {
   jcs,
   LEGACY_JSON_CANONICALIZATION,
+  computeContentHashSha256,
   computeEnvelopeHash,
 } from '@typedstandards/verify-core';
 import {
@@ -115,6 +116,62 @@ test('publishes: the 0.8.0 inputs build the published 0.8.0 node byte for byte',
   assert.equal(serialize(node), PUBLISHES_080_BYTES);
   assert.equal(nodeId, computeEnvelopeHash(JSON.parse(PUBLISHES_080_BYTES) as Record<string, unknown>));
   assert.ok(!('layoutNodeId' in node));
+});
+
+// --- publishes: the optional layoutNodeId (spec §8.10.1, hub ADR-0034 §C) ---
+//
+// `__fixtures__/publishes-layout-golden.node.json` is the same publishes node
+// with `layoutNodeId` set to the nodeId of `__fixtures__/layout-golden.node.json`.
+
+const PUBLISHES_LAYOUT_BYTES = fixtureText('publishes-layout-golden.node.json');
+const LAYOUT_GOLDEN_NODE_ID = computeEnvelopeHash(
+  JSON.parse(fixtureText('layout-golden.node.json')) as Record<string, unknown>,
+);
+
+test('publishes: layoutNodeId is emitted directly after releasedAt, before contentHash, and builds the committed bytes', () => {
+  const { node } = buildAttestationNode({
+    ...layoutGoldenInputs.publishes,
+    layoutNodeId: LAYOUT_GOLDEN_NODE_ID,
+  });
+  const keys = Object.keys(node);
+  assert.equal(keys.indexOf('layoutNodeId'), keys.indexOf('releasedAt') + 1);
+  assert.equal(keys.indexOf('contentHash'), keys.indexOf('layoutNodeId') + 1);
+  assert.equal(keys.at(-1), 'contentHash');
+  assert.equal(node.layoutNodeId, LAYOUT_GOLDEN_NODE_ID);
+  assert.equal(serialize(node), PUBLISHES_LAYOUT_BYTES);
+});
+
+test('publishes: deleting layoutNodeId and recomputing contentHash yields the 0.8.0 bytes', () => {
+  const withLayout = JSON.parse(PUBLISHES_LAYOUT_BYTES) as Record<string, unknown>;
+  const { layoutNodeId, contentHash: _contentHash, ...rest } = withLayout;
+  assert.equal(layoutNodeId, LAYOUT_GOLDEN_NODE_ID);
+  const reverted = {
+    ...rest,
+    contentHash: { sha256: computeContentHashSha256(rest, LEGACY_JSON_CANONICALIZATION) },
+  };
+  assert.equal(serialize(reverted), PUBLISHES_080_BYTES);
+  assert.equal(
+    computeEnvelopeHash(reverted),
+    computeEnvelopeHash(JSON.parse(PUBLISHES_080_BYTES) as Record<string, unknown>),
+  );
+  // The key changes contentHash and nodeId too (legacy-json/v1 covers it).
+  assert.notDeepEqual(withLayout['contentHash'], reverted.contentHash);
+});
+
+test('a sub-type other than publishes, given layoutNodeId, emits none', () => {
+  const others: Partial<AttestationInput>[] = [
+    { type: ATTESTATION_WITHDRAWS, reason: 'error found' },
+    { type: ATTESTATION_REINSTATES, reason: 'figure corrected' },
+    { type: ATTESTATION_LOCATED_AT, uri: 'https://evidence.example.org/p.json' },
+    { type: ATTESTATION_EVALUATES, scoringRubric: 'example-rubric' },
+  ];
+  for (const fields of others) {
+    const without = buildAttestationNode(baseInput(fields));
+    const withId = buildAttestationNode(baseInput({ ...fields, layoutNodeId: LAYOUT_GOLDEN_NODE_ID }));
+    assert.ok(!('layoutNodeId' in withId.node), String(fields.type));
+    assert.equal(serialize(withId.node), serialize(without.node), String(fields.type));
+    assert.equal(withId.nodeId, without.nodeId, String(fields.type));
+  }
 });
 
 test('locatedAt: uri, target fingerprint, and length are emitted when supplied', () => {

@@ -1,0 +1,53 @@
+{
+  "metadata": {
+    "schemaVersion": "0.1.0",
+    "packageId": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+    "createdAt": "2026-10-15T00:00:00.000Z",
+    "signingKeyId": "adopter:test-key-1"
+  },
+  "type": "content/layout/v1",
+  "signer": {
+    "bindingTier": "organization",
+    "identifier": "adopter:example-host",
+    "displayName": "Example Host"
+  },
+  "contentCanonicalization": "https://typedstandards.org/canonicalization/legacy-json/v1",
+  "name": "answer-first",
+  "version": 1,
+  "appliesTo": [
+    "default",
+    "datHere"
+  ],
+  "order": [
+    "status",
+    "answer",
+    "citation",
+    "steps",
+    "sources",
+    "disclosure",
+    "actions"
+  ],
+  "disclosure": {
+    "label": "Learn more about how this analysis was produced",
+    "order": [
+      "A",
+      "B",
+      "C",
+      "D",
+      "E",
+      "G",
+      "signers",
+      "attestations",
+      "verification"
+    ],
+    "openByDefault": false
+  },
+  "steps": {
+    "placement": "beside",
+    "openByDefault": true
+  },
+  "rendererVersion": "answer-view/1",
+  "contentHash": {
+    "sha256": "b19c47bef2e7f1f1929a94e6520ac08d0176a1ba6b74fee3bc1fc5757d362565"
+  }
+}
