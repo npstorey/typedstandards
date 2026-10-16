@@ -12,6 +12,11 @@ producer profile, capture method, extensions and sources as input values. It rea
 JSON, prints one JSON document on stdout, prints diagnostics on stderr, makes no
 network request, and writes no file.
 
+Every JSON file it reads, a record or a producer input, must be I-JSON (RFC 7493;
+specification §8.2): a text that repeats a member name within an object exits 2,
+naming the flag, the file, the member name and the JSON Pointer of the object. Such a
+record is not reported `altered`; it is refused before any hash is computed.
+
 ## Install
 
 Node 20.19 or later.

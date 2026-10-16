@@ -20,6 +20,7 @@ import {
   type SkillMetadata,
   type VcsRef,
 } from '@typedstandards/produce-core';
+import { parseStrictJson, RepeatedMemberNameError } from '@typedstandards/verify-core';
 import { usageError } from './errors.ts';
 import type { Io } from './io.ts';
 
@@ -287,7 +288,13 @@ export function readBytes(io: Io, path: string, flag: string): Uint8Array {
   }
 }
 
-/** A JSON file's value, or a usage error naming the flag. */
+/**
+ * A JSON file's value, or a usage error naming the flag. The text must be I-JSON
+ * (RFC 7493; specification §8.2): one that repeats a member name within an object
+ * is refused, whatever the file is. A record's would verify under the occurrence
+ * `JSON.parse` keeps, and a producer input's would be signed with the others
+ * dropped (typedstandards#145).
+ */
 export function readJson(io: Io, path: string, flag: string): unknown {
   const bytes = readBytes(io, path, flag);
   let text: string;
@@ -297,8 +304,13 @@ export function readJson(io: Io, path: string, flag: string): unknown {
     throw usageError(`${flag} ${path} is not UTF-8 text`);
   }
   try {
-    return JSON.parse(text) as unknown;
+    return parseStrictJson(text);
   } catch (err) {
+    if (err instanceof RepeatedMemberNameError) {
+      throw usageError(
+        `${flag} ${path} is not I-JSON (RFC 7493): the member name ${JSON.stringify(err.memberName)} is repeated in the object at JSON Pointer ${JSON.stringify(err.pointer)}`,
+      );
+    }
     throw usageError(`${flag} ${path} is not JSON: ${(err as Error).message}`);
   }
 }
