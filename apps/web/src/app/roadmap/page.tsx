@@ -70,8 +70,8 @@ const MILESTONES: Milestone[] = [
           Typed Standards Specification
         </a>{" "}
         is public: a v0.1 working draft, open for external review, under CC
-        BY 4.0. Seven revisions were tagged in the quarter, v0.1.4 through{" "}
-        {SPECIFICATION.version}.
+        BY 4.0. Seven revisions were tagged in the quarter, v0.1.4 through
+        v0.1.10.
       </>
     ),
   },
