@@ -61,5 +61,5 @@ its dependency `@typedstandards/verify-core@0.13.0` came from the registry too
 (`sha512-//bMjEiJH0+zSJg6LT3nEjQnFelbpOHPuD6T1ITygLeuS6QMFU1DChB+hFW8QLzxL02UhiUFwoCiLoOVcE2Aew==`).
 Its `nodeId` is
 `32568b2b8af86cf7472bb4b86c32da8191be87a40848a4e4e75815869684e283`.
-`attestation.test.ts` asserts that this branch's builder, given the same inputs,
+`attestation.test.ts` asserts that this package's builder, given the same inputs,
 emits these bytes.
