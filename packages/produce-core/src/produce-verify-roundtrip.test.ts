@@ -16,9 +16,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import {
   verifyEvidence,
+  computeEnvelopeHash,
   LEGACY_JSON_CANONICALIZATION,
+  type SignerIdentity,
   type TrustRegistry,
   type VerifySignatureEnvelope,
 } from '@typedstandards/verify-core';
@@ -28,6 +31,7 @@ import {
   buildCommitmentView,
   deriveKeyDerivedIdentifierFromKey,
   DEFAULT_CONTENT_TYPE,
+  CONTENT_LAYOUT,
   type EnvelopeInput,
 } from './index.ts';
 
@@ -435,4 +439,93 @@ test('round-trip (self-certifying): every other check reads as a signed package 
     strip(self as unknown as Record<string, unknown>),
     strip(control as unknown as Record<string, unknown>),
   );
+});
+
+// --- The content/layout/v1 node (spec §8.14, hub ADR-0034) ---
+//
+// The committed layout golden (`__fixtures__/layout-golden.node.json`, built
+// from the spec §8.14.1 payload; provenance in `__fixtures__/README.md`),
+// signed with a seed made here and verified offline against a test registry
+// that binds the key to the golden's signer. verify-core registers the type,
+// so check #12 reads `ok`, and verifies the node's envelope as any node's; it
+// runs no payload check (§8.14.5).
+
+const LAYOUT_GOLDEN = JSON.parse(
+  readFileSync(new URL('./__fixtures__/layout-golden.node.json', import.meta.url), 'utf8'),
+) as Record<string, unknown> & {
+  metadata: { signingKeyId: string };
+  signer: SignerIdentity;
+};
+
+function signLayoutGolden() {
+  const seed = makeSeed();
+  const nodeId = computeEnvelopeHash(LAYOUT_GOLDEN);
+  const kid = LAYOUT_GOLDEN.metadata.signingKeyId;
+  const signed = signEnvelopeHash(nodeId, seed, kid);
+  const registry: TrustRegistry = {
+    keys: [
+      {
+        kid,
+        publicKey: signed.publicKey,
+        status: 'active',
+        activatedAt: '2026-01-01T00:00:00.000Z',
+        deprecatedAt: null,
+        revokedAt: null,
+        signerIdentity: LAYOUT_GOLDEN.signer,
+      },
+    ],
+  };
+  return { nodeId, signed, registry };
+}
+
+test('round-trip (layout): the golden layout node, signed, reads #1 verified, #2 true, #3 ok, #4 ok, #12 ok, #13 match offline', async () => {
+  const { nodeId, signed, registry } = signLayoutGolden();
+  const result = await verifyEvidence(
+    {
+      package: storageRoundTrip(LAYOUT_GOLDEN),
+      packageHash: nodeId,
+      signature: { ...signed } as unknown as VerifySignatureEnvelope,
+    },
+    { registry, fetch: offlineFetch },
+  );
+
+  assert.deepEqual(result.envelopeIntegrity, { status: 'verified' }, '#1');
+  assert.equal(result.hashMatch, true, '#1 hashMatch');
+  assert.equal(result.hasSigning, true, '#2 hasSigning');
+  assert.equal(result.signatureValid, true, '#2 signatureValid');
+  assert.deepEqual(
+    result.contentCanonicalization,
+    { status: 'ok', rule: LEGACY_JSON_CANONICALIZATION },
+    '#3',
+  );
+  assert.equal(result.contentHash?.status, 'ok', '#4');
+  assert.equal(result.contentHash?.matched, 'sha256', '#4 matched algorithm');
+  assert.deepEqual(result.typeResolution, { status: 'ok', type: CONTENT_LAYOUT }, '#12');
+  assert.equal(result.nodeId, nodeId, '#13 nodeId');
+  assert.equal(result.recomputedHash, nodeId, '#13 recomputedHash');
+
+  // As measured on this node: a registry-bound signer with an active key.
+  assert.equal(result.keyTrust?.status, 'active', '#5');
+  assert.equal(result.signingKeyIdConsistency?.status, 'ok', '#6');
+  assert.equal(result.signerIdentity?.status, 'ok', '#14');
+  // A layout carries no producerProfile and no captureMethod (§8.14.1).
+  assert.equal(result.captureMethodVocab?.status, 'no_capture_method', '#15');
+  assert.equal(result.contentProfile?.status, 'contentProfile_absent', '#16');
+});
+
+test('round-trip (layout): one payload byte changed after signing reads #1 altered and #4 content_hash_mismatch', async () => {
+  const { nodeId, signed, registry } = signLayoutGolden();
+  const tampered = storageRoundTrip(LAYOUT_GOLDEN);
+  tampered['rendererVersion'] = 'answer-view/2';
+  const result = await verifyEvidence(
+    {
+      package: tampered,
+      packageHash: nodeId,
+      signature: { ...signed } as unknown as VerifySignatureEnvelope,
+    },
+    { registry, fetch: offlineFetch },
+  );
+  assert.deepEqual(result.envelopeIntegrity, { status: 'altered' }, '#1');
+  assert.equal(result.contentHash?.status, 'content_hash_mismatch', '#4');
+  assert.deepEqual(result.typeResolution, { status: 'ok', type: CONTENT_LAYOUT }, '#12');
 });

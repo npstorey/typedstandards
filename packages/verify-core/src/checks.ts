@@ -331,15 +331,23 @@ export function checkContentProfile(pkg: Record<string, unknown>): ContentProfil
 
 // --- Typed-standards envelope checks (spec §9.2 checks #12, #14, #15) ---
 
-// v0.1 ratified node type URIs (spec §8.12.1). Recognized so check #12 resolves
-// them; only `content/analysis/v1` (+ the lifecycle sub-types) are operationalized
-// today, but the full ratified set is registered so conformant packages don't
-// render as `unknown_type`. The sixteen attestation sub-types are in the order
-// of the §8.12.1 table; `type-resolution.test.ts` holds that table's copy.
-// Exported and frozen so a check outside this package can compare the registered
-// set with the specification's list without being able to change it.
+// The `content/layout/v1` sub-type (spec §8.14, hub ADR-0034): a standalone
+// assertion of how a host's page arranges a node's parts. Registered for check
+// #12; verify-core runs no payload check on it (§8.14.5).
+export const CONTENT_LAYOUT = 'content/layout/v1';
+
+// v0.1 ratified node type URIs. Recognized so check #12 resolves them; only
+// `content/analysis/v1` (+ the lifecycle sub-types) are operationalized today,
+// but the full ratified set is registered so conformant packages don't render
+// as `unknown_type`. The two `content/*` sub-types come first:
+// `content/analysis/v1`, then `content/layout/v1` (§8.14). The sixteen
+// attestation sub-types follow in the order of the §8.12.1 table;
+// `type-resolution.test.ts` holds that table's copy. Exported and frozen so a
+// check outside this package can compare the registered set with the
+// specification's list without being able to change it.
 export const KNOWN_TYPE_URIS: readonly string[] = Object.freeze([
   'content/analysis/v1',
+  CONTENT_LAYOUT,
   'attestation/withdraws/v1',
   'attestation/reinstates/v1',
   'attestation/supersedes/v1',

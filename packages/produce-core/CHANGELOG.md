@@ -3,6 +3,27 @@
 Factual record of what changed per published version. Check numbers (#1–#16)
 refer to the Typed Standards specification §9.2 verification sequence.
 
+## Unreleased
+
+**A minor bump**: new exports. It is to depend on the `@typedstandards/verify-core` release that
+exports `CONTENT_LAYOUT`.
+
+- **`buildLayoutNode` builds a `content/layout/v1` node (hub ADR-0034; spec §8.14).** New exports
+  `buildLayoutNode`, `CONTENT_LAYOUT` (re-exported from verify-core) and the types `LayoutInput`,
+  `LayoutNode`, `LayoutPayload`, `LayoutDisclosure` and `LayoutSteps`. The node is the structural
+  primitive (`metadata`, `type`, `signer`, `contentCanonicalization`), then the seven §8.14.1 payload
+  fields in table order, then `contentHash` under legacy-json/v1; its nodeId is the JCS envelope hash.
+  No `targetNodeId`, no `output`. The builder refuses, with an `Error` whose message starts
+  `buildLayoutNode:`, a payload that does not meet the §8.14.1 table: a missing field, a wrong type at
+  the top level or in a `disclosure` or `steps` sub-member, a `version` that is not an integer of at
+  least 1, an empty `appliesTo` or `order`, a repeated `order` entry, or a member outside the table. Part
+  names are not checked (§8.14.4). The values are emitted as supplied, copied, with the `disclosure` and
+  `steps` sub-members in table order.
+- **`layoutNodeId` on `attestation/publishes/v1` (spec §8.10.1).** `AttestationInput` and
+  `AttestationNode` gain an optional `layoutNodeId`, emitted after `releasedAt` only when supplied and
+  only for the publishes sub-type. A publication attestation built without it is byte-identical to one
+  built by 0.8.0 (a test pins it against the published 0.8.0's output).
+
 ## 0.8.0 — 2026-09-27
 
 The core-minors release (typedstandards#113, shipped in #115 and #116). **A minor bump** — four more

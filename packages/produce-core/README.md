@@ -1,9 +1,9 @@
 # @typedstandards/produce-core
 
 The portable, **I/O-free** producer core for [Typed Standards][ts] record
-packages — envelope and attestation assembly (spec §8.1, §8.12), the Ed25519ph
-signing mechanism (§8.3.1), pure external-proof codecs (RFC 3161
-`TimeStampReq`, Rekor `hashedrekord`), the §8.8.1 commitment view, and generic
+packages — envelope, attestation and layout assembly (spec §8.1, §8.12,
+§8.14), the Ed25519ph signing mechanism (§8.3.1), pure external-proof codecs
+(RFC 3161 `TimeStampReq`, Rekor `hashedrekord`), the §8.8.1 commitment view, and generic
 PROV-O helpers. Its verification counterpart is
 [`@typedstandards/verify-core`][vc] — a load-bearing runtime dependency
 (joined only by `@noble/curves`, the curve suite both packages use): producer
@@ -190,6 +190,32 @@ Optional external proofs use the pure codecs the same way: POST
 `JSON.stringify(buildRekorProposal(envelopeHash, signed.signature,
 signed.publicKey))` to a transparency log and keep `parseRekorResponse`'s
 fields in the commitment view so inclusion verifies offline.
+
+## Layout nodes and `layoutNodeId`
+
+`buildLayoutNode(input)` builds an unsigned `content/layout/v1` node (spec
+§8.14) and its nodeId: the structural primitive, then the seven §8.14.1
+payload fields (`name`, `version`, `appliesTo`, `order`, `disclosure`, `steps`,
+`rendererVersion`), then `contentHash` under legacy-json/v1. A layout states how
+a host's page arranges a node's parts; it carries no `targetNodeId` and no
+`output`, and applying one changes no node's bytes. `packageId`, `createdAt`,
+`signingKeyId` and `signer` are inputs, as for `buildAttestationNode`. Sign the
+nodeId with `signEnvelopeHash` as for any node.
+
+The builder throws an `Error` whose message starts `buildLayoutNode:` when the
+payload does not meet the §8.14.1 table: a field missing or of the wrong type
+(sub-members of `disclosure` and `steps` included), a `version` that is not an
+integer of at least 1, an empty `appliesTo` or `order`, a repeated `order`
+entry, or a member the table does not name. It does not check part names: the
+names in `order`, `disclosure.order` and `steps.placement`, and
+`rendererVersion`, are the renderer's vocabulary (§8.14.4). `CONTENT_LAYOUT` is
+the type URI, re-exported from verify-core.
+
+`buildAttestationNode` takes an optional `layoutNodeId` for
+`attestation/publishes/v1` (§8.10.1): the nodeId of the layout the host rendered
+the target with at release. It is emitted after `releasedAt` only when
+supplied, so a publication attestation built without it has the bytes 0.8.0
+emits; any other sub-type ignores it.
 
 ## Non-goals
 

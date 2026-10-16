@@ -137,6 +137,11 @@ export interface AttestationNode {
   publicationHost?: string;
   /** `publishes`: when the publication takes effect (defaults to envelope ts). */
   releasedAt?: string;
+  /** `publishes` (optional, spec §8.10.1): the nodeId of the
+   *  `content/layout/v1` node the host rendered the target with at release.
+   *  Emitted only when supplied; absent, the node asserts nothing about a
+   *  layout. */
+  layoutNodeId?: string;
   /** `locatedAt`: the URI where the target's content is available. */
   uri?: string;
   /** `locatedAt`: multihash fingerprint of the TARGET's content (SHOULD match
@@ -176,6 +181,8 @@ export interface AttestationInput {
   priorWithdrawalNodeId?: string;
   publicationHost?: string;
   releasedAt?: string;
+  /** `publishes` only; ignored for any other sub-type. */
+  layoutNodeId?: string;
   uri?: string;
   targetContentHash?: Record<string, string>;
   contentLength?: number;
@@ -222,11 +229,14 @@ export function buildAttestationNode(
       ? { priorWithdrawalNodeId: input.priorWithdrawalNodeId }
       : {}),
     // `publishes` payload (§8.12.1): publicationHost + releasedAt (defaults
-    // to the envelope timestamp, mirroring effectiveAt's rule).
+    // to the envelope timestamp, mirroring effectiveAt's rule), then the
+    // optional layoutNodeId (§8.10.1), emitted only when supplied, so a node
+    // built without it keeps the bytes produce-core 0.8.0 emits.
     ...(input.type === ATTESTATION_PUBLISHES
       ? {
           publicationHost: input.publicationHost,
           releasedAt: input.releasedAt ?? input.createdAt,
+          ...(input.layoutNodeId !== undefined ? { layoutNodeId: input.layoutNodeId } : {}),
         }
       : {}),
     // `locatedAt` payload (§8.12.1): uri + target fingerprint (+ optional

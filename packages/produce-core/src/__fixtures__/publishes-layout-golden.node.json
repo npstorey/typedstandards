@@ -1,0 +1,22 @@
+{
+  "metadata": {
+    "schemaVersion": "0.1.0",
+    "packageId": "bbbbbbbb-cccc-4ddd-8eee-ffffffffffff",
+    "createdAt": "2026-10-15T00:00:01.000Z",
+    "signingKeyId": "adopter:test-key-1"
+  },
+  "type": "attestation/publishes/v1",
+  "signer": {
+    "bindingTier": "organization",
+    "identifier": "adopter:example-host",
+    "displayName": "Example Host"
+  },
+  "targetNodeId": "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
+  "contentCanonicalization": "https://typedstandards.org/canonicalization/legacy-json/v1",
+  "publicationHost": "records.example.org",
+  "releasedAt": "2026-10-15T00:00:02.000Z",
+  "layoutNodeId": "66e55ff06b7cd66b85ab38c6297a71e0e0d04301432c0141155529a21b368ef4",
+  "contentHash": {
+    "sha256": "b0e695c3f374754ddac798f733aa383a9105d22378929312b1c773f28fafea35"
+  }
+}

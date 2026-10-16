@@ -1,8 +1,8 @@
 // @typedstandards/produce-core — the format-neutral, I/O-free producer core
-// for Typed Standards record packages: envelope + attestation assembly
-// (spec §8.1, §8.12), the Ed25519ph signing mechanism (§8.3.1), pure
-// external-proof codecs (RFC 3161 / Rekor hashedrekord), the §8.8.1
-// commitment view, and generic PROV-O helpers (§8.9). The verification
+// for Typed Standards record packages: envelope, attestation and layout
+// assembly (spec §8.1, §8.12, §8.14), the Ed25519ph signing mechanism
+// (§8.3.1), pure external-proof codecs (RFC 3161 / Rekor hashedrekord), the
+// §8.8.1 commitment view, and generic PROV-O helpers (§8.9). The verification
 // counterpart is @typedstandards/verify-core — the ONLY runtime dependency,
 // which is load-bearing: producer and verifier share one canonicalization /
 // hash implementation by construction.
@@ -17,6 +17,7 @@
 
 export * from './envelope.ts';
 export * from './attestation.ts';
+export * from './layout.ts';
 export * from './signing.ts';
 export * from './rfc3161-request.ts';
 export * from './rekor-proposal.ts';
