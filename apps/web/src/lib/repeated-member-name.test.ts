@@ -16,7 +16,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { resolveCommitment, resolveInput, VerifyFlowError, type ResolveStep } from './verify-flow.ts';
+import { NotIJsonError, resolveCommitment, resolveInput, VerifyFlowError, type ResolveStep } from './verify-flow.ts';
 
 const VECTOR_TEXT = readFileSync(
   new URL('../../../../packages/verify-core/src/__fixtures__/repeated-member-name.bundle.json', import.meta.url),
@@ -41,6 +41,10 @@ function refusal(source: RegExp, pointer: string): (err: unknown) => boolean {
       err.message,
     );
     assert.doesNotMatch(err.message, /could not be fetched|altered/i);
+    assert.ok(err instanceof NotIJsonError, 'its own VerifyFlowError');
+    assert.equal(err.name, 'NotIJsonError');
+    assert.equal(err.memberName, 'summary');
+    assert.equal(err.pointer, pointer);
     return true;
   };
 }

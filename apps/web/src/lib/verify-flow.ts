@@ -33,6 +33,8 @@ import {
   legacyEmbeddedKeyTrust,
   parseInclusionProof,
   isKeyDerivedIdentifier,
+  parseStrictJson,
+  RepeatedMemberNameError,
   type VerifyInput,
   type VerifyResult,
   type VerifySignatureEnvelope,
@@ -182,6 +184,41 @@ export type InputMode = 'hash' | 'url' | 'bundle';
 
 export class VerifyFlowError extends Error {}
 
+/** A record's JSON text that repeats a member name within an object, so it is not
+ *  I-JSON (RFC 7493). A verifier refuses it before any hash is computed
+ *  (specification §8.2, §9.2 check #1; typedstandards#145), because the envelope
+ *  hash is computed over the parsed object and `JSON.parse` keeps only the last
+ *  occurrence. It stops the verification: it is not content that could not be
+ *  fetched (check #1 `unavailable`), and no other commitment address is tried past
+ *  it. `source` is how the message names what was read. */
+export class NotIJsonError extends VerifyFlowError {
+  readonly source: string;
+  readonly memberName: string;
+  readonly pointer: string;
+
+  constructor(source: string, err: RepeatedMemberNameError) {
+    super(
+      `${source} is not I-JSON (RFC 7493): the member name ${JSON.stringify(err.memberName)} is repeated in the object at JSON Pointer ${JSON.stringify(err.pointer)}. A verifier refuses a record whose text repeats a member name, before computing any hash (specification §8.2), so it was not verified.`,
+    );
+    this.name = 'NotIJsonError';
+    this.source = source;
+    this.memberName = err.memberName;
+    this.pointer = err.pointer;
+  }
+}
+
+/** Parse a commitment's or a package's text strictly; a repeated member name is a
+ *  `NotIJsonError` naming `source`. Any other text parses as `JSON.parse` parses it,
+ *  and one that is not JSON throws what `JSON.parse` throws. */
+function parseRecordText(text: string, source: string): unknown {
+  try {
+    return parseStrictJson(text);
+  } catch (err) {
+    if (err instanceof RepeatedMemberNameError) throw new NotIJsonError(source, err);
+    throw err;
+  }
+}
+
 // --- Input detection ------------------------------------------------------
 
 const HASH_RE = /^[0-9a-f]{64}$/i;
@@ -241,7 +278,10 @@ export interface ResolvedInput {
   fullyOffline: boolean;
 }
 
-async function getJson(url: string, signal?: AbortSignal): Promise<unknown> {
+/** GET a JSON document. `strict` names what a commitment or package read is, and
+ *  parses its text with `parseRecordText`; the trust-registry reads pass none and
+ *  keep `Response.json()`. */
+async function getJson(url: string, signal?: AbortSignal, strict?: 'commitment' | 'package'): Promise<unknown> {
   let res: Awaited<ReturnType<typeof fetch>>;
   try {
     // Plain GET, no custom headers (see the module header re: CORS — preflight and,
@@ -268,6 +308,7 @@ async function getJson(url: string, signal?: AbortSignal): Promise<unknown> {
       `${shortUrl(url)} did not return JSON (content-type "${ct || 'unknown'}") — it may be an auth wall or a wrong URL.`,
     );
   }
+  if (strict) return parseRecordText(await res.text(), `The ${strict} at ${shortUrl(url)}`);
   return res.json();
 }
 
@@ -664,8 +705,9 @@ export async function resolveCommitment(
   if (mode === 'bundle') {
     let parsed: unknown;
     try {
-      parsed = JSON.parse(s);
-    } catch {
+      parsed = parseRecordText(s, 'That bundle');
+    } catch (err) {
+      if (err instanceof NotIJsonError) throw err;
       throw new VerifyFlowError('That bundle is not valid JSON.');
     }
     const commitment = parsed as Commitment;
@@ -688,7 +730,7 @@ export async function resolveCommitment(
   let lastError: unknown;
   for (const url of candidates) {
     try {
-      const commitment = (await getJson(url, signal)) as Commitment;
+      const commitment = (await getJson(url, signal, 'commitment')) as Commitment;
       if (!commitment?.packageHash) {
         throw new VerifyFlowError(
           `${shortUrl(url)} did not return a commitment (no \`packageHash\`).`,
@@ -699,6 +741,9 @@ export async function resolveCommitment(
       // A caller-cancelled verification is not a failed candidate — trying the
       // next one would issue a request the user already asked us to stop making.
       if (signal?.aborted) throw err;
+      // Nor is a commitment refused as not I-JSON: it answered, and what it said is
+      // refused; another address must not stand in for it (#145).
+      if (err instanceof NotIJsonError) throw err;
       lastError = err;
     }
   }
@@ -737,7 +782,7 @@ export async function resolveInput(
     ...(commitmentUrl ? { url: commitmentUrl } : {}),
   });
 
-  // Package blob. Three outcomes when the bytes aren't read inline:
+  // Package blob. Four outcomes when the bytes aren't read inline:
   //   - a location is present and fetches            → pkg set (normal path);
   //   - NO location (the commitment redacted it)     → content is private by design,
   //                                                     pkg null, step `skipped`;
@@ -748,6 +793,10 @@ export async function resolveInput(
   //                                                     commitment is still checkable
   //                                                     and an availability gap is not
   //                                                     tampering.
+  //   - a location fetches, but its text repeats a   → refused as not I-JSON (#145):
+  //     member name                                    the verification stops on a
+  //                                                     NotIJsonError, which is not
+  //                                                     unavailable content.
   // verify-core's `envelopeIntegrity` distinguishes private vs. unfetchable from the
   // commitment shape (see buildVerifyInput); here we only fork the live step label.
   let pkg: Record<string, unknown> | null;
@@ -759,11 +808,14 @@ export async function resolveInput(
     pkgStep = { label: 'Read package from bundle', state: 'done' };
   } else if (commitment.packageUrl) {
     try {
-      pkg = (await getJson(commitment.packageUrl, signal)) as Record<string, unknown>;
+      pkg = (await getJson(commitment.packageUrl, signal, 'package')) as Record<string, unknown>;
       pkgSource = { kind: 'fetched', url: commitment.packageUrl };
       pkgStep = { label: 'Fetched package blob', state: 'done' };
     } catch (err) {
       if (signal?.aborted) throw err; // a real cancellation still aborts.
+      // A package refused as not I-JSON was fetched: it is not unavailable content,
+      // and the verification stops on it (#145).
+      if (err instanceof NotIJsonError) throw err;
       pkg = null;
       pkgSource = { kind: 'fetched', url: commitment.packageUrl };
       pkgStep = { label: 'Content could not be fetched', state: 'skipped' };
