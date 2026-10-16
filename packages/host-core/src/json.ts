@@ -1,5 +1,7 @@
 // JSON and byte helpers shared by the host stages (typedstandards#125).
 
+import { parseStrictJson, RepeatedMemberNameError } from '@typedstandards/verify-core';
+
 export type JsonObject = Record<string, unknown>;
 
 /** In-memory files: a path, relative to some root and `/`-separated, to its bytes. */
@@ -27,7 +29,12 @@ export function sameBytes(a: Uint8Array, b: Uint8Array): boolean {
   return true;
 }
 
-/** Parse a file's bytes as JSON, naming the file in the error. */
+/**
+ * Parse a file's bytes as JSON, naming the file in the error. The text must be
+ * I-JSON (RFC 7493; specification §8.2): one that repeats a member name within an
+ * object is refused, before any hash is computed over what it holds
+ * (typedstandards#145). host-core's own serialization never writes one.
+ */
 export function parseJsonFile(bytes: Uint8Array, where: string): unknown {
   let text: string;
   try {
@@ -36,8 +43,13 @@ export function parseJsonFile(bytes: Uint8Array, where: string): unknown {
     throw new HostError(`${where} is not UTF-8`);
   }
   try {
-    return JSON.parse(text) as unknown;
+    return parseStrictJson(text);
   } catch (err) {
+    if (err instanceof RepeatedMemberNameError) {
+      throw new HostError(
+        `${where} is not I-JSON (RFC 7493): the member name ${JSON.stringify(err.memberName)} is repeated in the object at JSON Pointer ${JSON.stringify(err.pointer)}`,
+      );
+    }
     throw new HostError(`${where} is not JSON: ${(err as Error).message}`);
   }
 }

@@ -211,7 +211,12 @@ A policy kept as YAML is converted with any YAML-to-JSON tool first, for example
 - `parseManifest(value)`, `parseIndex(value)`, `serialize(value)`, and the served
   paths `INDEX_PATH`, `REGISTRY_PATH`, `bundlePathOf(name)`.
 
-Inputs it refuses throw `HostError`. The library is I/O-free and browser-safe: no
+Inputs it refuses throw `HostError`. Every JSON file it reads (the manifest, each
+signed document and carried node, and each served bundle, registry and index) must be
+I-JSON (RFC 7493; specification §8.2): a text that repeats a member name within an
+object is refused, naming the file, the member name and the JSON Pointer of the
+object. `build` stops on such an input; `verify` fails the record whose bundle it is,
+before any hash is computed. The library is I/O-free and browser-safe: no
 Node built-in, no `process`, no `Buffer`. The bin's one Node entry, `node/main.ts`,
 does the reading and writing.
 
