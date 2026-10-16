@@ -1,0 +1,26 @@
+{
+  "layout": {
+    "packageId": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+    "createdAt": "2026-10-15T00:00:00.000Z",
+    "signingKeyId": "adopter:test-key-1",
+    "signer": {
+      "bindingTier": "organization",
+      "identifier": "adopter:example-host",
+      "displayName": "Example Host"
+    }
+  },
+  "publishes": {
+    "packageId": "bbbbbbbb-cccc-4ddd-8eee-ffffffffffff",
+    "createdAt": "2026-10-15T00:00:01.000Z",
+    "signingKeyId": "adopter:test-key-1",
+    "type": "attestation/publishes/v1",
+    "targetNodeId": "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
+    "signer": {
+      "bindingTier": "organization",
+      "identifier": "adopter:example-host",
+      "displayName": "Example Host"
+    },
+    "publicationHost": "records.example.org",
+    "releasedAt": "2026-10-15T00:00:02.000Z"
+  }
+}

@@ -44,6 +44,8 @@ test('index exports the produce-core API surface', async () => {
     // envelope + attestation assembly
     'buildEnvelope',
     'buildAttestationNode',
+    // the content/layout/v1 builder (hub ADR-0034, spec §8.14)
+    'buildLayoutNode',
     // signing mechanism (caller-supplied key + kid)
     'signEnvelopeHash',
     'derivePublicKeySpki',
@@ -88,6 +90,7 @@ test('index exports the produce-core API surface', async () => {
     'ATTESTATION_PUBLISHES',
     'ATTESTATION_LOCATED_AT',
     'ATTESTATION_EVALUATES',
+    'CONTENT_LAYOUT',
     'LEGACY_JSON_CANONICALIZATION',
     'DATHERE_AG_JUPYTER_CANONICALIZATION',
     'PROV_NS',
@@ -142,4 +145,14 @@ test('RAW_BYTES_CANONICALIZATION is re-exported with verify-core\'s value', asyn
   for (const name of ['LEGACY_JSON_CANONICALIZATION', 'DATHERE_AG_JUPYTER_CANONICALIZATION']) {
     assert.equal(api[name], verifyCore[name], name);
   }
+});
+
+// CONTENT_LAYOUT is defined once in verify-core, which registers it for check
+// #12, and re-exported here as the attestation URIs are. Read through a dynamic
+// import, as above.
+test('CONTENT_LAYOUT is re-exported with verify-core\'s value', async () => {
+  const api = (await import('./index.ts')) as Record<string, unknown>;
+  const verifyCore = (await import('@typedstandards/verify-core')) as Record<string, unknown>;
+  assert.equal(verifyCore['CONTENT_LAYOUT'], 'content/layout/v1');
+  assert.equal(api['CONTENT_LAYOUT'], verifyCore['CONTENT_LAYOUT']);
 });

@@ -1,0 +1,13 @@
+{
+  "name": "answer-first",
+  "version": 1,
+  "appliesTo": ["default", "datHere"],
+  "order": ["status", "answer", "citation", "steps", "sources", "disclosure", "actions"],
+  "disclosure": {
+    "label": "Learn more about how this analysis was produced",
+    "order": ["A", "B", "C", "D", "E", "G", "signers", "attestations", "verification"],
+    "openByDefault": false
+  },
+  "steps": { "placement": "beside", "openByDefault": true },
+  "rendererVersion": "answer-view/1"
+}

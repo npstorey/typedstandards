@@ -7,6 +7,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import {
   jcs,
   LEGACY_JSON_CANONICALIZATION,
@@ -90,6 +91,30 @@ test('publishes: publicationHost is emitted and releasedAt defaults to the envel
   assert.equal(node.publicationHost, 'evidence.example.org');
   assert.equal(node.releasedAt, '2026-02-03T04:05:06.000Z');
   assert.ok(!('effectiveAt' in node));
+});
+
+// --- publishes: the 0.8.0 bytes (hub ADR-0034 Consequences) ---
+//
+// `__fixtures__/publishes-0.8.0-reference.node.json` holds the publishes node
+// that the published @typedstandards/produce-core 0.8.0 builds from the
+// `publishes` inputs in `__fixtures__/layout-golden-inputs.json`, serialized
+// as `JSON.stringify(node, null, 2) + '\n'` (provenance:
+// `__fixtures__/README.md`). A node built without `layoutNodeId` stays
+// byte-identical to it.
+
+const fixtureText = (name: string): string =>
+  readFileSync(new URL(`./__fixtures__/${name}`, import.meta.url), 'utf8');
+const serialize = (node: unknown): string => JSON.stringify(node, null, 2) + '\n';
+const layoutGoldenInputs = JSON.parse(fixtureText('layout-golden-inputs.json')) as {
+  publishes: AttestationInput;
+};
+const PUBLISHES_080_BYTES = fixtureText('publishes-0.8.0-reference.node.json');
+
+test('publishes: the 0.8.0 inputs build the published 0.8.0 node byte for byte', () => {
+  const { node, nodeId } = buildAttestationNode(layoutGoldenInputs.publishes);
+  assert.equal(serialize(node), PUBLISHES_080_BYTES);
+  assert.equal(nodeId, computeEnvelopeHash(JSON.parse(PUBLISHES_080_BYTES) as Record<string, unknown>));
+  assert.ok(!('layoutNodeId' in node));
 });
 
 test('locatedAt: uri, target fingerprint, and length are emitted when supplied', () => {
