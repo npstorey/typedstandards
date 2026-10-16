@@ -1,6 +1,6 @@
 {
   "name": "@typedstandards/host-core",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Serve signed Typed Standards records from a static host: build the bundles, the key registry and a versioned index from what the CLI's sign and withdraw print, check and verify what is served, print verifier links, and apply a display policy. Holds no key.",
   "license": "MIT",
   "author": "Nathan Storey",
@@ -38,8 +38,8 @@
     "prepublishOnly": "npm run clean && npm run build"
   },
   "dependencies": {
-    "@typedstandards/produce-core": "^0.8.0",
-    "@typedstandards/verify-core": "^0.13.0"
+    "@typedstandards/produce-core": "^0.9.0",
+    "@typedstandards/verify-core": "^0.14.0"
   },
   "devDependencies": {
     "@types/node": "^20",

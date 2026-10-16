@@ -3,7 +3,12 @@
 Factual record of what changed per published version. Check numbers (#1–#16)
 refer to the Typed Standards specification §9.2 verification sequence.
 
-## Unreleased
+## 0.2.1 — 2026-10-16
+
+The W5 release (civic-ai-tools#260, shipped in #147). **A patch**: no new export. It moves to
+`@typedstandards/produce-core` `^0.9.0` and `@typedstandards/verify-core` `^0.14.0`, through which
+check #12 reads `ok` for a `content/layout/v1` node, and it refuses a JSON text that repeats a member
+name (below).
 
 - **A JSON text that repeats a member name within an object is refused (typedstandards#145;
   specification §8.2, §9.2 check #1).** `readJson`, the one reader of every JSON file the
@@ -13,8 +18,8 @@ refer to the Typed Standards specification §9.2 verification sequence.
   `attest`, whose values would otherwise be signed with one occurrence dropped. It exits 2
   with `<flag> <path> is not I-JSON (RFC 7493): the member name "<name>" is repeated in the
   object at JSON Pointer "<pointer>"`; a record is not reported `altered`, since no hash is
-  computed. A text with no repeated name is read exactly as before. It needs the verify-core
-  release that exports `parseStrictJson`.
+  computed. A text with no repeated name is read exactly as before. verify-core 0.14.0 exports
+  `parseStrictJson`.
 
 ## 0.2.0 — 2026-09-27
 

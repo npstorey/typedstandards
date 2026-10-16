@@ -3,10 +3,10 @@
 Factual record of what changed per published version. Check numbers (#1–#16)
 refer to the Typed Standards specification §9.2 verification sequence.
 
-## Unreleased
+## 0.9.0 — 2026-10-16
 
-**A minor bump**: new exports. It is to depend on the `@typedstandards/verify-core` release that
-exports `CONTENT_LAYOUT`.
+The W5 release (civic-ai-tools#260, shipped in #146). **A minor bump**: new exports. It depends on
+`@typedstandards/verify-core` `^0.14.0`, which exports `CONTENT_LAYOUT`.
 
 - **`buildLayoutNode` builds a `content/layout/v1` node (hub ADR-0034; spec §8.14).** New exports
   `buildLayoutNode`, `CONTENT_LAYOUT` (re-exported from verify-core) and the types `LayoutInput`,
