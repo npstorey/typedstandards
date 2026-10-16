@@ -11,7 +11,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { computeContentHashSha256, computeEnvelopeHash, sha256Hex } from './index.ts';
+import {
+  computeContentHashSha256,
+  computeEnvelopeHash,
+  parseStrictJson,
+  RepeatedMemberNameError,
+  sha256Hex,
+} from './index.ts';
 
 const read = (url: URL): Uint8Array => new Uint8Array(readFileSync(url));
 
@@ -51,4 +57,22 @@ test('vector: JSON.parse keeps the last summary, so the package keeps both of th
   const rule = vector.package['contentCanonicalization'] as string;
   assert.equal(computeContentHashSha256(vector.package, rule), computeContentHashSha256(source.package, rule));
   assert.equal(computeContentHashSha256(vector.package, rule), source.package.contentHash.sha256);
+});
+
+test('vector: parseStrictJson refuses it, naming summary in the package object', () => {
+  for (const input of [VECTOR_BYTES, VECTOR_TEXT]) {
+    assert.throws(
+      () => parseStrictJson(input),
+      (err: unknown) =>
+        err instanceof RepeatedMemberNameError &&
+        err.name === 'RepeatedMemberNameError' &&
+        err.memberName === 'summary' &&
+        err.pointer === '/package' &&
+        err.message === 'JSON text is not I-JSON (RFC 7493): the member name "summary" is repeated in the object at JSON Pointer "/package"',
+    );
+  }
+});
+
+test('vector: its source parses strictly, to what JSON.parse gives', () => {
+  assert.deepEqual(parseStrictJson(SOURCE_BYTES), JSON.parse(SOURCE_TEXT));
 });

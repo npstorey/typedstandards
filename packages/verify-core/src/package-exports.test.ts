@@ -83,3 +83,13 @@ test('ADR-0030 exports resolve from the entry point', async () => {
   assert.equal(api['applySelfCertifiedKeyTrust'], undefined);
   assert.equal(api['compareKeyDerivedIdentifier'], undefined);
 });
+
+// typedstandards#145 (specification §8.2, §9.2 check #1): the strict parse and its
+// named error are public runtime exports.
+test('the strict parse and its error resolve from the entry point', async () => {
+  const api = (await import('./index.ts')) as Record<string, unknown>;
+  assert.equal(typeof api['parseStrictJson'], 'function');
+  assert.equal(typeof api['RepeatedMemberNameError'], 'function');
+  const Err = api['RepeatedMemberNameError'] as new (memberName: string, pointer: string) => Error;
+  assert.equal(new Err('a', '').name, 'RepeatedMemberNameError');
+});

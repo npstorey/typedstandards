@@ -34,3 +34,4 @@ export * from './asn1.ts';
 export * from './x509.ts';
 export * from './rfc3161.ts';
 export * from './verify.ts';
+export * from './strict-json.ts';

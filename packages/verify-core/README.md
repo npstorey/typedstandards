@@ -64,6 +64,14 @@ const result = await verifyRecord(input, {
 // contentHash, typeResolution, signerIdentity, lifecycle, ...
 ```
 
+> **Parse the package's text with `parseStrictJson`.** A record package's JSON text is
+> I-JSON (RFC 7493), so a verifier refuses a text that repeats a member name within an
+> object, before any hash is computed (spec §8.2, §9.2 check #1). `JSON.parse` keeps the
+> last occurrence and drops the others, and `verifyRecord` takes the parsed object, so it
+> cannot see a repeat. `parseStrictJson(text)` (a string, or bytes decoded as UTF-8)
+> throws `RepeatedMemberNameError`, with `memberName` and `pointer` (the JSON Pointer of
+> the object), on a repeated name, and otherwise returns what `JSON.parse` returns.
+
 > **`verifyEvidence` is the same function.** The 2026-08-19 vocabulary settlement
 > renamed the entry point to `verifyRecord` (spec Appendix J) — "evidence" is
 > retired from the artifact/infrastructure brand role and kept only for the
