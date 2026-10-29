@@ -33,7 +33,7 @@
   "dependencies": {
     "@noble/curves": "^2.4.0",
     "@noble/hashes": "^2.2.0",
-    "canonicalize": "^3.0.0"
+    "canonicalize": "^5.1.0"
   },
   "devDependencies": {
     "@types/node": "^22",
