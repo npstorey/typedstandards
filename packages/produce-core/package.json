@@ -32,12 +32,12 @@
     "prepublishOnly": "npm run clean && npm run build"
   },
   "dependencies": {
-    "@noble/curves": "^2.2.0",
+    "@noble/curves": "^2.4.0",
     "@typedstandards/verify-core": "^0.14.0"
   },
   "devDependencies": {
     "@types/node": "^22",
-    "@typescript-eslint/parser": "^8",
+    "@typescript-eslint/parser": "^8.72.0",
     "eslint": "^9",
     "typescript": "^5.9.3"
   },
