@@ -9,6 +9,16 @@ updates:
       minor-and-patch:
         update-types: ["minor", "patch"]
     open-pull-requests-limit: 5
+    ignore:
+      # The major follows the CI Node version (22): lift when CI moves to a newer Node.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+      # Lift when eslint-plugin-react declares eslint 10 as a peer.
+      - dependency-name: "eslint"
+        update-types: ["version-update:semver-major"]
+      # 7.0 has no compiler API and @typescript-eslint/parser's peer range stops at 6.1: lift when both change.
+      - dependency-name: "typescript"
+        versions: [">=7.0.0"]
   - package-ecosystem: github-actions
     directory: /
     schedule:

@@ -96,6 +96,8 @@ guard's patterns unilaterally. Shapes: [`.claude/rules/fixtures.md`](.claude/rul
   author email exactly — a mismatch fails DCO, absence is not the only way to fail it.
 - Work lands via PRs to `main` (protect-main ruleset); never push to `main`. Merging
   is the orchestrator's call on evidence-pass in gated sprints, the owner's otherwise.
+  Dependabot's PRs pass the same gates as any PR and merge only on the seat's GO,
+  never on the bot's green alone.
 - `npm publish` is always an owner-only decision; a session ends at branch/PR (or
   merged-and-tagged in a sprint), never at published.
 - The owner publishes with `node scripts/publish.mjs --merged <merge SHA>` (#113), from a
