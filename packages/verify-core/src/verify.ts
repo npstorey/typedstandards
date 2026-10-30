@@ -436,7 +436,7 @@ export async function verifyRecord(
   }
 
   // Step 5 — canonicalization, content-hash, and envelope checks
-  // (#3/#4/#6/#12/#14/#15/#16). #4 fetches only for a raw-bytes/v1 BlobRef output.
+  // (#3/#4/#6/#12/#14/#15/#16/#17). #4 fetches only for a raw-bytes/v1 BlobRef output.
   let contentCanonicalization: ContentCanonicalizationResolution | null = null;
   let contentHashCheck: ContentHashCheck | null = null;
   let typeResolution: TypeResolution | null = null;

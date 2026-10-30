@@ -3,7 +3,9 @@
 //   - `contentProfile_absent`       the key is absent (read as "default", spec §8.1.2);
 //   - `contentProfile_unknown`      present and neither "default" nor "datHere";
 //   - `contentProfile_inconsistent` present, known, producerProfile present, and
-//                                   the ADR-0006 §2 invariant fails.
+//                                   the §8.1.1 invariant fails (ADR-0006 §2 as
+//                                   amended by hub ADR-0038 §3: read from the
+//                                   subtype table).
 // The invariant is compared only when BOTH fields are present.
 //
 // Synthetic packages only: each is the minimal object the check reads.

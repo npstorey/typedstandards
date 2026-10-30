@@ -1,5 +1,5 @@
 // Content-canonicalization, content-hash, and typed-standards envelope checks
-// (spec §9.2 checks #3, #4, #6, #12, #13, #14, #15, #16) + the package-level
+// (spec §9.2 checks #3, #4, #6, #12, #13, #14, #15, #16, #17) + the package-level
 // blob-ref walker (#9) — browser-safe.
 //
 // Factored verbatim from the server `verify.ts` (WS2); these functions were
@@ -17,7 +17,7 @@ import {
   RAW_BYTES_CANONICALIZATION,
 } from './canonicalization.ts';
 import { sha256Hex } from './primitives.ts';
-import { captureVocabForProfile, resolveProfileType } from './profiles.ts';
+import { captureVocabForProfile, isContentProfileConsistent, resolveProfileType } from './profiles.ts';
 import {
   isBlobRef,
   parseBlobRef,
@@ -65,7 +65,12 @@ export interface ContentCanonicalizationResolution {
  * `unknown_canonicalization_rule` (renders; check #4 then cannot recompute). An
  * absent field on a pre-v0.1 package → `implicit`, inferring the rule from
  * contentProfile / producerProfile (datHere → dathere-ag-jupyter/v1; otherwise
- * legacy-json/v1).
+ * legacy-json/v1). A `producerProfile` reads as datHere when the subtype admits
+ * `"datHere"` and not `"default"` under the §8.1.1 invariant
+ * (`isContentProfileConsistent`): with no row, exactly when it begins with
+ * `ai-assisted-analysis/datHere`, as before; a subtype whose row admits both, as
+ * `ai-assisted-analysis/civicaitools-v1` does, leaves the choice to
+ * `contentProfile`.
  */
 export function resolveContentCanonicalization(
   pkg: Record<string, unknown>,
@@ -90,7 +95,9 @@ export function resolveContentCanonicalization(
       : undefined;
   const isDatHere =
     contentProfile === 'datHere' ||
-    (producerProfile?.startsWith('ai-assisted-analysis/datHere') ?? false);
+    (producerProfile !== undefined &&
+      isContentProfileConsistent(producerProfile, 'datHere') &&
+      !isContentProfileConsistent(producerProfile, 'default'));
   return {
     status: 'implicit',
     rule: isDatHere
@@ -267,7 +274,7 @@ export async function verifyContentHashWithFetch(
   return verifyContentHash(pkg, resolution, legacyExternalHash, bytes);
 }
 
-// --- Content-profile check (spec §9.2 check #16; hub ADR-0029 §5) ---
+// --- Content-profile check (spec §9.2 check #16; hub ADR-0029 §5, ADR-0038 §3) ---
 
 /** The known `metadata.contentProfile` values (spec §8.1.2). */
 export const KNOWN_CONTENT_PROFILES: readonly string[] = ['default', 'datHere'];
@@ -293,8 +300,10 @@ export interface ContentProfileCheck {
  *   - key absent → `contentProfile_absent` (read as `"default"`, spec §8.1.2).
  *   - present and neither `"default"` nor `"datHere"` → `contentProfile_unknown`
  *     (reported, not passed; consistency is not judged).
- *   - present, known, `producerProfile` present, and the ADR-0006 §2 invariant
- *     fails (`contentProfile === "datHere"` iff `producerProfile` starts with
+ *   - present, known, `producerProfile` present, and the §8.1.1 invariant fails
+ *     (ADR-0006 §2 as amended by hub ADR-0038 §3: the content profile is not one
+ *     the subtype's row admits, `isContentProfileConsistent`; a subtype with no
+ *     row admits `"datHere"` exactly when it begins with
  *     `ai-assisted-analysis/datHere`) → `contentProfile_inconsistent`.
  *   - otherwise → `ok`.
  * The invariant is compared only when both fields are present. No status is an
@@ -319,12 +328,8 @@ export function checkContentProfile(pkg: Record<string, unknown>): ContentProfil
   if (typeof raw !== 'string' || !KNOWN_CONTENT_PROFILES.includes(raw)) {
     return { status: 'contentProfile_unknown', ...base };
   }
-  if (producerProfile !== undefined) {
-    const isDatHere = raw === 'datHere';
-    const profileIsDatHere = producerProfile.startsWith('ai-assisted-analysis/datHere');
-    if (isDatHere !== profileIsDatHere) {
-      return { status: 'contentProfile_inconsistent', ...base };
-    }
+  if (producerProfile !== undefined && !isContentProfileConsistent(producerProfile, raw)) {
+    return { status: 'contentProfile_inconsistent', ...base };
   }
   return { status: 'ok', ...base };
 }
@@ -336,11 +341,39 @@ export type SystemPromptStatus = (typeof SYSTEM_PROMPT_STATUSES)[number];
 
 export interface SystemPromptCheck {
   status: SystemPromptStatus;
+  /** On `ok`, how the text is carried: inline, or a BlobRef (which check #9 resolves). */
+  form?: 'string' | 'blobRef';
 }
 
-/** Check #17 — a typed stub: the check itself lands in the next change. */
-export function checkSystemPrompt(_pkg: Record<string, unknown>): SystemPromptCheck {
-  return { status: 'not_applicable' };
+/**
+ * Check #17 — the system prompt §8.7.1 requirement 2 requires of a
+ * `datHere`-content-profile package (hub ADR-0038 §6).
+ *   - `metadata.contentProfile` not `"datHere"` (absent, `"default"` or unknown)
+ *     → `not_applicable`, and nothing else is read.
+ *   - `"datHere"` and `skillMetadata.skillText` a non-empty string → `ok`
+ *     (`form: 'string'`), or a BlobRef → `ok` (`form: 'blobRef'`).
+ *   - `"datHere"` and the key absent, empty, or neither a string nor a BlobRef
+ *     → `skillText_absent`.
+ * `skillText_absent` is an attention status, never a failure: it says nothing
+ * about the envelope, the signature or the notebook. The check does not resolve
+ * a BlobRef (check #9 does), and cannot check that the text is the prompt the
+ * model ran under.
+ */
+export function checkSystemPrompt(pkg: Record<string, unknown>): SystemPromptCheck {
+  const metadata = pkg['metadata'];
+  const contentProfile =
+    typeof metadata === 'object' && metadata !== null && !Array.isArray(metadata)
+      ? (metadata as Record<string, unknown>)['contentProfile']
+      : undefined;
+  if (contentProfile !== 'datHere') return { status: 'not_applicable' };
+  const skillMetadata = pkg['skillMetadata'];
+  const skillText =
+    typeof skillMetadata === 'object' && skillMetadata !== null && !Array.isArray(skillMetadata)
+      ? (skillMetadata as Record<string, unknown>)['skillText']
+      : undefined;
+  if (typeof skillText === 'string' && skillText.length > 0) return { status: 'ok', form: 'string' };
+  if (isBlobRef(skillText)) return { status: 'ok', form: 'blobRef' };
+  return { status: 'skillText_absent' };
 }
 
 // --- Typed-standards envelope checks (spec §9.2 checks #12, #14, #15) ---
