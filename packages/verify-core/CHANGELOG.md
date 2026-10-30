@@ -1,10 +1,66 @@
 # Changelog — @typedstandards/verify-core
 
-Factual record of what changed per published version. Check numbers (#1–#16)
+Factual record of what changed per published version. Check numbers (#1–#17)
 refer to the Typed Standards specification §9.2 verification sequence. Issue
 references are to `npstorey/civic-ai-tools-website` (#119 is the offline-crypto
 hardening arc; #116 is the standalone-verifier arc this package was extracted
 in).
+
+## 0.15.0 — 2026-10-30
+
+The R10 release (civic-ai-tools#289; hub ADR-0038 §3, §5 and §6, specification v0.1.13 §8.1.1,
+§8.6 and §9.2). **A minor bump**: new exports, a new `VerifyResult` field, and one combination
+check #16 newly reads `ok`.
+
+- **The subtype table (new exports `PRODUCER_PROFILE_SUBTYPES`, `isContentProfileConsistent`, and
+  the types `ProducerProfileSubtypeRow` and `ProducerProfileBundleRef`).** Beside the profile-type
+  table, one frozen row per built subtype of `ai-assisted-analysis`, keyed by the full
+  `producerProfile` value:
+  - `ai-assisted-analysis/datHere` admits `datHere`, with no bundle pinned;
+  - `ai-assisted-analysis/civicaitools-v1` admits `datHere` and `default`, with its guidance
+    bundle pinned by URL
+    (`https://raw.githubusercontent.com/npstorey/civic-ai-tools/v0.1.13-typed-standards-spec/docs/profiles/ai-assisted-analysis/civicaitools-v1/bundle.json`)
+    and SHA-256 (`724e399e02db8993041b64982eec731505084bec2ec5e6ca58fda2de8087a281`), revision 1.
+
+  `isContentProfileConsistent(producerProfile, contentProfile)` is the §8.1.1 invariant over the
+  table: the content profile is one the subtype's row admits; a subtype with no row admits
+  `"datHere"` exactly when it begins with `ai-assisted-analysis/datHere`, and `"default"` exactly
+  when it does not. Only the table's own keys are rows. The row does not change the capture
+  vocabulary: `PROFILE_CAPTURE_VOCAB`, `resolveProfileType` and `captureVocabForProfile` (check #15)
+  are unchanged.
+- **Check #16 reads the predicate.** `checkContentProfile` reports `contentProfile_inconsistent`
+  when `isContentProfileConsistent` is false, in place of the `startsWith` comparison. The no-row
+  clause is that comparison, so every status is unchanged except one: `datHere` under
+  `ai-assisted-analysis/civicaitools-v1` reads `ok` (it read `contentProfile_inconsistent`). No
+  published record carries that combination.
+- **Check #3's implicit rule reads the predicate.** For a package with no
+  `contentCanonicalization`, a `producerProfile` reads as datHere when its subtype admits
+  `"datHere"` and not `"default"`, which is the `startsWith` reading for the `datHere` row and every
+  subtype with no row; under `ai-assisted-analysis/civicaitools-v1` the choice is
+  `metadata.contentProfile`'s. Every result is unchanged.
+- **Check #17, the content-profile system prompt (new exports `checkSystemPrompt`,
+  `SYSTEM_PROMPT_STATUSES`, and the types `SystemPromptStatus` and `SystemPromptCheck`).** When
+  `metadata.contentProfile` is `"datHere"`, `skillMetadata.skillText` as a non-empty string reads
+  `ok` (`form: 'string'`) and as a BlobRef `ok` (`form: 'blobRef'`); absent, empty, or neither
+  reads `skillText_absent`. Any other content profile (absent, `"default"` or unknown) reads
+  `not_applicable`. `skillText_absent` is an attention status and never a failure. The check does
+  not resolve a BlobRef (check #9 does).
+- **`VerifyResult` gains `systemPrompt`** (`SystemPromptCheck | null`, null when the package is
+  absent), set by `verifyRecord` beside `contentProfile`. Every other field of the result is
+  unchanged. A consumer that builds a `VerifyResult` literal needs the new field.
+- **Every earlier fixture reads as before.** Over the signed bundles, signed documents and package
+  objects in this repository's fixtures and the hub harness's `reference-golden.json` and
+  `in-loop-golden.json`, `verifyRecord`, `checkContentProfile`, `resolveContentCanonicalization`
+  and `captureVocabForProfile` give byte-identical output to 0.14.0 once `systemPrompt` is removed.
+  Check #17 reads `skillText_absent` on the five fixture packages that declare `datHere` without
+  `skillText` (the hub reference golden's `v01-dathere-empty-notebook` and
+  `v01-dathere-executed-notebook`, their copies in produce-core's `reference-golden.json`, and the
+  hub's `in-loop-golden.json`), `ok` on the site's `q15-d67b8e` record, and `not_applicable` on
+  every other.
+- **A local copy of the bundle**, `src/__fixtures__/civicaitools-v1-guidance-bundle.json` (not
+  published), byte-identical to the hub file at tree `7060f5e3`. A test asserts its SHA-256,
+  `subtype`, `url` and admitted set against the row, without the network. Its provenance is in
+  `src/__fixtures__/README.md`.
 
 ## 0.14.0 — 2026-10-16
 
