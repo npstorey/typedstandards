@@ -514,7 +514,8 @@ function isAbsent(v: unknown): boolean {
 
 /** Each payload field §8.12.1 requires of `type` that `node` lacks, by name. */
 function missingRequiredFields(node: Record<string, unknown>, type: string): string[] {
-  return (ATTESTATION_REQUIRED_FIELDS[type] ?? []).filter((f) => isAbsent(node[f]));
+  const required = Object.hasOwn(ATTESTATION_REQUIRED_FIELDS, type) ? ATTESTATION_REQUIRED_FIELDS[type] : [];
+  return required.filter((f) => isAbsent(node[f]));
 }
 
 /**
@@ -542,7 +543,7 @@ export function checkAttestationNode(
 ): AttestationCheck {
   const node = carried.node;
   const type = pickString(node['type']) ?? '';
-  const rule = ATTESTATION_AUTHORIZATION_RULES[type] ?? null;
+  const rule = Object.hasOwn(ATTESTATION_AUTHORIZATION_RULES, type) ? ATTESTATION_AUTHORIZATION_RULES[type] : null;
   const verdict = verifyAttestationNode(node, carried.nodeId, carried.signature ?? null);
   const missingFields = missingRequiredFields(node, type);
   const publicKey = carried.signature?.publicKey ?? '';

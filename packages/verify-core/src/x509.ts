@@ -210,7 +210,7 @@ export async function verifyCertSignatureRsa(
   cert: X509Cert,
   issuerSpkiDer: Uint8Array,
 ): Promise<boolean> {
-  const hash = RSA_SIG_HASH[cert.sigAlgOid];
+  const hash = isImplementedCertSignatureAlgorithm(cert.sigAlgOid) ? RSA_SIG_HASH[cert.sigAlgOid] : undefined;
   if (!hash) return false;
   try {
     // Copy into fresh ArrayBuffer-backed views: subarray slices are

@@ -57,9 +57,9 @@ check #16 newly reads `ok`.
   `v01-dathere-executed-notebook`, their copies in produce-core's `reference-golden.json`, and the
   hub's `in-loop-golden.json`), `ok` on the site's `q15-d67b8e` record, and `not_applicable` on
   every other.
-- **Check #15's profile-type lookup reads only the table's own entries.** A malformed
-  `producerProfile` value reads `producerProfile_bundle_unresolved`. Every well-formed value reads
-  as before, and check #15's statuses are unchanged.
+- **Every lookup of a verify-core table by a value a record or bundle supplies reads only the
+  table's own entries;** a malformed value reads as an unknown one. Every well-formed value reads as
+  before.
 - **A local copy of the bundle**, `src/__fixtures__/civicaitools-v1-guidance-bundle.json` (not
   published), byte-identical to the hub file at tree `7060f5e3`. A test asserts its SHA-256,
   `subtype`, `url` and admitted set against the row, without the network. Its provenance is in
