@@ -19,7 +19,7 @@
 // must itself carry CORS headers, or the fetch fails regardless of the request's
 // simplicity. Server-side/Node fetches follow redirects without that constraint.
 // Verification depth MATCHES verify-core / the civicaitools.org
-// server: full client-side crypto for #1–#6/#9/#12–#16; #7 (RFC 3161) is the TSA
+// server: full client-side crypto for #1–#6/#9/#12–#17; #7 (RFC 3161) is the TSA
 // signature + cert chain verified offline to the pinned FreeTSA root; #8 (Rekor) is
 // the RFC 6962 Merkle inclusion proof recomputed against a signed checkpoint when one
 // is carried (else online hash-parity); #10 (lifecycle) resolves from the carried
@@ -67,6 +67,7 @@ import {
   SIGNER_IDENTITY_SIGNALS,
   CAPTURE_METHOD_VOCAB_SIGNALS,
   CONTENT_PROFILE_SIGNALS,
+  SYSTEM_PROMPT_SIGNALS,
   SIGNING_KEY_ID_SIGNALS,
   TIMESTAMP_FAILURE_NOTES,
   BLOB_REF_REASON_SIGNALS,
@@ -1530,6 +1531,7 @@ export function checkSignalsOf(
     add('15', 'Capture method', CAPTURE_METHOD_VOCAB_SIGNALS[result.captureMethodVocab.status]);
   }
   if (result.contentProfile) add('16', 'Content profile', CONTENT_PROFILE_SIGNALS[result.contentProfile.status]);
+  if (result.systemPrompt) add('17', 'System prompt', SYSTEM_PROMPT_SIGNALS[result.systemPrompt.status]);
   return out;
 }
 
@@ -1889,6 +1891,20 @@ export function buildCheckRows(
     ];
     if (cp.producerProfile) math.push({ label: 'producerProfile', value: cp.producerProfile, mono: true });
     rows.push(checkRow('16', math));
+  }
+
+  // #17 — skillMetadata.skillText on a datHere package (hub ADR-0038 §6).
+  if (result.systemPrompt) {
+    const sp = result.systemPrompt;
+    const carried =
+      sp.status === 'ok'
+        ? sp.form === 'blobRef'
+          ? 'carried as a referenced file (#9)'
+          : 'carried inline'
+        : sp.status === 'skillText_absent'
+          ? 'not carried'
+          : 'not read (the package does not declare datHere)';
+    rows.push(checkRow('17', [{ label: 'skillMetadata.skillText', value: carried }]));
   }
 
   return rows;

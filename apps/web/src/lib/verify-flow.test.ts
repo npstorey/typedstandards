@@ -26,6 +26,7 @@ import {
   SIGNER_IDENTITY_SUPPLIED_REGISTRY,
   CONTENT_HASH_SIGNALS,
   CONTENT_PROFILE_SIGNALS,
+  SYSTEM_PROMPT_SIGNALS,
   CAPTURE_METHOD_LABELS,
 } from './trust-signal.ts';
 import {
@@ -1501,6 +1502,53 @@ test('#16 content profile: the verdict treats it by tier — inconsistent never 
   assert.equal(absent.tier, 'verified');
 });
 
+test('#17 system prompt: each status renders its ADR-0038 §6 tier in row #17, with how the text is carried', () => {
+  const cases = [
+    [{ status: 'ok', form: 'string' }, 'verified', 'carried inline'],
+    [{ status: 'ok', form: 'blobRef' }, 'verified', 'carried as a referenced file (#9)'],
+    [{ status: 'skillText_absent' }, 'attention', 'not carried'],
+    [{ status: 'not_applicable' }, 'normal', 'not read (the package does not declare datHere)'],
+  ] as const;
+  for (const [systemPrompt, tier, carried] of cases) {
+    const rows = buildCheckRows(
+      mkResult({ systemPrompt }),
+      buildVerifyInput({ packageHash: 'ab'.repeat(32) }, {}),
+      { packageHash: 'ab'.repeat(32) },
+    );
+    const r = rowOf(rows, '17');
+    assert.equal(r.name, 'System prompt');
+    assert.equal(r.signal.tier, tier, systemPrompt.status);
+    assert.equal(r.signal.label, SYSTEM_PROMPT_SIGNALS[systemPrompt.status].label);
+    assert.deepEqual(r.math, [{ label: 'skillMetadata.skillText', value: carried }]);
+  }
+});
+
+test('#17 system prompt: skillText_absent never alarms; ok and not_applicable keep a green package verified', () => {
+  const green = (over: Partial<VerifyResult>) =>
+    mkResult({ hasTimestamp: false, contentProfile: { status: 'ok' } as VerifyResult['contentProfile'], ...over });
+  const absent = rollupVerdict(green({ systemPrompt: { status: 'skillText_absent' } }), DECLARED_META);
+  assert.equal(absent.tier, 'attention');
+  for (const systemPrompt of [{ status: 'ok', form: 'string' }, { status: 'not_applicable' }] as const) {
+    const v = rollupVerdict(green({ systemPrompt }), DECLARED_META);
+    assert.equal(v.tier, 'verified', systemPrompt.status);
+    assert.equal(v.headline, 'Verified', systemPrompt.status);
+  }
+});
+
+test('#17 system prompt: a result without the field (a verifier before check #17) renders no row', () => {
+  const rows = buildCheckRows(mkResult(), buildVerifyInput({ packageHash: 'ab'.repeat(32) }, {}), { packageHash: 'ab'.repeat(32) });
+  assert.equal(rows.find((r) => r.num === '17'), undefined);
+});
+
+test('#17 system prompt: a real package with no contentProfile key renders the calm not_applicable row', async () => {
+  const m = mintSigned({ identifier: 'urn', bindingTier: 'platform', inlineRegistry: true, declareUrl: false });
+  const run = await runFlow(m, 'bundle');
+  assert.deepEqual(run.result.systemPrompt, { status: 'not_applicable' });
+  const r = rowOf(run.rows, '17');
+  assert.equal(r.signal.tier, 'normal');
+  assert.equal(r.signal.label, SYSTEM_PROMPT_SIGNALS.not_applicable.label);
+});
+
 test('#16 content profile: a real package with no contentProfile key renders the calm absent row', async () => {
   const m = mintSigned({ identifier: 'urn', bindingTier: 'platform', inlineRegistry: true, declareUrl: false });
   const run = await runFlow(m, 'bundle');
@@ -2121,6 +2169,7 @@ const ATTENTION_CASES: { status: string; check: string; over: Partial<VerifyResu
   { status: '#15 captureMethod_unknown', check: '15', over: { captureMethodVocab: { status: 'captureMethod_unknown', profileType: 'x' } as VerifyResult['captureMethodVocab'] } },
   { status: '#16 contentProfile_unknown', check: '16', over: { contentProfile: { status: 'contentProfile_unknown' } as VerifyResult['contentProfile'] } },
   { status: '#16 contentProfile_inconsistent', check: '16', over: { contentProfile: { status: 'contentProfile_inconsistent' } as VerifyResult['contentProfile'] } },
+  { status: '#17 skillText_absent', check: '17', over: { systemPrompt: { status: 'skillText_absent' } } },
 ];
 const ROW_INPUT = buildVerifyInput({ packageHash: 'ab'.repeat(32) }, {});
 const ROW_COMMITMENT = { packageHash: 'ab'.repeat(32) };

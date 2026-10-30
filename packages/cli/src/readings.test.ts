@@ -96,3 +96,21 @@ test('attention readings do not fail: a key with no registry, an unfetched file,
   const attention = readingsOf(r, [], 'a'.repeat(64)).filter((x) => x.tier === 'attention').map((x) => x.check);
   assert.deepEqual(attention.sort(), ['#12', '#4', '#5', '#9'].sort());
 });
+
+test('check #17: a datHere package without its system prompt reads attention and does not fail', () => {
+  const absent = { ...clean(), systemPrompt: { status: 'skillText_absent' } } as VerifyResult;
+  assert.deepEqual(alarms(absent), []);
+  const reading = readingsOf(absent, [], 'a'.repeat(64)).find((x) => x.check === '#17');
+  assert.deepEqual(reading, { check: '#17', field: 'systemPrompt', status: 'skillText_absent', tier: 'attention' });
+  const tiers = (status: string) =>
+    readingsOf({ ...clean(), systemPrompt: { status } } as VerifyResult, [], 'a'.repeat(64)).find((x) => x.check === '#17')?.tier;
+  assert.equal(tiers('ok'), 'verified');
+  assert.equal(tiers('not_applicable'), 'normal');
+  // No package, no reading.
+  assert.equal(readingsOf({ ...clean(), systemPrompt: null }, [], 'a'.repeat(64)).find((x) => x.check === '#17'), undefined);
+});
+
+test('the check #17 table is compared with the site\'s', () => {
+  assert.ok('SYSTEM_PROMPT_SIGNALS' in SITE_TABLES);
+  assert.deepEqual(Object.keys(SITE_TABLES.SYSTEM_PROMPT_SIGNALS).sort(), ['not_applicable', 'ok', 'skillText_absent']);
+});
