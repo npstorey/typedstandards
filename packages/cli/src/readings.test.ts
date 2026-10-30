@@ -56,6 +56,7 @@ function clean(): VerifyResult {
     signingKeyIdConsistency: { status: 'ok' },
     captureMethodVocab: { status: 'ok' } as VerifyResult['captureMethodVocab'],
     contentProfile: { status: 'contentProfile_absent' } as VerifyResult['contentProfile'],
+    systemPrompt: { status: 'not_applicable' },
     lifecycle: { status: 'active', source: 'none', chain: [] },
   };
 }

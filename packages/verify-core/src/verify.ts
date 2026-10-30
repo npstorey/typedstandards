@@ -58,6 +58,7 @@ import {
   checkSigningKeyIdConsistency,
   checkCaptureMethodVocab,
   checkContentProfile,
+  checkSystemPrompt,
   verifyPackageBlobRefs,
   type ContentCanonicalizationResolution,
   type ContentHashCheck,
@@ -66,6 +67,7 @@ import {
   type SigningKeyIdConsistencyCheck,
   type CaptureMethodVocabCheck,
   type ContentProfileCheck,
+  type SystemPromptCheck,
   type BlobRefVerification,
 } from './checks.ts';
 import {
@@ -236,6 +238,9 @@ export interface VerifyResult {
   captureMethodVocab: CaptureMethodVocabCheck | null;
   /** Check #16 — `metadata.contentProfile` (hub ADR-0029 §5). */
   contentProfile: ContentProfileCheck | null;
+  /** Check #17 — whether a `datHere`-content-profile package carries
+   *  `skillMetadata.skillText` (hub ADR-0038 §6). Null when the package is absent. */
+  systemPrompt: SystemPromptCheck | null;
   lifecycle: LifecycleResolution;
 }
 
@@ -439,6 +444,7 @@ export async function verifyRecord(
   let signingKeyIdConsistency: SigningKeyIdConsistencyCheck | null = null;
   let captureMethodVocab: CaptureMethodVocabCheck | null = null;
   let contentProfile: ContentProfileCheck | null = null;
+  let systemPrompt: SystemPromptCheck | null = null;
   if (pkg) {
     contentCanonicalization = resolveContentCanonicalization(pkg);
     contentHashCheck = await verifyContentHashWithFetch(
@@ -454,6 +460,7 @@ export async function verifyRecord(
     }
     captureMethodVocab = checkCaptureMethodVocab(pkg);
     contentProfile = checkContentProfile(pkg);
+    systemPrompt = checkSystemPrompt(pkg);
   }
 
   // Step 6 — lifecycle (check #10). Server-deeper resolution wins when supplied;
@@ -492,6 +499,7 @@ export async function verifyRecord(
     signingKeyIdConsistency,
     captureMethodVocab,
     contentProfile,
+    systemPrompt,
     lifecycle,
   };
 }

@@ -329,6 +329,20 @@ export function checkContentProfile(pkg: Record<string, unknown>): ContentProfil
   return { status: 'ok', ...base };
 }
 
+// --- Content-profile system prompt (spec §9.2 check #17; hub ADR-0038 §6) ---
+
+export const SYSTEM_PROMPT_STATUSES = ['ok', 'skillText_absent', 'not_applicable'] as const;
+export type SystemPromptStatus = (typeof SYSTEM_PROMPT_STATUSES)[number];
+
+export interface SystemPromptCheck {
+  status: SystemPromptStatus;
+}
+
+/** Check #17 — a typed stub: the check itself lands in the next change. */
+export function checkSystemPrompt(_pkg: Record<string, unknown>): SystemPromptCheck {
+  return { status: 'not_applicable' };
+}
+
 // --- Typed-standards envelope checks (spec §9.2 checks #12, #14, #15) ---
 
 // The `content/layout/v1` sub-type (spec §8.14, hub ADR-0034): a standalone
