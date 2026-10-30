@@ -21,6 +21,7 @@ import {
   CONTENT_HASH_SIGNALS,
   CONTENT_PROFILE_SIGNALS,
   SYSTEM_PROMPT_SIGNALS,
+  CAPTURE_METHOD_LABELS,
 } from './trust-signal.ts';
 
 const detailOf = (d: { detail?: string }): string => {
@@ -176,4 +177,16 @@ test('system-prompt statuses (#17, hub ADR-0038 §6): an omission is attention, 
   // Presence only: the reading never claims the text is the prompt the model ran under.
   assert.match(detailOf(SYSTEM_PROMPT_SIGNALS.ok), /does not establish that the text is the prompt the model ran under/);
   for (const d of Object.values(SYSTEM_PROMPT_SIGNALS)) assert.notEqual(d.tier, 'alarm');
+});
+
+test('the capture-method label resolves only its table\'s own entries', () => {
+  const unknown = resolveCaptureMethodLabel('not-a-capture-method');
+  assert.equal(unknown, null);
+  for (const name of Object.getOwnPropertyNames(Object.prototype)) {
+    assert.equal(resolveCaptureMethodLabel(name), unknown, name);
+  }
+  for (const [method, label] of Object.entries(CAPTURE_METHOD_LABELS)) {
+    assert.equal(resolveCaptureMethodLabel(method), label, method);
+  }
+  assert.match(resolveCaptureMethodLabel('datHere') ?? '', /legacy datHere capture method/);
 });

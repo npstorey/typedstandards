@@ -924,7 +924,9 @@ export const CAPTURE_METHOD_LABELS: Record<CaptureMethod, string> = {
  */
 export function resolveCaptureMethodLabel(method: string | null | undefined): string | null {
   if (!method) return null;
-  const known = (CAPTURE_METHOD_LABELS as Record<string, string | undefined>)[method];
+  const known = Object.prototype.hasOwnProperty.call(CAPTURE_METHOD_LABELS, method)
+    ? (CAPTURE_METHOD_LABELS as Record<string, string | undefined>)[method]
+    : undefined;
   if (known) return known;
   if (method === 'datHere') {
     return 'Recorded with a legacy datHere capture method (pre-ADR-0004 reframe); the content profile now carries this distinction.';
