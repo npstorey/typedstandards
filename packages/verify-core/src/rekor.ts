@@ -58,7 +58,7 @@ export async function verifyRekorEntry(
     }
 
     const result = (await response.json()) as Record<string, RekorLogEntry>;
-    const entry = result[entryId] || Object.values(result)[0];
+    const entry = (Object.hasOwn(result, entryId) ? result[entryId] : undefined) || Object.values(result)[0];
     if (!entry) return { verified: false };
 
     // Decode the base64 body and cross-check both hash algorithm and value.

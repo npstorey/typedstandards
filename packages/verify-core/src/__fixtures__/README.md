@@ -25,3 +25,24 @@ typedstandards#145).
 
 `repeated-member-name.test.ts` asserts each of these, and pins the file's SHA-256. The
 CLI, host-core and web tests read the vector from here.
+
+## `civicaitools-v1-guidance-bundle.json`, the subtype's guidance bundle
+
+A byte-identical copy of the `ai-assisted-analysis/civicaitools-v1` guidance bundle,
+revision 1 (2026-10-30), whose address and SHA-256 the subtype table's row pins
+(`PRODUCER_PROFILE_SUBTYPES` in `src/profiles.ts`; specification §8.6, hub ADR-0038 §5).
+
+- **Source:** `docs/profiles/ai-assisted-analysis/civicaitools-v1/bundle.json` in the hub
+  repository (`npstorey/civic-ai-tools`) at tree `7060f5e32b2a4e429c8b6df317153bc4fc7c57c6`,
+  the tree of merge commit `b2bb304cbf7063e84e260d725b7727b9ff85e38c`, which the tag
+  `v0.1.13-typed-standards-spec` names. The row's URL is that file's raw address at the tag.
+- **Derivation:** none. The bytes are the source's, written with
+  `git show 7060f5e32b2a4e429c8b6df317153bc4fc7c57c6:docs/profiles/ai-assisted-analysis/civicaitools-v1/bundle.json`;
+  the git blob is the source's (`00c91578c02a7b3fb370808f45a09ee6112cf7b2`), 32,785 bytes.
+- **What it pins:** SHA-256 `724e399e02db8993041b64982eec731505084bec2ec5e6ca58fda2de8087a281`,
+  the digest ADR-0038 §5 records and the row carries.
+
+`producer-profile-subtypes.test.ts` asserts the copy's SHA-256 against the row, and its
+`subtype`, `url` and `contentProfiles.admits` against the row's key, URL and admitted set.
+No test fetches the URL. A later revision of the bundle replaces this copy and the row's
+pin in one change.

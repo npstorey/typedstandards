@@ -1,7 +1,19 @@
 # Changelog — @typedstandards/cli
 
-Factual record of what changed per published version. Check numbers (#1–#16)
+Factual record of what changed per published version. Check numbers (#1–#17)
 refer to the Typed Standards specification §9.2 verification sequence.
+
+## 0.2.2 — 2026-10-30
+
+The R10 release (civic-ai-tools#289). **A patch**: no new export. It moves to
+`@typedstandards/verify-core` `^0.15.0`, through which check #16 reads `ok` for `datHere` under
+`ai-assisted-analysis/civicaitools-v1`, and it reads check #17.
+
+- **`verify` reads check #17, the content-profile system prompt (hub ADR-0038 §6).** One reading,
+  `#17 systemPrompt`, at the tier typedstandards.org gives it: `ok` verified, `not_applicable`
+  normal, `skillText_absent` attention. An attention reading prints and does not fail `verify`,
+  so no record that verified before fails now. The table is copied from the site's
+  `SYSTEM_PROMPT_SIGNALS`, and the parity test compares the two tier by tier.
 
 ## 0.2.1 — 2026-10-16
 

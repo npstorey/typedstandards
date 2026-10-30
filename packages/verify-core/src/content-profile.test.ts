@@ -3,7 +3,9 @@
 //   - `contentProfile_absent`       the key is absent (read as "default", spec §8.1.2);
 //   - `contentProfile_unknown`      present and neither "default" nor "datHere";
 //   - `contentProfile_inconsistent` present, known, producerProfile present, and
-//                                   the ADR-0006 §2 invariant fails.
+//                                   the §8.1.1 invariant fails (ADR-0006 §2 as
+//                                   amended by hub ADR-0038 §3: read from the
+//                                   subtype table).
 // The invariant is compared only when BOTH fields are present.
 //
 // Synthetic packages only: each is the minimal object the check reads.
@@ -128,3 +130,31 @@ test('verifyRecord reports null for #16 when the package is unavailable', async 
   );
   assert.equal(result.contentProfile, null);
 });
+
+// Hub ADR-0038 §3: the eight combinations of its table, each read by check #16.
+// "Before" is the `startsWith` reading every earlier release applied; "after" is
+// the reading from the subtype table (spec §8.1.1, §8.6). One combination
+// changes: `datHere` under `ai-assisted-analysis/civicaitools-v1`, which the
+// subtype's row admits.
+const ADR_0038_COMBINATIONS: readonly [string, string, string, string][] = [
+  // [contentProfile, producerProfile, before, after]
+  ['datHere', 'ai-assisted-analysis/datHere', 'ok', 'ok'],
+  ['default', 'ai-assisted-analysis/datHere', 'contentProfile_inconsistent', 'contentProfile_inconsistent'],
+  ['datHere', 'ai-assisted-analysis/general', 'contentProfile_inconsistent', 'contentProfile_inconsistent'],
+  ['default', 'ai-assisted-analysis/general', 'ok', 'ok'],
+  ['datHere', 'ai-assisted-analysis/datHere-x', 'ok', 'ok'],
+  ['default', 'ai-assisted-analysis/datHere-x', 'contentProfile_inconsistent', 'contentProfile_inconsistent'],
+  ['datHere', 'ai-assisted-analysis/civicaitools-v1', 'contentProfile_inconsistent', 'ok'],
+  ['default', 'ai-assisted-analysis/civicaitools-v1', 'ok', 'ok'],
+];
+
+for (const [contentProfile, producerProfile, before, after] of ADR_0038_COMBINATIONS) {
+  const moves = before === after ? `${after}, as before` : `${after} (was ${before})`;
+  test(`ADR-0038 §3: ${contentProfile} + ${producerProfile} reads ${moves}`, () => {
+    assert.deepEqual(checkContentProfile(pkgWith(contentProfile, producerProfile)), {
+      status: after,
+      contentProfile,
+      producerProfile,
+    });
+  });
+}

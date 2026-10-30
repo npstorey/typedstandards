@@ -36,6 +36,7 @@ import type {
   ContentProfileStatus,
   Rfc3161FailReason,
   SigningKeyIdConsistencyStatus,
+  SystemPromptStatus,
 } from '@typedstandards/verify-core';
 
 // --- Tiers ---------------------------------------------------------------
@@ -923,7 +924,9 @@ export const CAPTURE_METHOD_LABELS: Record<CaptureMethod, string> = {
  */
 export function resolveCaptureMethodLabel(method: string | null | undefined): string | null {
   if (!method) return null;
-  const known = (CAPTURE_METHOD_LABELS as Record<string, string | undefined>)[method];
+  const known = Object.prototype.hasOwnProperty.call(CAPTURE_METHOD_LABELS, method)
+    ? (CAPTURE_METHOD_LABELS as Record<string, string | undefined>)[method]
+    : undefined;
   if (known) return known;
   if (method === 'datHere') {
     return 'Recorded with a legacy datHere capture method (pre-ADR-0004 reframe); the content profile now carries this distinction.';
@@ -1063,6 +1066,35 @@ export const CONTENT_PROFILE_SIGNALS: Record<ContentProfileStatus, TrustSignalDe
     label: 'Content profile contradicts the producer profile',
     detail:
       'The content-profile label and the producer profile disagree, so this package is malformed. Both labels are signature-covered, so this is a producer error, not evidence of alteration; the envelope and signature checks are unaffected.',
+  },
+};
+
+// --- #17 the content-profile system prompt (hub ADR-0038 §6) ---------------
+//
+// Whether a `datHere`-content-profile package carries `skillMetadata.skillText`,
+// which §8.7.1 requirement 2 requires. No status is `alarm`: a package that does
+// not carry the text is a producer omission, not evidence of alteration. The
+// check reads presence only: it does not resolve a referenced file (#9 does)
+// and cannot establish that the text is the prompt the model ran under.
+
+export const SYSTEM_PROMPT_SIGNALS: Record<SystemPromptStatus, TrustSignalDescriptor> = {
+  ok: {
+    tier: 'verified',
+    label: 'System prompt carried',
+    detail:
+      'This package declares the datHere content profile and carries the system prompt’s text, inline or as a referenced file (#9 checks a referenced file). This check does not establish that the text is the prompt the model ran under.',
+  },
+  skillText_absent: {
+    tier: 'attention',
+    label: 'System prompt not carried',
+    detail:
+      'This package declares the datHere content profile, which requires the system prompt’s text, and does not carry it. This is a producer omission, not evidence of alteration; the envelope, signature and notebook checks are unaffected.',
+  },
+  // Load-bearing: every package that does not declare datHere reads this. Calm.
+  not_applicable: {
+    tier: 'normal',
+    label: 'No system prompt required',
+    detail: 'This package does not declare the datHere content profile, so the standard does not require it to carry the system prompt’s text.',
   },
 };
 

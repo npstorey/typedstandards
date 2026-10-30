@@ -25,6 +25,7 @@ import {
   type KeyTrustStatus,
   type SignerIdentityCheckStatus,
   type SigningKeyIdConsistencyStatus,
+  type SystemPromptStatus,
   type TypeResolutionStatus,
   type VerifyResult,
 } from '@typedstandards/verify-core';
@@ -159,6 +160,14 @@ const CONTENT_PROFILE: Record<ContentProfileStatus, Tier> = {
   contentProfile_inconsistent: 'attention',
 };
 
+// SYSTEM_PROMPT_SIGNALS, trust-signal.ts (check #17, hub ADR-0038 §6): a datHere
+// package that does not carry its system prompt's text reads attention, never alarm.
+const SYSTEM_PROMPT: Record<SystemPromptStatus, Tier> = {
+  ok: 'verified',
+  skillText_absent: 'attention',
+  not_applicable: 'normal',
+};
+
 /**
  * The copied tables under the site's own export names, for the test that
  * compares them with trust-signal.ts tier by tier.
@@ -182,6 +191,7 @@ export const SITE_TABLES = {
   SIGNER_IDENTITY_SIGNALS: SIGNER_IDENTITY,
   CAPTURE_METHOD_VOCAB_SIGNALS: CAPTURE_METHOD_VOCAB,
   CONTENT_PROFILE_SIGNALS: CONTENT_PROFILE,
+  SYSTEM_PROMPT_SIGNALS: SYSTEM_PROMPT,
 } as const;
 
 /** A carried lifecycle attestation, as `withdraw` prints it and `view` carries it. */
@@ -264,5 +274,6 @@ export function readingsOf(
     add('#15', 'captureMethodVocab', result.captureMethodVocab.status, CAPTURE_METHOD_VOCAB[result.captureMethodVocab.status]);
   }
   if (result.contentProfile) add('#16', 'contentProfile', result.contentProfile.status, CONTENT_PROFILE[result.contentProfile.status]);
+  if (result.systemPrompt) add('#17', 'systemPrompt', result.systemPrompt.status, SYSTEM_PROMPT[result.systemPrompt.status]);
   return out;
 }

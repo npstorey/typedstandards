@@ -1,7 +1,14 @@
 # Changelog — @typedstandards/produce-core
 
-Factual record of what changed per published version. Check numbers (#1–#16)
+Factual record of what changed per published version. Check numbers (#1–#17)
 refer to the Typed Standards specification §9.2 verification sequence.
+
+## 0.9.1 — 2026-10-30
+
+The R10 release (civic-ai-tools#289). **A patch**: no new export and no change to what it emits.
+It moves to `@typedstandards/verify-core` `^0.15.0`, so a project that installs both resolves one
+verify-core. Its re-exports from verify-core are named, so verify-core 0.15.0's new exports are not
+re-exported here.
 
 ## 0.9.0 — 2026-10-16
 

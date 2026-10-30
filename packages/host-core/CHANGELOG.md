@@ -1,7 +1,14 @@
 # Changelog — @typedstandards/host-core
 
-Factual record of what changed per published version. Check numbers (#1–#16)
+Factual record of what changed per published version. Check numbers (#1–#17)
 refer to the Typed Standards specification §9.2 verification sequence.
+
+## 0.1.3 — 2026-10-30
+
+The R10 release (civic-ai-tools#289). **A patch**: no new export and no change to what it builds,
+checks or reports. It moves to `@typedstandards/verify-core` `^0.15.0`. `verify` fails a served
+record on the alarm statuses of checks #1, #2, #4, #5, #6, #9 and #14 only, as before: check #17
+is never a failure, and check #16's one changed reading is not one `verify` reads.
 
 ## 0.1.2 — 2026-10-16
 

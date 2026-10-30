@@ -20,6 +20,8 @@ import {
   SIGNER_IDENTITY_SIGNALS,
   CONTENT_HASH_SIGNALS,
   CONTENT_PROFILE_SIGNALS,
+  SYSTEM_PROMPT_SIGNALS,
+  CAPTURE_METHOD_LABELS,
 } from './trust-signal.ts';
 
 const detailOf = (d: { detail?: string }): string => {
@@ -164,4 +166,27 @@ test('#78: the supplied-registry readings never take the tier or label a declare
   assert.equal(signals.SIGNER_IDENTITY_SUPPLIED_REGISTRY.tier, 'normal');
   assert.notEqual(signals.SIGNER_IDENTITY_SUPPLIED_REGISTRY.label, SIGNER_IDENTITY_SIGNALS.ok.label);
   assert.match(detailOf(signals.SIGNER_IDENTITY_SUPPLIED_REGISTRY), /not checked against the publisher’s domain/);
+});
+
+test('system-prompt statuses (#17, hub ADR-0038 §6): an omission is attention, never alarm', () => {
+  assert.deepEqual(Object.keys(SYSTEM_PROMPT_SIGNALS).sort(), ['not_applicable', 'ok', 'skillText_absent']);
+  assert.equal(SYSTEM_PROMPT_SIGNALS.ok.tier, 'verified');
+  assert.equal(SYSTEM_PROMPT_SIGNALS.skillText_absent.tier, 'attention');
+  assert.equal(SYSTEM_PROMPT_SIGNALS.not_applicable.tier, 'normal');
+  assert.match(detailOf(SYSTEM_PROMPT_SIGNALS.skillText_absent), /not evidence of alteration/);
+  // Presence only: the reading never claims the text is the prompt the model ran under.
+  assert.match(detailOf(SYSTEM_PROMPT_SIGNALS.ok), /does not establish that the text is the prompt the model ran under/);
+  for (const d of Object.values(SYSTEM_PROMPT_SIGNALS)) assert.notEqual(d.tier, 'alarm');
+});
+
+test('the capture-method label resolves only its table\'s own entries', () => {
+  const unknown = resolveCaptureMethodLabel('not-a-capture-method');
+  assert.equal(unknown, null);
+  for (const name of Object.getOwnPropertyNames(Object.prototype)) {
+    assert.equal(resolveCaptureMethodLabel(name), unknown, name);
+  }
+  for (const [method, label] of Object.entries(CAPTURE_METHOD_LABELS)) {
+    assert.equal(resolveCaptureMethodLabel(method), label, method);
+  }
+  assert.match(resolveCaptureMethodLabel('datHere') ?? '', /legacy datHere capture method/);
 });
