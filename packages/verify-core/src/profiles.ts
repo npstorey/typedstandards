@@ -52,7 +52,8 @@ export function captureVocabForProfile(
   producerProfile?: string | null,
   contentProfile?: string | null,
 ): readonly CaptureMethod[] | undefined {
-  return PROFILE_CAPTURE_VOCAB[resolveProfileType(producerProfile, contentProfile)];
+  const profileType = resolveProfileType(producerProfile, contentProfile);
+  return Object.hasOwn(PROFILE_CAPTURE_VOCAB, profileType) ? PROFILE_CAPTURE_VOCAB[profileType] : undefined;
 }
 
 // --- The subtype table (spec §8.1.1 and §8.6; hub ADR-0038 §3 and §5) ---
