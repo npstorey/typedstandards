@@ -4,8 +4,8 @@
 //
 // __fixtures__/civicaitools-v1-guidance-bundle.json is byte-identical to the
 // hub's docs/profiles/ai-assisted-analysis/civicaitools-v1/bundle.json at tree
-// 7060f5e32b2a4e429c8b6df317153bc4fc7c57c6 (the merge commit b2bb304 that
-// tag v0.1.13-typed-standards-spec names); its provenance is in
+// bcd06c5fa43696db3b7576c93f829eed686d13af (revision 2, to be tagged
+// v0.1.14-typed-standards-spec at its merge commit); its provenance is in
 // __fixtures__/README.md.
 
 import { test } from 'node:test';
