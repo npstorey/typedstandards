@@ -33,7 +33,7 @@
   },
   "dependencies": {
     "@typedstandards/produce-core": "^0.9.0",
-    "@typedstandards/verify-core": "^0.15.0"
+    "@typedstandards/verify-core": "^0.15.1"
   },
   "devDependencies": {
     "@types/node": "^22",

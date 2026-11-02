@@ -97,7 +97,7 @@ export async function verifyOffline(io: Io, record: RecordToVerify): Promise<Ver
     checks,
     lifecycle: checks.lifecycle,
     refused: offline.refused,
-    notChecked: record.rekorEntryId !== undefined ? [`log entry ${record.rekorEntryId} against this record's hash`] : [],
+    notChecked: record.rekorEntryId !== undefined ? [`the log's copy of entry ${record.rekorEntryId}`] : [],
   };
 }
 

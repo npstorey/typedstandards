@@ -10,9 +10,11 @@
 //
 // Checks #7 (an RFC 3161 token) and #8 (a transparency-log inclusion proof) arise on
 // the commitment view a host serves (typedstandards#166). verify-core checks both
-// offline. `verify` does not give it the view's log entry id, since checking that
-// entry's hash against the record needs the log; check #8 reads that as not
-// confirmed, never as confirmed or failed.
+// offline, and check #8 checks that the carried entry body records this record's
+// hash. `verify` does not give verify-core the view's log entry id, since verify-core
+// would fetch that entry from the log; the log's copy of the entry is reported not
+// checked, and check #8's hash parity (`rekorVerified`) reads null: not confirmed,
+// never confirmed or failed.
 
 import {
   checkAttestationNode,
