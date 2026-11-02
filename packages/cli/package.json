@@ -1,6 +1,6 @@
 {
   "name": "@typedstandards/cli",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Sign, withdraw, attest, build a commitment view for, and verify Typed Standards records from the command line, through @typedstandards/produce-core and @typedstandards/verify-core. JSON in, JSON out; the signing seed comes from one environment variable.",
   "license": "MIT",
   "author": "Nathan Storey",
