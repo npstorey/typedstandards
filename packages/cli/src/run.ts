@@ -28,9 +28,11 @@ export const USAGE = `Usage: typedstandards <command> [options]
             [--trust-registry-url <url>] [--package-url <url>] [--title <text>]
             Build the commitment view a host serves, with the package inline, carrying
             the lifecycle attestations given (--withdrawal is an alias of --attestation).
-  verify    --input <file|-> [--blob <file>]... [--json]
-            Verify what sign or view printed, offline. Prints {ok, nodeId, failures};
-            --json adds every check's fields and the lifecycle resolution.
+  verify    --input <file|-> [--package <file>] [--blob <file>]... [--json]
+            Verify, offline, what sign or view printed or the commitment view a host
+            serves; --package names the package's file when the view does not carry it.
+            Prints {ok, nodeId, failures}; --json adds every check's fields and the
+            lifecycle resolution.
 
 sign, withdraw and attest read the signing seed from ${SEED_VARIABLE}
 (the standard base64 of a 32-byte Ed25519 seed). It is never an argument.

@@ -8,9 +8,11 @@
 // minor (#109 G0 ruling, note 2). Each map is keyed by verify-core's status union,
 // so a status verify-core adds fails this file's typecheck until it is classified.
 //
-// Not classified here, because nothing `sign` or `view` emits carries them, and
-// `verify` refuses any input key they do not emit: check #7 (an RFC 3161 token)
-// and check #8 (a transparency-log entry).
+// Checks #7 (an RFC 3161 token) and #8 (a transparency-log inclusion proof) arise on
+// the commitment view a host serves (typedstandards#166). verify-core checks both
+// offline. `verify` does not give it the view's log entry id, since checking that
+// entry's hash against the record needs the log; check #8 reads that as not
+// confirmed, never as confirmed or failed.
 
 import {
   checkAttestationNode,
@@ -88,6 +90,39 @@ const SIGNING_KEY_ID: Record<SigningKeyIdConsistencyStatus, Tier> = {
   signingKeyId_absent: 'attention',
   kid_absent: 'normal',
 };
+
+// TIMESTAMP_SIGNALS, trust-signal.ts:436.
+const TIMESTAMP = { verified: 'verified', failed: 'alarm', unconfirmed: 'attention', absent: 'normal' } as const satisfies Record<string, Tier>;
+
+/**
+ * Check #7's reading of a token that did not verify, by its reason: the site's
+ * TIMESTAMP_FAILURE_CLASS (trust-signal.ts:507) classes each reason `fails`, read
+ * as its `failed`, or `caveats`, read as its `unconfirmed`. A reason verify-core
+ * adds fails this file's typecheck until it is classified here.
+ */
+export const TIMESTAMP_REASON_TIERS = {
+  parse_error: TIMESTAMP.failed,
+  imprint_mismatch: TIMESTAMP.failed,
+  no_message_digest: TIMESTAMP.failed,
+  content_not_bound: TIMESTAMP.failed,
+  no_signing_cert: TIMESTAMP.failed,
+  eku_not_timestamping: TIMESTAMP.failed,
+  genTime_outside_validity: TIMESTAMP.failed,
+  signature_invalid: TIMESTAMP.failed,
+  chain_signature_invalid: TIMESTAMP.failed,
+  unexpected_algorithm: TIMESTAMP.unconfirmed,
+  untrusted_root: TIMESTAMP.unconfirmed,
+  chain_incomplete: TIMESTAMP.unconfirmed,
+  chain_algorithm_unsupported: TIMESTAMP.unconfirmed,
+  chain_outside_validity: TIMESTAMP.unconfirmed,
+} as const satisfies Record<Rfc3161FailReason, Tier>;
+
+// REKOR_SIGNALS, trust-signal.ts:570.
+const REKOR = { included: 'verified', matched: 'verified', unconfirmed: 'attention', absent: 'normal' } as const satisfies Record<string, Tier>;
+
+/** The tier of check #8's `included` reading: an inclusion proof and its signed
+ *  checkpoint that verify offline. Set here only. */
+export const REKOR_INCLUDED_TIER: Tier = REKOR.included;
 
 // BLOB_REF_REASON_SIGNALS, trust-signal.ts:678 (a reference that verifies reads
 // `verified`, BLOB_REFS_SIGNALS, trust-signal.ts:608).
@@ -183,6 +218,8 @@ export const SITE_TABLES = {
   CONTENT_HASH_SIGNALS: CONTENT_HASH,
   KEY_TRUST_SIGNALS: KEY_TRUST,
   SIGNING_KEY_ID_SIGNALS: SIGNING_KEY_ID,
+  TIMESTAMP_SIGNALS: TIMESTAMP,
+  REKOR_SIGNALS: REKOR,
   BLOB_REF_REASON_SIGNALS: BLOB_REF_REASON,
   LIFECYCLE_ATTESTATION_NODE_ID_SIGNALS: LIFECYCLE_NODE_ID,
   LIFECYCLE_ATTESTATION_SIGNATURE_SIGNALS: LIFECYCLE_SIGNATURE,
@@ -194,11 +231,6 @@ export const SITE_TABLES = {
   CONTENT_PROFILE_SIGNALS: CONTENT_PROFILE,
   SYSTEM_PROMPT_SIGNALS: SYSTEM_PROMPT,
 } as const;
-
-// Typed stubs for the tests of the next change (check #7 and check #8 readings);
-// that change fills them in.
-export const TIMESTAMP_REASON_TIERS = {} as Record<Rfc3161FailReason, Tier>;
-export const REKOR_INCLUDED_TIER: Tier = 'verified';
 
 /** A carried lifecycle attestation, as `withdraw` prints it and `view` carries it. */
 export interface CarriedNode {
@@ -227,15 +259,18 @@ export interface ReadingTarget {
  * §8.12.1 requires of its sub-type gets one reading per field, named in the field
  * (`missingFields`, which `verifyLifecycleChain` records on the node's view):
  * attention when the node names the record's signer (`namesTarget`), normal on a
- * third party's.
+ * third party's. Check #7 reads the token verify-core checked, as the site's verdict
+ * reads it (`classifyTimestamp`). Check #8 reads as the site's `resolveRekor` does
+ * with no log confirmation: `included` when the inclusion proof and its checkpoint
+ * verify, and not confirmed when the view names a log entry (`carriedProofs`) or
+ * carries a proof that does not verify.
  */
 export function readingsOf(
   result: VerifyResult,
   carried: readonly CarriedNode[],
   packageHash: string,
   target?: ReadingTarget,
-  // Typed stub for the tests of the next change, which reads it.
-  _carriedProofs?: CarriedProofs,
+  carriedProofs?: CarriedProofs,
 ): Reading[] {
   const out: Reading[] = [];
   const add = (check: string, field: string, status: string, tier: Tier) => out.push({ check, field, status, tier });
@@ -251,6 +286,25 @@ export function readingsOf(
   if (result.keyTrust) add('#5', 'keyTrust', result.keyTrust.status, KEY_TRUST[result.keyTrust.status]);
   if (result.signingKeyIdConsistency) {
     add('#6', 'signingKeyIdConsistency', result.signingKeyIdConsistency.status, SIGNING_KEY_ID[result.signingKeyIdConsistency.status]);
+  }
+  if (result.hasTimestamp) {
+    const stamp = result.rfc3161;
+    if (stamp?.verified) {
+      add('#7', 'rfc3161', 'verified', TIMESTAMP.verified);
+    } else {
+      // A token present but not evaluated, or with a reason the table does not
+      // name, reads as the site's verdict reads it: caveated, not failed.
+      const reason = stamp?.reason;
+      const tier = reason !== undefined && Object.hasOwn(TIMESTAMP_REASON_TIERS, reason) ? TIMESTAMP_REASON_TIERS[reason] : TIMESTAMP.unconfirmed;
+      add('#7', 'rfc3161', reason ?? 'not_evaluated', tier);
+    }
+  }
+  const inclusion = result.rekorInclusion;
+  if (inclusion?.inclusionVerified && inclusion.checkpointVerified) {
+    add('#8', 'rekorInclusion', 'included', REKOR_INCLUDED_TIER);
+  } else if (inclusion || result.hasRekor || carriedProofs?.rekorEntryCarried) {
+    if (result.rekorVerified === true) add('#8', 'rekorVerified', 'matched', REKOR.matched);
+    else add('#8', 'rekorInclusion', inclusion ? (inclusion.reason ?? 'not_verified') : 'not_carried', REKOR.unconfirmed);
   }
   result.blobRefs.forEach((ref) => {
     const status = ref.ok ? 'ok' : (ref.reason ?? 'fetch_failed');

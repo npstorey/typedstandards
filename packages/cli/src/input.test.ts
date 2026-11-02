@@ -104,10 +104,10 @@ test('usage: no command, an unknown command and an unknown flag exit 2; --help a
   assert.deepEqual(JSON.parse(version.out.join('')), { name: '@typedstandards/cli', version: '0.0.0-test' });
 });
 
-test('verify refuses input that sign and view do not print', async () => {
+test('verify refuses input that is neither what sign prints nor a commitment view', async () => {
   const cases: Array<[unknown, RegExp]> = [
     [{ package: {}, envelopeHash: 'a'.repeat(64), signature: { signature: 's', publicKey: 'k' }, extra: 1 }, /extra: not part of/],
-    [{ packageHash: 'a'.repeat(64), signature: { signature: 's', publicKey: 'k' }, package: {}, rfc3161Timestamp: 't' }, /rfc3161Timestamp: verify reads what sign and view print/],
+    [{ packageHash: 'a'.repeat(64), signature: { signature: 's', publicKey: 'k' }, package: {}, extra: 't' }, /extra: not part of a commitment view/],
     [{ packageHash: 'a'.repeat(64), signature: { signature: 's', publicKey: 'k' } }, /carries no package/],
     [{ something: 1 }, /must be what sign prints/],
   ];
