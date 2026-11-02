@@ -39,7 +39,7 @@
     "@types/node": "^22",
     "@typescript-eslint/parser": "^8.72.0",
     "eslint": "^9",
-    "typescript": "^5.9.3"
+    "typescript": "^6.0.3"
   },
   "engines": {
     "node": ">=18"
