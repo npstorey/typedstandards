@@ -3,6 +3,21 @@
 Factual record of what changed per published version. Check numbers (#1–#17)
 refer to the Typed Standards specification §9.2 verification sequence.
 
+## 0.3.1 — 2026-11-02
+
+The R11 fix round (npstorey/civic-ai-tools#294, its cold read's finding F1). **A patch**: one stderr line
+and the docs name what offline verification leaves unchecked. No export, input, stdout or exit code changes.
+
+- **The not-checked line names the log's copy of the entry.** On a commitment view that carries a log entry
+  id, `verify` prints `not checked offline: the log's copy of entry <id>`. 0.3.0 printed
+  `not checked offline: log entry <id> against this record's hash`, and its README and its entry below said
+  that checking that the entry records this record's hash needs the log. It does not: verify-core 0.15.1's
+  check #8 checks offline that the carried entry body records this record's hash, and reads
+  `inclusionVerified` false when it does not. What offline verification does not check is the log's own copy
+  of the entry under that id. `--json` still shows `checks.rekorVerified` `null`.
+- **`@typedstandards/verify-core` `^0.15.1`** (was `^0.15.0`): 0.15.1 is the first version whose check #8
+  makes that check, so the line and the README hold under every version the range admits.
+
 ## 0.3.0 — 2026-11-02
 
 The R11 release (npstorey/civic-ai-tools#294). **A minor bump**: `verify` takes a new input, the

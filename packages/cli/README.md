@@ -230,10 +230,11 @@ mismatch.
 `view` does not emit. `verify` reads three of them: the RFC 3161 token
 (`rfc3161Timestamp`, check #7) and the transparency-log inclusion proof with its entry
 body (`rekorInclusionProof`, `rekorEntryBody`, check #8), which verify-core checks
-offline. It does not pass the log entry id (`rekorEntryId`) to verify-core: checking
-that the entry records this record's hash needs the log. It prints
-`not checked offline: log entry <id> against this record's hash` instead, and in
-`--json`, `checks.rekorVerified` is `null` and `checks.hasRekor` is `false`. It accepts
+offline; check #8 also checks that the entry body records this record's hash. It does
+not pass the log entry id (`rekorEntryId`) to verify-core, since verify-core would
+fetch that entry from the log and `verify` makes no network request. It prints
+`not checked offline: the log's copy of entry <id>` instead, and in `--json`,
+`checks.rekorVerified` is `null` and `checks.hasRekor` is `false`. It accepts
 and does not read `signerIdentity`, `trustRegistryUrlLegacy`, `trustRegistry`,
 `evidenceProtocolVersion`, the view's `lifecycle` summary, or a carried attestation's
 `hasTimestamp` and `hasRekor`. Each is the host's statement, not signed, and none
@@ -293,9 +294,9 @@ in GitHub Actions:
   env:
     TYPEDSTANDARDS_SIGNING_SEED_B64: ${{ secrets.TYPEDSTANDARDS_SIGNING_SEED_B64 }}
   run: |
-    npx --yes @typedstandards/cli@0.3.0 sign --input record.json --output-file analysis.ipynb > signed.json
-    npx --yes @typedstandards/cli@0.3.0 view --signed signed.json --visibility public > bundle.json
-    npx --yes @typedstandards/cli@0.3.0 verify --input bundle.json
+    npx --yes @typedstandards/cli@0.3.1 sign --input record.json --output-file analysis.ipynb > signed.json
+    npx --yes @typedstandards/cli@0.3.1 view --signed signed.json --visibility public > bundle.json
+    npx --yes @typedstandards/cli@0.3.1 verify --input bundle.json
 ```
 
 A checked-in input template plus the file's bytes describe the record fully. Pin the
