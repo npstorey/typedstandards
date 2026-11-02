@@ -6,6 +6,28 @@ references are to `npstorey/civic-ai-tools-website` (#119 is the offline-crypto
 hardening arc; #116 is the standalone-verifier arc this package was extracted
 in).
 
+## 0.15.1 — 2026-11-02
+
+The R11 patch (npstorey/civic-ai-tools#293; anchor npstorey/civic-ai-tools#294). **A patch**: no
+export, signature or type changes.
+
+- **Check #8's inclusion verdict requires the log entry to record this record's hash.**
+  `rekorInclusion.inclusionVerified` and `checkpointVerified` are true only when the entry body's
+  `spec.data.hash` is `sha512` with the value `rekorHashForPackage(packageHash)`. That holds for an
+  entry body and proof the input carries (`verifyRecord`) and for an entry `verifyRekorEntry`
+  fetches (its `inclusion`). An entry that does not record the hash, or an empty `packageHash`,
+  reads both false, with the proof's `treeSize` and `leafIndex` and no `reason`.
+  `verifyRekorInclusion` is unchanged: it checks inclusion alone.
+- **Every genuine pairing reads as before.** Over the package objects and the carried log
+  inclusions in this repository's fixtures, and two host-served commitment views, `verifyRecord`
+  gives output deep-equal to 0.15.0's, with the entry carried, fetched, or both.
+- **The `ai-assisted-analysis/civicaitools-v1` row pins revision 2 of its guidance bundle**
+  (2026-11-02), as hub ADR-0038's amendment of 2026-11-02 records:
+  `https://raw.githubusercontent.com/npstorey/civic-ai-tools/v0.1.14-typed-standards-spec/docs/profiles/ai-assisted-analysis/civicaitools-v1/bundle.json`,
+  SHA-256 `45bf3ab479325a791829ed9987f5f291fea44238b54bfb598f32f306f574eb9b`. The row's key and
+  `admits` are unchanged. The local copy (not published) is byte-identical to the hub file at
+  tree `bcd06c5f`; its provenance is in `src/__fixtures__/README.md`.
+
 ## 0.15.0 — 2026-10-30
 
 The R10 release (civic-ai-tools#289; hub ADR-0038 §3, §5 and §6, specification v0.1.13 §8.1.1,

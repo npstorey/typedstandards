@@ -29,18 +29,20 @@ CLI, host-core and web tests read the vector from here.
 ## `civicaitools-v1-guidance-bundle.json`, the subtype's guidance bundle
 
 A byte-identical copy of the `ai-assisted-analysis/civicaitools-v1` guidance bundle,
-revision 1 (2026-10-30), whose address and SHA-256 the subtype table's row pins
-(`PRODUCER_PROFILE_SUBTYPES` in `src/profiles.ts`; specification §8.6, hub ADR-0038 §5).
+revision 2 (2026-11-02), whose address and SHA-256 the subtype table's row pins
+(`PRODUCER_PROFILE_SUBTYPES` in `src/profiles.ts`; specification §8.6, hub ADR-0038's
+amendment of 2026-11-02).
 
 - **Source:** `docs/profiles/ai-assisted-analysis/civicaitools-v1/bundle.json` in the hub
-  repository (`npstorey/civic-ai-tools`) at tree `7060f5e32b2a4e429c8b6df317153bc4fc7c57c6`,
-  the tree of merge commit `b2bb304cbf7063e84e260d725b7727b9ff85e38c`, which the tag
-  `v0.1.13-typed-standards-spec` names. The row's URL is that file's raw address at the tag.
+  repository (`npstorey/civic-ai-tools`): revision 2 at hub tree
+  `bcd06c5fa43696db3b7576c93f829eed686d13af`, to be tagged `v0.1.14-typed-standards-spec`
+  at its merge commit. The row's URL is that file's raw address at the tag.
 - **Derivation:** none. The bytes are the source's, written with
-  `git show 7060f5e32b2a4e429c8b6df317153bc4fc7c57c6:docs/profiles/ai-assisted-analysis/civicaitools-v1/bundle.json`;
-  the git blob is the source's (`00c91578c02a7b3fb370808f45a09ee6112cf7b2`), 32,785 bytes.
-- **What it pins:** SHA-256 `724e399e02db8993041b64982eec731505084bec2ec5e6ca58fda2de8087a281`,
-  the digest ADR-0038 §5 records and the row carries.
+  `git show bcd06c5fa43696db3b7576c93f829eed686d13af:docs/profiles/ai-assisted-analysis/civicaitools-v1/bundle.json`;
+  the git blob is the source's (`204e564bcf60ecf4025149c24b7ba9133cee65fa`), 35,491 bytes.
+- **What it pins:** SHA-256 `45bf3ab479325a791829ed9987f5f291fea44238b54bfb598f32f306f574eb9b`,
+  the digest ADR-0038's amendment of 2026-11-02 records and the row carries. Revision 1's
+  (`724e399e…a281`, at tag `v0.1.13-typed-standards-spec`) is the one ADR-0038 §5 records.
 
 `producer-profile-subtypes.test.ts` asserts the copy's SHA-256 against the row, and its
 `subtype`, `url` and `contentProfiles.admits` against the row's key, URL and admitted set.

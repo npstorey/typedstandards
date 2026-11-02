@@ -380,23 +380,24 @@ test('verifyEvidence: surfaces lifecycle STATE from the sidecar (portable depth)
 // --- 4. Carried-offline Rekor inclusion through the orchestrator (#119 P1) --
 
 test('verifyEvidence: verifies carried Rekor inclusion OFFLINE (failFetch, no network)', async () => {
-  // A real rekor.sigstore.dev entry + its proof + checkpoint, carried in the input
-  // (as an offline bundle would). The orchestrator folds the proof and verifies the
-  // checkpoint signature against the pinned log key — with `failFetch`, proving the
-  // whole #8 deep check runs with ZERO network (the property #119 demonstrates).
+  // A record's real rekor.sigstore.dev entry + its proof + checkpoint, carried in the
+  // input (as an offline bundle would): the captured `q15-255b8e` commitment bundle
+  // (`apps/web/src/lib/__fixtures__/`), whose entry records its own package hash. The
+  // orchestrator folds the proof and verifies the checkpoint signature against the
+  // pinned log key — with `failFetch`, proving the whole #8 deep check runs with ZERO
+  // network (the property #119 demonstrates).
   const fx = JSON.parse(
-    readFileSync(new URL('./__fixtures__/rekor-inclusion.json', import.meta.url), 'utf8'),
-  ) as { body: string; inclusionProof: Record<string, unknown> };
-  const { pkg, packageHash, signature, registry } = buildSignedFixture();
+    readFileSync(new URL('../../../apps/web/src/lib/__fixtures__/q15-255b8e.json', import.meta.url), 'utf8'),
+  ) as { packageHash: string; rekorEntryBody: string; rekorInclusionProof: string };
+  const { registry } = buildSignedFixture();
 
   const result = await verifyEvidence(
     {
-      package: pkg,
-      packageHash,
-      signature,
+      package: null,
+      packageHash: fx.packageHash,
       rekorEntryId: null, // no id ⇒ no fetch; inclusion comes from the carried proof
-      rekorInclusionProof: fx.inclusionProof as never,
-      rekorEntryBody: fx.body,
+      rekorInclusionProof: JSON.parse(fx.rekorInclusionProof),
+      rekorEntryBody: fx.rekorEntryBody,
       lifecycle: null,
     },
     { registry, fetch: failFetch },

@@ -32,11 +32,8 @@
 import { recomputePackageHash } from './checks.ts';
 import { verifySignature } from './signature.ts';
 import { verifyRekorEntry, type RekorVerifyResult } from './rekor.ts';
-import {
-  verifyRekorInclusion,
-  type RekorInclusionProof,
-  type RekorInclusionResult,
-} from './rekor-inclusion.ts';
+import { type RekorInclusionProof, type RekorInclusionResult } from './rekor-inclusion.ts';
+import { verifyRekorInclusionForRecord } from './rekor-binding.ts';
 import { verifyRfc3161Timestamp, type Rfc3161VerifyResult } from './rfc3161.ts';
 import {
   verifyKeyTrust,
@@ -215,7 +212,8 @@ export interface VerifyResult {
   rekorDetails: { logIndex?: number; logEntryUrl?: string } | null;
   rekorIntegratedTime?: number;
   /** Cryptographic Merkle-inclusion verdict (#119): null when no proof was
-   *  available, else the graded result (`inclusionVerified` / `checkpointVerified`).
+   *  available, else the graded result (`inclusionVerified` / `checkpointVerified`),
+   *  both false when the log entry does not record `packageHash`.
    *  Additive to `rekorVerified` (hash-parity). */
   rekorInclusion: RekorInclusionResult | null;
   hasRekor: boolean;
@@ -348,6 +346,7 @@ export async function verifyRecord(
   // Merkle inclusion (#119) is verified cryptographically. The carried proof + body
   // verify inclusion OFFLINE (no fetch); otherwise the online fetch's entry carries
   // the proof. Carried-offline takes precedence — it is the zero-dependency property.
+  // Either way the entry must record this record's hash (`rekor-binding.ts`).
   let rekorVerified: boolean | null = null;
   let rekorDetails: { logIndex?: number; logEntryUrl?: string } | null = null;
   let rekorIntegratedTime: number | undefined;
@@ -369,7 +368,11 @@ export async function verifyRecord(
     if (rekorResult.inclusion) rekorInclusion = rekorResult.inclusion;
   }
   if (input.rekorInclusionProof && input.rekorEntryBody) {
-    rekorInclusion = verifyRekorInclusion(input.rekorEntryBody, input.rekorInclusionProof);
+    rekorInclusion = verifyRekorInclusionForRecord(
+      input.rekorEntryBody,
+      input.rekorInclusionProof,
+      packageHash,
+    );
   }
 
   // Step 3c — RFC 3161 timestamp (check #7, deep). Presence is `hasTimestamp`; when a
