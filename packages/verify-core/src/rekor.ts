@@ -10,11 +10,8 @@
 
 import { rekorHashForPackage } from './signature.ts';
 import { base64ToBytes } from './primitives.ts';
-import {
-  verifyRekorInclusion,
-  type RekorInclusionProof,
-  type RekorInclusionResult,
-} from './rekor-inclusion.ts';
+import { type RekorInclusionProof, type RekorInclusionResult } from './rekor-inclusion.ts';
+import { verifyRekorInclusionForRecord } from './rekor-binding.ts';
 import type { FetchLike } from './types.ts';
 
 export interface RekorVerifyResult {
@@ -24,7 +21,8 @@ export interface RekorVerifyResult {
   integratedTime?: number;
   logEntryUrl?: string;
   /** Cryptographic Merkle-inclusion verdict (#119), when the fetched entry carries
-   *  an inclusion proof. Additive — `verified` (hash-parity) is unchanged. */
+   *  an inclusion proof; not verified when the entry does not record this package's
+   *  hash. Additive — `verified` (hash-parity) is unchanged. */
   inclusion?: RekorInclusionResult;
 }
 
@@ -71,10 +69,12 @@ export async function verifyRekorEntry(
 
     // Deepen #8 (civic-ai-tools-website#119): when the entry carries an inclusion
     // proof, cryptographically verify Merkle inclusion against the pinned log key —
-    // the same offline check a carried bundle runs, here over the fetched entry.
+    // the same offline check a carried bundle runs, here over the fetched entry, and
+    // bound to this record: an entry that does not record `packageHash` is not
+    // verified (`rekor-binding.ts`).
     const proof = entry.verification?.inclusionProof;
     const inclusion =
-      proof && entry.body ? verifyRekorInclusion(entry.body, proof) : undefined;
+      proof && entry.body ? verifyRekorInclusionForRecord(entry.body, proof, packageHash) : undefined;
 
     return {
       verified,

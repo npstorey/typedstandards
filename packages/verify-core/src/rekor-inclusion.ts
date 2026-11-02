@@ -129,7 +129,9 @@ export interface RekorInclusionResult {
   origin?: string;
   /** The matched anchor's key hint (hex), for display / provenance. */
   keyHint?: string;
-  /** The first thing that failed, when not fully verified. */
+  /** The first thing that failed, when not fully verified. Absent when
+   *  `verifyRecord` or `verifyRekorEntry` found that the entry does not record the
+   *  package's hash: the proof is then not evaluated. */
   reason?: RekorInclusionFailReason;
 }
 
@@ -325,7 +327,9 @@ export function verifyCheckpointSignature(
  * is the carried `verification.inclusionProof`. Returns a graded verdict:
  * `inclusionVerified` (the proof folds to its root) and `checkpointVerified` (that
  * root is in a checkpoint a pinned log key signed). The strong property — "this
- * entry is in a log the sigstore key vouches for" — is both being true.
+ * entry is in a log the sigstore key vouches for" — is both being true. This
+ * export checks inclusion alone; `verifyRecord` (`verifyEvidence`) applies the
+ * record binding.
  */
 export function verifyRekorInclusion(
   entryBody: string | Uint8Array,
