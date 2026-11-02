@@ -3,6 +3,35 @@
 Factual record of what changed per published version. Check numbers (#1–#17)
 refer to the Typed Standards specification §9.2 verification sequence.
 
+## Unreleased
+
+The R11 release (npstorey/civic-ai-tools#294). **A minor bump**: `verify` takes a new input, the
+commitment view a host serves, and a new flag, `--package`. No export changes.
+
+- **`verify` reads the commitment view a host serves (typedstandards#166, ruling A).** That is
+  produce-core's `buildCommitmentView` with the keys a host adds; 0.2.2 exited 2 on it, and on
+  every bundle host-core serves beside a registry (`trustRegistry`).
+  - Check #7 reads the view's RFC 3161 token, and check #8 its transparency-log inclusion proof
+    and entry body; verify-core checks both offline. Their tiers are copied from
+    typedstandards.org's `TIMESTAMP_SIGNALS`, `TIMESTAMP_FAILURE_CLASS` and `REKOR_SIGNALS`, and
+    the parity test compares them. A token that does not verify for the package reads alarm, so
+    such a view exits 1. An inclusion proof that does not verify, or a log entry named with no
+    proof, reads attention.
+  - The view's log entry id (`rekorEntryId`) is not passed to verify-core: checking that the
+    entry records this record's hash needs the log. `verify` prints
+    `not checked offline: log entry <id> against this record's hash`, and `--json` shows
+    `checks.rekorVerified` `null`.
+  - Accepted and not read: `signerIdentity`, `trustRegistryUrlLegacy`, `trustRegistry`,
+    `evidenceProtocolVersion` (the prior-era name of `protocolVersion`), and a carried
+    attestation's `hasTimestamp` and `hasRekor`, which are removed before the node is read. No
+    reading and no output field derives from them.
+- **`--package <file>`** names the package's file when the view does not carry it inline. With a
+  view that carries a package, or with what `sign` prints, it exits 2.
+- **Unchanged:** every input 0.2.2 accepted (what `sign` and `view` print, the publish script's
+  fixture, a website layout node document, and a host-core bundle served without a registry)
+  gives the same stdout, stderr and exit code; `src/no-change.test.ts` holds them to what 0.2.2
+  printed. The refusals' messages are reworded to name the commitment view.
+
 ## 0.2.2 — 2026-10-30
 
 The R10 release (civic-ai-tools#289). **A patch**: no new export. It moves to

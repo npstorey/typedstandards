@@ -214,19 +214,37 @@ of a record that does not verify.
 ### `verify`
 
 ```sh
-typedstandards verify --input <file|-> [--blob <file>]... [--json]
+typedstandards verify --input <file|-> [--package <file>] [--blob <file>]... [--json]
 ```
 
-Runs verify-core's checks offline over what `sign` or `view` printed, and prints
-`{ok, nodeId, failures}`. `--json` adds `checks` (verify-core's full result, every
-check's fields) and `lifecycle` (the lifecycle resolution from the carried
-lifecycle attestations). `--blob` supplies a referenced file's bytes. Files are matched to the
-record's BlobRefs by SHA-256; when exactly one file and one reference are left over,
-they are paired, so a changed file reads as a mismatch.
+Runs verify-core's checks offline over what `sign` or `view` printed, or over the
+commitment view a host serves, and prints `{ok, nodeId, failures}`. `--json` adds
+`checks` (verify-core's full result, every check's fields) and `lifecycle` (the
+lifecycle resolution from the carried lifecycle attestations). `--package` names the
+package's file when the view does not carry it inline. `--blob` supplies a referenced
+file's bytes. Files are matched to the record's BlobRefs by SHA-256; when exactly one
+file and one reference are left over, they are paired, so a changed file reads as a
+mismatch.
 
-`verify` reads only what `sign` and `view` print. Nothing either prints carries an
-RFC 3161 token or a transparency-log entry, so checks #7 and #8 do not arise, and an
-input with such keys is refused.
+**What a host serves.** A host serves produce-core's `buildCommitmentView` with keys
+`view` does not emit. `verify` reads three of them: the RFC 3161 token
+(`rfc3161Timestamp`, check #7) and the transparency-log inclusion proof with its entry
+body (`rekorInclusionProof`, `rekorEntryBody`, check #8), which verify-core checks
+offline. It does not pass the log entry id (`rekorEntryId`) to verify-core: checking
+that the entry records this record's hash needs the log. It prints
+`not checked offline: log entry <id> against this record's hash` instead, and in
+`--json`, `checks.rekorVerified` is `null` and `checks.hasRekor` is `false`. It accepts
+and does not read `signerIdentity`, `trustRegistryUrlLegacy`, `trustRegistry`,
+`evidenceProtocolVersion`, the view's `lifecycle` summary, or a carried attestation's
+`hasTimestamp` and `hasRekor`. Each is the host's statement, not signed, and none
+changes a reading or the output. The package comes inline, as `package`, or from
+`--package`:
+
+```sh
+curl -sS 'https://<host>/<path of the record's commitment view>' > view.json
+typedstandards verify --input view.json                          # the package inline
+typedstandards verify --input view.json --package package.json   # the package's own file
+```
 
 **The exit rule.** `verify` exits 1 when any check reads **alarm** on
 typedstandards.org's verifier, and 0 otherwise. The tiers are copied from the site's
@@ -240,15 +258,19 @@ package compares the copy with the site's file:
 | #4 content hash | `content_hash_mismatch` | `CONTENT_HASH_SIGNALS`, :228 |
 | #5 key trust | `revoked`, `deprecated_invalid` | `KEY_TRUST_SIGNALS`, :283 |
 | #6 key id | `signingKeyId_mismatch` | `SIGNING_KEY_ID_SIGNALS`, :402 |
+| #7 timestamp | a token that does not verify for this package (a reason the site classes `fails`) | `TIMESTAMP_SIGNALS`, :436; `TIMESTAMP_FAILURE_CLASS`, :507 |
+| #8 transparency log | none: an inclusion proof that does not verify, or a log entry with no proof, reads attention | `REKOR_SIGNALS`, :570 |
 | #9 referenced files | `invalid_ref`, `size_mismatch`, `hash_mismatch` | `BLOB_REF_REASON_SIGNALS`, :678 |
 | #10 carried lifecycle nodes | altered, or a signature that does not verify | `LIFECYCLE_ATTESTATION_NODE_ID_SIGNALS`, :763; `LIFECYCLE_ATTESTATION_SIGNATURE_SIGNALS`, :750 |
 | #14 signer identity | `signer_identity_mismatch`, `key_derived_mismatch` | `SIGNER_IDENTITY_SIGNALS`, :855 |
 
 **Attention** readings print on stderr and do not fail. Examples: a signer whose key
-no registry was consulted for (`registry_unavailable`; `verify` runs offline), and a
-referenced file that was not supplied. Exit 0 means the record is intact and signed,
-and that no check contradicts it. It does not mean a registry vouches for the key:
-that is `checks.keyTrust` in `--json`. A withdrawn record still verifies; its status
+no registry was consulted for (`registry_unavailable`; `verify` runs offline), a
+referenced file that was not supplied, and a log entry named with no inclusion proof.
+A line that begins `not checked offline:` names something offline verification did
+not check. Exit 0 means the record is intact and signed, and that no check
+contradicts it. It does not mean a registry vouches for the key: that is
+`checks.keyTrust` in `--json`. A withdrawn record still verifies; its status
 is `lifecycle.status`.
 
 ## Exit codes
@@ -271,9 +293,9 @@ in GitHub Actions:
   env:
     TYPEDSTANDARDS_SIGNING_SEED_B64: ${{ secrets.TYPEDSTANDARDS_SIGNING_SEED_B64 }}
   run: |
-    npx --yes @typedstandards/cli@0.2.1 sign --input record.json --output-file analysis.ipynb > signed.json
-    npx --yes @typedstandards/cli@0.2.1 view --signed signed.json --visibility public > bundle.json
-    npx --yes @typedstandards/cli@0.2.1 verify --input bundle.json
+    npx --yes @typedstandards/cli@0.3.0 sign --input record.json --output-file analysis.ipynb > signed.json
+    npx --yes @typedstandards/cli@0.3.0 view --signed signed.json --visibility public > bundle.json
+    npx --yes @typedstandards/cli@0.3.0 verify --input bundle.json
 ```
 
 A checked-in input template plus the file's bytes describe the record fully. Pin the
