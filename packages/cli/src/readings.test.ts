@@ -5,8 +5,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
-import type { VerifyResult } from '@typedstandards/verify-core';
-import { SITE_TABLES, readingsOf, type Tier } from './readings.ts';
+import { RFC3161_FAIL_REASONS, type Rfc3161VerifyResult, type RekorInclusionResult, type VerifyResult } from '@typedstandards/verify-core';
+import { REKOR_INCLUDED_TIER, SITE_TABLES, TIMESTAMP_REASON_TIERS, readingsOf, type Tier } from './readings.ts';
 
 // Read at run time by path, so the site's source stays out of this package's
 // type-check program.
@@ -113,4 +113,64 @@ test('check #17: a datHere package without its system prompt reads attention and
 test('the check #17 table is compared with the site\'s', () => {
   assert.ok('SYSTEM_PROMPT_SIGNALS' in SITE_TABLES);
   assert.deepEqual(Object.keys(SITE_TABLES.SYSTEM_PROMPT_SIGNALS).sort(), ['not_applicable', 'ok', 'skillText_absent']);
+});
+
+// Checks #7 and #8 (typedstandards#166): a commitment view a host serves carries an
+// RFC 3161 token and a transparency-log inclusion proof, which verify-core checks
+// offline. Their tiers are copied from the site's TIMESTAMP_SIGNALS and REKOR_SIGNALS.
+
+test('the check #7 and check #8 tables are compared with the site\'s', async () => {
+  assert.ok('TIMESTAMP_SIGNALS' in SITE_TABLES, 'check #7 is not compared');
+  assert.ok('REKOR_SIGNALS' in SITE_TABLES, 'check #8 is not compared');
+  const site = (await import(SITE)) as {
+    TIMESTAMP_FAILURE_CLASS: Record<string, 'fails' | 'caveats'>;
+    TIMESTAMP_SIGNALS: Record<'failed' | 'unconfirmed', { tier: Tier }>;
+  };
+  // Each reason a token that does not verify can carry reads at the tier the site's
+  // class for it gives: fails, the site's `failed`; caveats, its `unconfirmed`.
+  assert.deepEqual(Object.keys(TIMESTAMP_REASON_TIERS).sort(), [...RFC3161_FAIL_REASONS].sort());
+  for (const reason of RFC3161_FAIL_REASONS) {
+    const siteClass = site.TIMESTAMP_FAILURE_CLASS[reason];
+    const expected = site.TIMESTAMP_SIGNALS[siteClass === 'fails' ? 'failed' : 'unconfirmed'].tier;
+    assert.equal(TIMESTAMP_REASON_TIERS[reason], expected, `${reason}: the CLI reads ${TIMESTAMP_REASON_TIERS[reason]}, the site ${expected}`);
+  }
+});
+
+const reading = (r: VerifyResult, check: string) => readingsOf(r, [], 'a'.repeat(64)).filter((x) => x.check === check);
+
+test('check #7: a token that verifies reads verified; one that does not reads as the site\'s verdict reads its reason', () => {
+  const token = (rfc3161: Partial<Rfc3161VerifyResult>): VerifyResult => ({ ...clean(), hasTimestamp: true, rfc3161: rfc3161 as Rfc3161VerifyResult });
+  assert.deepEqual(reading(token({ verified: true }), '#7'), [{ check: '#7', field: 'rfc3161', status: 'verified', tier: 'verified' }]);
+  assert.deepEqual(reading(token({ verified: false, reason: 'imprint_mismatch' }), '#7'), [
+    { check: '#7', field: 'rfc3161', status: 'imprint_mismatch', tier: 'alarm' },
+  ]);
+  assert.deepEqual(reading(token({ verified: false, reason: 'untrusted_root' }), '#7'), [
+    { check: '#7', field: 'rfc3161', status: 'untrusted_root', tier: 'attention' },
+  ]);
+  // A token present but not evaluated reads as the site's verdict reads it: caveated.
+  assert.deepEqual(reading({ ...clean(), hasTimestamp: true, rfc3161: null }, '#7'), [
+    { check: '#7', field: 'rfc3161', status: 'not_evaluated', tier: 'attention' },
+  ]);
+  // No token, no reading.
+  assert.deepEqual(reading(clean(), '#7'), []);
+});
+
+test('check #8: an inclusion proof that verifies offline reads REKOR_INCLUDED_TIER; one that does not reads attention, never alarm', () => {
+  const inclusion = (r: Partial<RekorInclusionResult>): VerifyResult => ({ ...clean(), rekorInclusion: r as RekorInclusionResult });
+  assert.ok(REKOR_INCLUDED_TIER === 'verified' || REKOR_INCLUDED_TIER === 'normal', `REKOR_INCLUDED_TIER is ${REKOR_INCLUDED_TIER}`);
+  assert.deepEqual(reading(inclusion({ inclusionVerified: true, checkpointVerified: true }), '#8'), [
+    { check: '#8', field: 'rekorInclusion', status: 'included', tier: REKOR_INCLUDED_TIER },
+  ]);
+  for (const reason of ['root_mismatch', 'checkpoint_signature_invalid', 'checkpoint_unknown_anchor'] as const) {
+    const verifiedFold = reason !== 'root_mismatch';
+    assert.deepEqual(reading(inclusion({ inclusionVerified: verifiedFold, checkpointVerified: false, reason }), '#8'), [
+      { check: '#8', field: 'rekorInclusion', status: reason, tier: 'attention' },
+    ]);
+  }
+  // A log entry with no inclusion proof: the host names an entry, nothing offline confirms it.
+  assert.deepEqual(readingsOf(clean(), [], 'a'.repeat(64), undefined, { rekorEntryCarried: true }).filter((x) => x.check === '#8'), [
+    { check: '#8', field: 'rekorInclusion', status: 'not_carried', tier: 'attention' },
+  ]);
+  // Nothing carried, no reading.
+  assert.deepEqual(reading(clean(), '#8'), []);
 });

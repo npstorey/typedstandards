@@ -1,0 +1,77 @@
+{
+  "protocolVersion": "0.1.0",
+  "packageHash": "770ed52e2abfc0c7d4626953c9f715c11a50e63bd911fa2bed56b77a76fe0ee7",
+  "visibility": "public",
+  "captureMethod": null,
+  "contentProfile": "default",
+  "type": "content/layout/v1",
+  "signer": {
+    "bindingTier": "platform",
+    "identifier": "platform:civic-ai-tools",
+    "displayName": "Civic AI Tools Platform"
+  },
+  "contentHash": {
+    "sha256": "0eac97e1f459e337b866b34ec998b14e52c05be17a748fb335c198fa65e1a007"
+  },
+  "contentCanonicalization": "https://typedstandards.org/canonicalization/legacy-json/v1",
+  "signature": {
+    "signature": "0t8SxwMmknA7azQJbBTPO3usTrtGRAowsdDH/7P04KUSi+GpzmRQ9+S/PQr5B3/3C7dd5vfZenwvBi4/QiN7Cw==",
+    "publicKey": "MCowBQYDK2VwAyEAqd/MVdHJFPLi8nxxwmqWsDdgz8yssU76unJMHW3xaAE=",
+    "algorithm": "Ed25519ph",
+    "kid": "platform:evidence-2026-04"
+  },
+  "trustRegistryUrl": "https://civicaitools.org/.well-known/typed-publisher.json",
+  "package": {
+    "metadata": {
+      "schemaVersion": "0.1.0",
+      "packageId": "19df6e42-7d8f-4f7b-ab6f-ffed28532b93",
+      "createdAt": "2026-10-20T16:08:06.168Z",
+      "signingKeyId": "platform:evidence-2026-04"
+    },
+    "type": "content/layout/v1",
+    "signer": {
+      "bindingTier": "platform",
+      "identifier": "platform:civic-ai-tools",
+      "displayName": "Civic AI Tools Platform"
+    },
+    "contentCanonicalization": "https://typedstandards.org/canonicalization/legacy-json/v1",
+    "name": "answer-first",
+    "version": 1,
+    "appliesTo": [
+      "default",
+      "datHere"
+    ],
+    "order": [
+      "status",
+      "answer",
+      "citation",
+      "steps",
+      "sources",
+      "disclosure",
+      "actions"
+    ],
+    "disclosure": {
+      "label": "Learn more about how this analysis was produced",
+      "order": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "G",
+        "signers",
+        "attestations",
+        "verification"
+      ],
+      "openByDefault": false
+    },
+    "steps": {
+      "placement": "beside",
+      "openByDefault": true
+    },
+    "rendererVersion": "answer-view/1",
+    "contentHash": {
+      "sha256": "0eac97e1f459e337b866b34ec998b14e52c05be17a748fb335c198fa65e1a007"
+    }
+  }
+}

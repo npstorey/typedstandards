@@ -23,6 +23,7 @@ import {
   type ContentHashStatus,
   type ContentProfileStatus,
   type KeyTrustStatus,
+  type Rfc3161FailReason,
   type SignerIdentityCheckStatus,
   type SigningKeyIdConsistencyStatus,
   type SystemPromptStatus,
@@ -194,11 +195,22 @@ export const SITE_TABLES = {
   SYSTEM_PROMPT_SIGNALS: SYSTEM_PROMPT,
 } as const;
 
+// Typed stubs for the tests of the next change (check #7 and check #8 readings);
+// that change fills them in.
+export const TIMESTAMP_REASON_TIERS = {} as Record<Rfc3161FailReason, Tier>;
+export const REKOR_INCLUDED_TIER: Tier = 'verified';
+
 /** A carried lifecycle attestation, as `withdraw` prints it and `view` carries it. */
 export interface CarriedNode {
   node: Record<string, unknown>;
   nodeId: string;
   signature?: { signature?: string; publicKey?: string; algorithm?: string } | null;
+}
+
+/** What a commitment view carried for check #8 that verify-core is not given offline. */
+export interface CarriedProofs {
+  /** The view names a transparency-log entry (`rekorEntryId`). */
+  rekorEntryCarried?: boolean;
 }
 
 /** The record the carried nodes attest about: its signer identifier and signing key. */
@@ -222,6 +234,8 @@ export function readingsOf(
   carried: readonly CarriedNode[],
   packageHash: string,
   target?: ReadingTarget,
+  // Typed stub for the tests of the next change, which reads it.
+  _carriedProofs?: CarriedProofs,
 ): Reading[] {
   const out: Reading[] = [];
   const add = (check: string, field: string, status: string, tier: Tier) => out.push({ check, field, status, tier });
