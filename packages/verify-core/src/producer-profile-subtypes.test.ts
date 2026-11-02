@@ -21,8 +21,8 @@ import {
 
 const BUNDLE_BYTES = readFileSync(new URL('./__fixtures__/civicaitools-v1-guidance-bundle.json', import.meta.url));
 const ADR_0038_URL =
-  'https://raw.githubusercontent.com/npstorey/civic-ai-tools/v0.1.13-typed-standards-spec/docs/profiles/ai-assisted-analysis/civicaitools-v1/bundle.json';
-const ADR_0038_SHA256 = '724e399e02db8993041b64982eec731505084bec2ec5e6ca58fda2de8087a281';
+  'https://raw.githubusercontent.com/npstorey/civic-ai-tools/v0.1.14-typed-standards-spec/docs/profiles/ai-assisted-analysis/civicaitools-v1/bundle.json';
+const ADR_0038_SHA256 = '45bf3ab479325a791829ed9987f5f291fea44238b54bfb598f32f306f574eb9b';
 
 test('the table has exactly the two rows spec §8.6 states, in its order', () => {
   assert.deepEqual(Object.keys(PRODUCER_PROFILE_SUBTYPES), [
@@ -45,11 +45,15 @@ test('the table cannot be changed by a caller', () => {
   }
 });
 
-test('the civicaitools-v1 pin: the local copy hashes to the row, and the row to ADR-0038 §5', () => {
+test('the civicaitools-v1 pin: the local copy hashes to the row, and the row to ADR-0038 (revision 2, amendment of 2026-11-02)', () => {
   const row = PRODUCER_PROFILE_SUBTYPES['ai-assisted-analysis/civicaitools-v1'];
   assert.equal(row.bundle?.url, ADR_0038_URL);
   assert.equal(row.bundle?.sha256, ADR_0038_SHA256);
   assert.equal(sha256Hex(new Uint8Array(BUNDLE_BYTES)), row.bundle?.sha256);
+});
+
+test('the civicaitools-v1 local copy is revision 2: its SHA-256 is the pinned digest', () => {
+  assert.equal(sha256Hex(new Uint8Array(BUNDLE_BYTES)), ADR_0038_SHA256);
 });
 
 test('the civicaitools-v1 bundle names its subtype, its URL and the content profiles the row admits', () => {
