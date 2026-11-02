@@ -127,7 +127,7 @@ test('a host-served commitment view with its package verifies offline: exit 0, o
   assert.deepEqual(r.json(), { ok: true, nodeId: NODE_ID, failures: [] });
 });
 
-test('--json shows checks #7 and #8 as verify-core reports them offline; the log entry\'s hash is reported not checked', async () => {
+test('--json shows checks #7 and #8 as verify-core reports them offline; the log\'s copy of the entry is reported not checked', async () => {
   const r = await verify({ 'view.json': await hostServed() }, ['--input', 'view.json', '--json']);
   assert.equal(r.code, EXIT.ok, r.err);
   const checks = r.json()['checks'] as Json & { rfc3161: Json; rekorInclusion: Json };
@@ -137,7 +137,10 @@ test('--json shows checks #7 and #8 as verify-core reports them offline; the log
   assert.equal(checks.rekorInclusion['checkpointVerified'], true);
   // The entry id is not passed offline, so the hash parity is not checked: null, not false.
   assert.equal(checks['rekorVerified'], null);
-  assert.match(r.err, new RegExp(`not checked offline: log entry ${proofs.rekorEntryId} against this record's hash`));
+  // Check #8 already binds the carried entry to this record's hash (verify-core 0.15.1); what is
+  // not checked offline is the log's copy of the entry under its id.
+  assert.match(r.err, new RegExp(`not checked offline: the log's copy of entry ${proofs.rekorEntryId}\n`));
+  assert.doesNotMatch(r.err, /against this record's hash/);
   assert.doesNotMatch(r.err, /#7|#8/);
 });
 
@@ -173,14 +176,14 @@ test('an inclusion proof that does not verify reads attention, never alarm', asy
   assert.match(r.err, /#8 rekorInclusion: root_mismatch \(attention\)/);
 });
 
-test('a log entry id with no inclusion proof reads attention, and its hash is reported not checked', async () => {
+test('a log entry id with no inclusion proof reads attention, and the log\'s copy is reported not checked', async () => {
   const view = await hostServed();
   delete view['rekorInclusionProof'];
   delete view['rekorEntryBody'];
   const r = await verify({ 'view.json': view }, ['--input', 'view.json']);
   assert.equal(r.code, EXIT.ok, r.err);
   assert.match(r.err, /#8 rekorInclusion: not_carried \(attention\)/);
-  assert.match(r.err, /not checked offline: log entry /);
+  assert.match(r.err, /not checked offline: the log's copy of entry /);
 });
 
 test('a carried attestation\'s hasTimestamp and hasRekor are accepted, and no output derives from them', async () => {
