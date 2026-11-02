@@ -3,7 +3,7 @@
 Factual record of what changed per published version. Check numbers (#1–#17)
 refer to the Typed Standards specification §9.2 verification sequence.
 
-## Unreleased
+## 0.3.0 — 2026-11-02
 
 The R11 release (npstorey/civic-ai-tools#294). **A minor bump**: `verify` takes a new input, the
 commitment view a host serves, and a new flag, `--package`. No export changes.
