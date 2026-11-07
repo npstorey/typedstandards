@@ -6,6 +6,18 @@ references are to `npstorey/civic-ai-tools-website` (#119 is the offline-crypto
 hardening arc; #116 is the standalone-verifier arc this package was extracted
 in).
 
+## 0.15.2 — 2026-11-07
+
+The S2-A patch (anchor npstorey/civic-ai-tools#309). **A patch**: no export, signature or type
+changes.
+
+- **The `ai-assisted-analysis/civicaitools-v1` row pins revision 3 of its guidance bundle**
+  (2026-11-07), as hub ADR-0038's amendment of 2026-11-07 records:
+  `https://raw.githubusercontent.com/npstorey/civic-ai-tools/v0.1.15-typed-standards-spec/docs/profiles/ai-assisted-analysis/civicaitools-v1/bundle.json`,
+  SHA-256 `db8175703601a5de9d785a2cda93db194eb05cdeeb222dcfd509ea8ab249f016`. The row's key and
+  `admits` are unchanged. The local copy (not published) is byte-identical to the hub file at
+  tree `d958f067`; its provenance is in `src/__fixtures__/README.md`.
+
 ## 0.15.1 — 2026-11-02
 
 The R11 patch (npstorey/civic-ai-tools#293; anchor npstorey/civic-ai-tools#294). **A patch**: no

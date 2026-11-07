@@ -4,8 +4,8 @@
 //
 // __fixtures__/civicaitools-v1-guidance-bundle.json is byte-identical to the
 // hub's docs/profiles/ai-assisted-analysis/civicaitools-v1/bundle.json at tree
-// bcd06c5fa43696db3b7576c93f829eed686d13af (revision 2, to be tagged
-// v0.1.14-typed-standards-spec at its merge commit); its provenance is in
+// d958f067307920d31d0c195ed33d1b846ac8dc7f (revision 3; the merge commit
+// edfd267 that tag v0.1.15-typed-standards-spec names); its provenance is in
 // __fixtures__/README.md.
 
 import { test } from 'node:test';
@@ -21,8 +21,8 @@ import {
 
 const BUNDLE_BYTES = readFileSync(new URL('./__fixtures__/civicaitools-v1-guidance-bundle.json', import.meta.url));
 const ADR_0038_URL =
-  'https://raw.githubusercontent.com/npstorey/civic-ai-tools/v0.1.14-typed-standards-spec/docs/profiles/ai-assisted-analysis/civicaitools-v1/bundle.json';
-const ADR_0038_SHA256 = '45bf3ab479325a791829ed9987f5f291fea44238b54bfb598f32f306f574eb9b';
+  'https://raw.githubusercontent.com/npstorey/civic-ai-tools/v0.1.15-typed-standards-spec/docs/profiles/ai-assisted-analysis/civicaitools-v1/bundle.json';
+const ADR_0038_SHA256 = 'db8175703601a5de9d785a2cda93db194eb05cdeeb222dcfd509ea8ab249f016';
 
 test('the table has exactly the two rows spec §8.6 states, in its order', () => {
   assert.deepEqual(Object.keys(PRODUCER_PROFILE_SUBTYPES), [
@@ -45,14 +45,14 @@ test('the table cannot be changed by a caller', () => {
   }
 });
 
-test('the civicaitools-v1 pin: the local copy hashes to the row, and the row to ADR-0038 (revision 2, amendment of 2026-11-02)', () => {
+test('the civicaitools-v1 pin: the local copy hashes to the row, and the row to ADR-0038 (revision 3, amendment of 2026-11-07)', () => {
   const row = PRODUCER_PROFILE_SUBTYPES['ai-assisted-analysis/civicaitools-v1'];
   assert.equal(row.bundle?.url, ADR_0038_URL);
   assert.equal(row.bundle?.sha256, ADR_0038_SHA256);
   assert.equal(sha256Hex(new Uint8Array(BUNDLE_BYTES)), row.bundle?.sha256);
 });
 
-test('the civicaitools-v1 local copy is revision 2: its SHA-256 is the pinned digest', () => {
+test('the civicaitools-v1 local copy is revision 3: its SHA-256 is the pinned digest', () => {
   assert.equal(sha256Hex(new Uint8Array(BUNDLE_BYTES)), ADR_0038_SHA256);
 });
 
