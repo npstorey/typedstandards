@@ -42,6 +42,12 @@ const EXAMPLES: Example[] = [
     site: "https://publish-example.typedstandards.org",
     repo: "https://github.com/npstorey/typedstandards-publish-example",
   },
+  {
+    title: "A red-team engagement as records",
+    body: "One human red-team engagement on an open-source red-teaming platform, as seventeen signed records: five findings, each carrying the flagged turns of the platform's own transcript export, and twelve reviewer verdicts, each naming its finding by hash. One group of conversations is open and one stays confidential, its transcript withheld. One command checks all seventeen offline.",
+    site: "https://red-team.typedstandards.org",
+    repo: "https://github.com/npstorey/typedstandards-red-team-example",
+  },
 ];
 
 export default function ExamplesPage() {
@@ -54,7 +60,7 @@ export default function ExamplesPage() {
         Worked examples
       </h1>
       <p className="mt-4 max-w-2xl leading-relaxed text-muted">
-        Each example is a public repository of signed records. Three also
+        Each example is a public repository of signed records. Four also
         serve their records from a site.
       </p>
 
