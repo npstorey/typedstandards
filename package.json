@@ -21,6 +21,11 @@
   "engines": {
     "node": ">=22"
   },
+  "overrides": {
+    "@typescript-eslint/typescript-estree": {
+      "minimatch": "^11.0.1"
+    }
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/npstorey/typedstandards.git"
