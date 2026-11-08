@@ -41,14 +41,22 @@
 // registry, about five minutes with backoff, before the next package starts. It
 // reads back the version, the dependency ranges (equal to package.json's), the
 // bin, and dist.integrity (equal to the local `npm pack` of the same package at
-// the merged commit). Every registry read sends `Cache-Control: no-cache` and a
-// cache-busting `?t=<epoch ms>` query (#112).
+// the merged commit). For a version the run's first registry read showed (one
+// already on npm when the run began) whose dist.integrity is not the local
+// pack's, the read-back compares what a consumer installs instead (#174): it
+// reads the published tarball, checks it against dist.integrity, and compares
+// every file in it byte for byte with the local pack's, and package.json with
+// devDependencies set aside, so a devDependency-only bump after a release does
+// not stop the run. A version the run publishes is read back by its integrity.
+// Every registry read, the tarball's included, sends `Cache-Control: no-cache`
+// and a cache-busting `?t=<epoch ms>` query (#112).
 //
 // If the wait ends first, the package was sent and is not yet visible: it exits
 // 2 and says to re-run with --readback-only, never to publish again.
 // --readback-only publishes nothing and checks no CHANGELOG: it checks the tree
-// and HEAD, installs and clean-builds (for the local pack's integrity), and reads
-// every listed package back.
+// and HEAD, reads the registry (for which versions were on npm when it began),
+// installs and clean-builds (for the local pack's integrity), and reads every
+// listed package back.
 //
 // Last, it runs the published cli's `verify` from a clean temporary directory on
 // packages/cli/scripts/fixtures/published-verify.bundle.json (under --dry-run,
@@ -67,6 +75,7 @@ import {
   PACKAGES,
   changelogHeadingProblem,
   expectedHeading,
+  fetchPublishedTarball,
   fetchRegistryDocument,
   filesOutside,
   headingCheckPackages,
@@ -77,7 +86,9 @@ import {
   publishArgs,
   rangeProblems,
   readBackProblems,
+  sha512Integrity,
   stripDot,
+  tarFiles,
   versionOnRegistry,
   waitDelays,
 } from './publish-lib.mjs';
@@ -209,8 +220,43 @@ function checkPacks(manifests) {
   }
 }
 
-/** Wait for the version on the registry, then read it back against the local manifest and pack. */
-async function readBack(pkg, manifest, waitSeconds) {
+/**
+ * The files of the published tarball and of the local pack, for the read-back of
+ * a version already on npm (#174). The published tarball is checked against its
+ * dist.integrity, the local one against the integrity the read-back printed.
+ */
+async function tarballContents(pkg, published, localIntegrity, check) {
+  let remote;
+  try {
+    remote = await fetchPublishedTarball(published.dist);
+  } catch (e) {
+    stop(check, `reading the published tarball of ${pkg.name}@${published.version} failed: ${e.message}`);
+  }
+  const dir = mkdtempSync(join(tmpdir(), 'typedstandards-pack-'));
+  try {
+    const r = sh('npm', ['pack', '--json', '--pack-destination', dir], { cwd: join(ROOT, pkg.dir) });
+    if (r.code !== 0) stop(check, `npm pack for ${pkg.name} failed: ${r.err.split('\n').slice(-2).join(' ')}`);
+    const local = readFileSync(join(dir, JSON.parse(r.out)[0].filename));
+    if (sha512Integrity(local) !== localIntegrity) stop(check, `the local pack of ${pkg.name} written to disk hashes to ${sha512Integrity(local)}, not ${localIntegrity}`);
+    try {
+      return { published: tarFiles(remote), local: tarFiles(local) };
+    } catch (e) {
+      stop(check, `reading the tarballs of ${pkg.name} failed: ${e.message}`);
+    }
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+const devDependenciesOf = (files) => JSON.stringify(JSON.parse(Buffer.from(files.get('package.json')).toString('utf8')).devDependencies ?? {});
+
+/**
+ * Wait for the version on the registry, then read it back against the local
+ * manifest and pack. `onNpmAtStart`: the run's first registry read showed this
+ * version; if its dist.integrity is not the local pack's, the read-back compares
+ * what a consumer installs (#174).
+ */
+async function readBack(pkg, manifest, waitSeconds, onNpmAtStart) {
   const { name, version } = manifest;
   step(`waiting for ${name}@${version} on the registry (up to ${waitSeconds}s, cache bypassed)`);
   const read = async () => {
@@ -241,9 +287,20 @@ async function readBack(pkg, manifest, waitSeconds) {
   if (published.bin || manifest.bin) console.log(`bin ${JSON.stringify(published.bin ?? {})}`);
   console.log(`dist.integrity ${published.dist?.integrity}`);
   console.log(`local pack     ${integrity}`);
-  const problems = readBackProblems(published, manifest, integrity);
+  let contents;
+  if (onNpmAtStart && integrity && published.dist?.integrity !== integrity) {
+    console.log(`the integrities differ, and ${name}@${version} was on npm when this run began: comparing what a consumer installs (#174)`);
+    contents = await tarballContents(pkg, published, integrity, 'the read-back');
+  }
+  const problems = readBackProblems(published, manifest, integrity, contents);
   if (problems.length) stop('the read-back', `${name}@${version}: ${problems.join('; ')}`);
-  console.log(`${name}@${version} reads back as package.json and the local pack.`);
+  if (contents) {
+    console.log(`devDependencies published ${devDependenciesOf(contents.published)}`);
+    console.log(`devDependencies local     ${devDependenciesOf(contents.local)}`);
+    console.log(`${name}@${version} reads back as package.json, and installs as the local pack: ${contents.published.size} files, all byte-equal but package.json, which is equal with devDependencies set aside.`);
+  } else {
+    console.log(`${name}@${version} reads back as package.json and the local pack.`);
+  }
 }
 
 /** Run a CLI binary's verify on the fixture, copied into a clean temporary directory. */
@@ -286,6 +343,23 @@ function localVerify(pkg, manifest) {
   }
 }
 
+/**
+ * For --readback-only, which versions the registry shows before anything is
+ * built (#174): name → whether it was on npm when the run began. A failed read
+ * stops, as the publish run's first read does (#125 D13).
+ */
+async function versionsOnNpmAtStart(manifests) {
+  step('the registry, before the read-backs');
+  const onNpm = {};
+  for (const pkg of PACKAGES) {
+    const { version } = manifests[pkg.name];
+    const doc = await registryDocument(pkg.name, 'the registry');
+    onNpm[pkg.name] = versionOnRegistry(doc, version);
+    console.log(onNpm[pkg.name] ? `${pkg.name}@${version} is on npm` : `${pkg.name}@${version} is not on npm yet${doc === null ? ' (404)' : ''}: once visible, it reads back by its integrity`);
+  }
+  return onNpm;
+}
+
 async function main() {
   const { values } = parseArgs({
     options: {
@@ -308,10 +382,11 @@ async function main() {
   checkTreeAndHead(values.merged);
 
   if (readbackOnly) {
+    const onNpmAtStart = await versionsOnNpmAtStart(manifests);
     installBuildTest({ test: false });
-    for (const pkg of PACKAGES) await readBack(pkg, manifests[pkg.name], waitSeconds);
+    for (const pkg of PACKAGES) await readBack(pkg, manifests[pkg.name], waitSeconds, onNpmAtStart[pkg.name]);
     await publishedVerify(manifests['@typedstandards/cli']);
-    console.log(`\nread back only: all ${PACKAGES.length} listed packages are on npm as package.json and the local packs, and the published verify passes.`);
+    console.log(`\nread back only: all ${PACKAGES.length} listed packages are on npm and read back against package.json and the local packs, and the published verify passes.`);
     return;
   }
 
@@ -353,7 +428,7 @@ async function main() {
     const doc = await registryDocument(pkg.name, 'the registry');
     if (versionOnRegistry(doc, manifest.version)) {
       console.log(`${pkg.name}@${manifest.version} is already on npm: not publishing it again; reading it back`);
-      await readBack(pkg, manifest, waitSeconds);
+      await readBack(pkg, manifest, waitSeconds, versionOnRegistry(docs[pkg.name], manifest.version));
       if (pkg.name === '@typedstandards/cli') cliOnNpm = true;
       continue;
     }
@@ -371,7 +446,7 @@ async function main() {
       if (!npmPublish(pkg, false)) {
         stop('npm publish', `npm publish failed for ${pkg.name}@${manifest.version}; it may still have landed: re-run this script, which reads the registry first and does not publish a version already there`);
       }
-      await readBack(pkg, manifest, waitSeconds);
+      await readBack(pkg, manifest, waitSeconds, false);
       if (pkg.name === '@typedstandards/cli') cliOnNpm = true;
     }
   }

@@ -1,6 +1,10 @@
 // The pure helpers of scripts/publish.mjs (typedstandards#113, #112). Importing
 // this module runs nothing; scripts/publish.test.mjs tests it under node --test.
 
+import { createHash } from 'node:crypto';
+import { isDeepStrictEqual } from 'node:util';
+import { gunzipSync } from 'node:zlib';
+
 /** The published packages, in the order they publish: each one's range needs the one before it on the registry. */
 export const PACKAGES = Object.freeze([
   Object.freeze({ name: '@typedstandards/verify-core', dir: 'packages/verify-core' }),
@@ -184,13 +188,174 @@ export function normalizeBin(bin, name) {
 
 const sortedEntries = (o) => JSON.stringify(Object.entries(o ?? {}).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)));
 
+/** The integrity npm writes for a tarball: `sha512-` and the base64 SHA-512 of its bytes. */
+export function sha512Integrity(bytes) {
+  return `sha512-${createHash('sha512').update(bytes).digest('base64')}`;
+}
+
+/**
+ * Read a published version's tarball, `dist.tarball`, and check its bytes
+ * against `dist.integrity` (#174). It sends the no-cache header and a
+ * cache-busting `?t=` query, as every registry read does (#112). Fails closed: a
+ * tarball URL outside the registry, an integrity that is not one sha512, a
+ * network error, a non-OK answer, or bytes that do not hash to `dist.integrity`
+ * each throw.
+ * @returns {Promise<Uint8Array>} the tarball's bytes
+ */
+export async function fetchPublishedTarball(dist, { fetchImpl = globalThis.fetch, now = Date.now, timeoutMs = 60_000 } = {}) {
+  const tarball = dist?.tarball;
+  if (typeof tarball !== 'string' || !tarball.startsWith(`${REGISTRY}/`)) throw new Error(`the tarball URL ${tarball} is not on ${REGISTRY}`);
+  if (typeof dist.integrity !== 'string' || !/^sha512-[A-Za-z0-9+/]+={0,2}$/.test(dist.integrity)) throw new Error(`dist.integrity ${dist.integrity} is not one sha512 integrity`);
+  if (!Number.isFinite(now())) throw new TypeError('fetchPublishedTarball needs the current time in ms');
+  const url = new URL(tarball);
+  url.searchParams.set('t', String(now()));
+  const res = await fetchImpl(url.href, { headers: { 'cache-control': 'no-cache' }, signal: AbortSignal.timeout(timeoutMs) });
+  if (!res.ok) throw new Error(`the registry answered ${res.status} for ${tarball}`);
+  const bytes = new Uint8Array(await res.arrayBuffer());
+  const integrity = sha512Integrity(bytes);
+  if (integrity !== dist.integrity) throw new Error(`the tarball at ${tarball} hashes to ${integrity}, not dist.integrity ${dist.integrity}`);
+  return bytes;
+}
+
+const ascii = (bytes) => String.fromCharCode(...bytes);
+
+/** A NUL-terminated header field. */
+function tarField(header, start, length) {
+  const field = header.subarray(start, start + length);
+  const end = field.indexOf(0);
+  return new TextDecoder('utf-8', { fatal: true }).decode(end === -1 ? field : field.subarray(0, end));
+}
+
+/** An octal header number; anything else (base-256 included) throws. */
+function tarOctal(header, start, length, what) {
+  const text = ascii(header.subarray(start, start + length)).replace(/[\0 ]+$/, '').replace(/^ +/, '');
+  if (!/^[0-7]+$/.test(text)) throw new Error(`a tar header's ${what} "${text}" is not an octal number`);
+  return parseInt(text, 8);
+}
+
+/** The records of a pax extended header: `<length> <key>=<value>\n`, the length counting the whole record in bytes. */
+function paxRecords(body) {
+  const records = {};
+  for (let at = 0; at < body.length; ) {
+    const space = body.indexOf(0x20, at);
+    const length = space === -1 || space - at > 20 ? NaN : Number(ascii(body.subarray(at, space)));
+    if (!Number.isInteger(length) || length <= space - at + 1 || at + length > body.length || body[at + length - 1] !== 0x0a) throw new Error('a pax header record is malformed');
+    const record = new TextDecoder('utf-8', { fatal: true }).decode(body.subarray(space + 1, at + length - 1));
+    const eq = record.indexOf('=');
+    if (eq <= 0) throw new Error('a pax header record has no key');
+    records[record.slice(0, eq)] = record.slice(eq + 1);
+    at += length;
+  }
+  return records;
+}
+
+/**
+ * The files of an npm tarball (a gzipped ustar archive, as `npm pack` writes
+ * it), path → bytes, each path without its top directory (`package/`), as npm
+ * installs it (#174). Directory entries are skipped; a pax header's `path` is
+ * honoured. Fails closed: a header whose checksum fails, a header that is not
+ * POSIX ustar, an entry other than a file, a directory or a pax header (a link
+ * included), a pax `size`, a path with no top directory or with an empty, `.`
+ * or `..` segment, a path given twice, or a truncated archive each throw.
+ * @param {Uint8Array} tgz
+ * @returns {Map<string, Uint8Array>}
+ */
+export function tarFiles(tgz) {
+  const tar = gunzipSync(tgz);
+  const files = new Map();
+  let pax = {};
+  for (let at = 0; ; ) {
+    if (at + 512 > tar.length) throw new Error('the tarball ends before its end-of-archive block');
+    const header = tar.subarray(at, at + 512);
+    if (header.every((b) => b === 0)) break;
+    let sum = 0;
+    for (let i = 0; i < 512; i++) sum += i >= 148 && i < 156 ? 0x20 : header[i];
+    if (sum !== tarOctal(header, 148, 8, 'checksum')) throw new Error(`the tar header at byte ${at} fails its checksum`);
+    if (ascii(header.subarray(257, 263)) !== 'ustar\0') throw new Error(`the tar header at byte ${at} is not POSIX ustar`);
+    const size = tarOctal(header, 124, 12, 'size');
+    const type = header[156] === 0 ? '0' : String.fromCharCode(header[156]);
+    const body = tar.subarray(at + 512, at + 512 + size);
+    if (body.length !== size) throw new Error(`the tar entry at byte ${at} is truncated`);
+    at += 512 + Math.ceil(size / 512) * 512;
+    if (type === 'x') {
+      pax = paxRecords(body);
+      if (Object.hasOwn(pax, 'size')) throw new Error('a pax header sets a size, which this reader does not read');
+      continue;
+    }
+    const name = tarField(header, 0, 100);
+    const prefix = tarField(header, 345, 155);
+    const path = pax.path ?? (prefix ? `${prefix}/${name}` : name);
+    pax = {};
+    if (type === '5') continue;
+    if (type !== '0') throw new Error(`the tar entry ${path} has type "${type}", not a file or a directory`);
+    const segments = path.split('/');
+    if (segments.length < 2 || segments.some((s) => s === '' || s === '.' || s === '..')) throw new Error(`the tar entry ${path} is not a file under a top directory`);
+    const inPackage = segments.slice(1).join('/');
+    if (files.has(inPackage)) throw new Error(`the tarball has ${inPackage} twice`);
+    files.set(inPackage, body);
+  }
+  return files;
+}
+
+const sameBytes = (a, b) => a.length === b.length && Buffer.compare(a, b) === 0;
+
+/** package.json's bytes as JSON, or the reason they are not. */
+function parsePackageJson(bytes) {
+  try {
+    return { json: JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)) };
+  } catch (e) {
+    return { error: e.message };
+  }
+}
+
+/**
+ * What a consumer would install differently from the published tarball (#174):
+ * every file but package.json byte for byte, the same file set, and package.json
+ * equal as JSON with devDependencies set aside.
+ * @param {Map<string, Uint8Array>} published the published tarball's files (tarFiles)
+ * @param {Map<string, Uint8Array>} local the local pack's files (tarFiles)
+ * @returns {string[]} empty when they install the same
+ */
+export function installedContentProblems(published, local) {
+  const problems = [];
+  const onlyPublished = [...published.keys()].filter((p) => !local.has(p)).sort();
+  const onlyLocal = [...local.keys()].filter((p) => !published.has(p)).sort();
+  if (onlyPublished.length) problems.push(`the published tarball has files the local pack does not: ${onlyPublished.join(', ')}`);
+  if (onlyLocal.length) problems.push(`the local pack has files the published tarball does not: ${onlyLocal.join(', ')}`);
+  const differing = [...published.keys()].filter((p) => p !== 'package.json' && local.has(p) && !sameBytes(published.get(p), local.get(p))).sort();
+  if (differing.length) problems.push(`these files differ from the local pack's: ${differing.join(', ')}`);
+  if (published.has('package.json') && local.has('package.json')) {
+    const remote = parsePackageJson(published.get('package.json'));
+    const here = parsePackageJson(local.get('package.json'));
+    if (remote.error || here.error) {
+      problems.push(`package.json does not parse (${remote.error ?? here.error})`);
+    } else {
+      const { devDependencies: _r, ...remoteRest } = remote.json;
+      const { devDependencies: _l, ...localRest } = here.json;
+      const keys = [...new Set([...Object.keys(remoteRest), ...Object.keys(localRest)])];
+      const changed = keys.filter((k) => !isDeepStrictEqual(remoteRest[k], localRest[k])).sort();
+      if (changed.length) problems.push(`package.json differs from the local pack's beyond devDependencies, in: ${changed.join(', ')}`);
+    }
+  }
+  return problems;
+}
+
 /**
  * What the published version document disagrees with, against the local
- * manifest and the integrity of the local `npm pack` at the merged commit: the
- * version, each dependency field's ranges, the bin, and dist.integrity.
+ * manifest and the local `npm pack` at the merged commit: the version, each
+ * dependency field's ranges but devDependencies', the bin, and then one of two:
+ *
+ * - without `contents`: dist.integrity, equal to the local pack's;
+ * - with `contents`, `{ published, local }`, each a tarball's files (tarFiles):
+ *   what a consumer installs (installedContentProblems), whatever the integrity.
+ *
+ * The script passes `contents` only for a version already on npm when the run
+ * began whose dist.integrity is not the local pack's (#174), so a
+ * devDependency-only bump after a release does not stop the run. A version the
+ * run publishes is read back by its integrity.
  * @returns {string[]} empty when the read-back matches
  */
-export function readBackProblems(published, manifest, localIntegrity) {
+export function readBackProblems(published, manifest, localIntegrity, contents) {
   const problems = [];
   if (published.version !== manifest.version) problems.push(`the registry has version ${published.version}, not ${manifest.version}`);
   for (const field of DEPENDENCY_FIELDS.filter((f) => f !== 'devDependencies')) {
@@ -203,6 +368,7 @@ export function readBackProblems(published, manifest, localIntegrity) {
   if (JSON.stringify(remoteBin) !== JSON.stringify(localBin)) problems.push(`the published bin ${JSON.stringify(remoteBin)} is not ${JSON.stringify(localBin)}`);
   const remoteIntegrity = published.dist?.integrity;
   if (!localIntegrity) problems.push('the local npm pack gave no integrity');
+  else if (contents !== undefined) problems.push(...installedContentProblems(contents.published, contents.local));
   else if (remoteIntegrity !== localIntegrity) problems.push(`the registry's dist.integrity ${remoteIntegrity ?? '(none)'} is not the local pack's ${localIntegrity}`);
   return problems;
 }
