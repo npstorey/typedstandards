@@ -4,17 +4,22 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, readdirSync, existsSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { readFileSync, readdirSync, existsSync, mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { gunzipSync, gzipSync } from 'node:zlib';
 import {
   PACKAGES,
   changelogHeadingProblem,
   expectedHeading,
+  fetchPublishedTarball,
   fetchRegistryDocument,
   filesOutside,
   headingCheckPackages,
   inRepoRanges,
+  installedContentProblems,
   isFullSha,
   localDate,
   normalizeBin,
@@ -25,6 +30,8 @@ import {
   readBackProblems,
   registryHeaders,
   registryUrl,
+  sha512Integrity,
+  tarFiles,
   waitDelays,
 } from './publish-lib.mjs';
 
@@ -364,4 +371,144 @@ test('a drift in a dependencies range still stops on a version already on npm (#
 
 test('without the tarballs, as for a version the run publishes, the integrity still decides (#174)', () => {
   assert.match(readBackProblems(RELEASED_DOC, DEV_BUMPED, 'sha512-LOCAL').join(), /dist\.integrity sha512-PUBLISHED is not the local pack's sha512-LOCAL/);
+});
+
+test('main() reads back a version it publishes by its integrity, and a version already on npm by the first read (#174)', () => {
+  const script = readFileSync(join(ROOT, 'scripts', 'publish.mjs'), 'utf8');
+  const main = script.slice(script.indexOf('async function main()'));
+  const calls = [...main.matchAll(/\breadBack\(pkg, [^)]*\)/g)].map((m) => m[0]);
+  assert.deepEqual(calls, [
+    'readBack(pkg, manifests[pkg.name], waitSeconds, onNpmAtStart[pkg.name])',
+    'readBack(pkg, manifest, waitSeconds, versionOnRegistry(docs[pkg.name], manifest.version)',
+    'readBack(pkg, manifest, waitSeconds, false)',
+  ]);
+  const published = main.slice(main.indexOf('npmPublish(pkg, false)'));
+  assert.ok(published.indexOf('readBack(pkg, manifest, waitSeconds, false)') >= 0, 'the read-back after npm publish is not the integrity one');
+});
+
+/** A gzipped POSIX ustar archive of `entries`, as `npm pack` writes one: { path, body?, type?, prefix? }. */
+function tgzOf(entries) {
+  const blocks = [];
+  for (const { path, body = '', type = '0', prefix = '' } of entries) {
+    const bytes = Buffer.from(body);
+    const header = Buffer.alloc(512);
+    header.write(path, 0, 100);
+    header.write('0000644\0', 100);
+    header.write('0000000\0', 108);
+    header.write('0000000\0', 116);
+    header.write(`${bytes.length.toString(8).padStart(11, '0')}\0`, 124);
+    header.write('00000000000\0', 136);
+    header.write('        ', 148);
+    header.write(type, 156);
+    header.write('ustar\u000000', 257);
+    header.write(prefix, 345, 155);
+    let sum = 0;
+    for (const b of header) sum += b;
+    header.write(`${sum.toString(8).padStart(6, '0')}\0 `, 148);
+    blocks.push(header, bytes, Buffer.alloc((512 - (bytes.length % 512)) % 512));
+  }
+  blocks.push(Buffer.alloc(1024));
+  return gzipSync(Buffer.concat(blocks));
+}
+
+/** One pax record: its length counts the whole record, the length's own digits included. */
+function paxRecord(key, value) {
+  const rest = ` ${key}=${value}\n`;
+  let n = Buffer.byteLength(rest) + 1;
+  while (String(n).length + Buffer.byteLength(rest) !== n) n += 1;
+  return `${n}${rest}`;
+}
+
+const text = (files) => Object.fromEntries([...files].map(([p, b]) => [p, Buffer.from(b).toString('utf8')]));
+
+test('tarFiles reads files under the top directory, skips directories, and honours a ustar prefix and a pax path (#174)', () => {
+  const long = `dist/${'a'.repeat(120)}.js`;
+  const files = tarFiles(
+    tgzOf([
+      { path: 'package/', type: '5' },
+      { path: 'package/package.json', body: '{"name":"x"}\n' },
+      { path: 'index.js', prefix: 'package/dist', body: 'export {};\n' },
+      { path: 'PaxHeader', type: 'x', body: paxRecord('path', `package/${long}`) },
+      { path: 'package/dist/aaaa.js', body: 'long\n' },
+      { path: 'package/empty.txt' },
+    ]),
+  );
+  assert.deepEqual(text(files), { 'package.json': '{"name":"x"}\n', 'dist/index.js': 'export {};\n', [long]: 'long\n', 'empty.txt': '' });
+});
+
+test('tarFiles fails closed on a link, a path outside the top directory, a duplicate, a bad checksum, or a truncated archive (#174)', () => {
+  assert.throws(() => tarFiles(tgzOf([{ path: 'package/bin', type: '2' }])), /type "2"/);
+  assert.throws(() => tarFiles(tgzOf([{ path: 'package/hard', type: '1' }])), /type "1"/);
+  assert.throws(() => tarFiles(tgzOf([{ path: 'package.json', body: '{}' }])), /not a file under a top directory/);
+  assert.throws(() => tarFiles(tgzOf([{ path: 'package/../x', body: '' }])), /not a file under a top directory/);
+  assert.throws(() => tarFiles(tgzOf([{ path: 'package/a', body: '1' }, { path: 'other/a', body: '2' }])), /a twice/);
+  const raw = gunzipSync(tgzOf([{ path: 'package/a', body: 'x' }]));
+  raw[0] ^= 1;
+  assert.throws(() => tarFiles(gzipSync(raw)), /checksum/);
+  assert.throws(() => tarFiles(gzipSync(gunzipSync(tgzOf([{ path: 'package/a', body: 'x' }])).subarray(0, 512))), /truncated|end-of-archive/);
+  assert.throws(() => tarFiles(tgzOf([{ path: 'PaxHeader', type: 'x', body: paxRecord('size', '1') }, { path: 'package/a' }])), /size/);
+});
+
+test('tarFiles reads a real npm pack: the paths npm lists, and the bytes on disk (#174)', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'publish-test-pack-'));
+  try {
+    const pkgDir = join(ROOT, 'packages', 'verify-core');
+    const r = spawnSync('npm', ['pack', '--json', '--pack-destination', dir], { cwd: pkgDir, encoding: 'utf8' });
+    assert.equal(r.status, 0, r.stderr);
+    const [entry] = JSON.parse(r.stdout);
+    const bytes = readFileSync(join(dir, entry.filename));
+    assert.equal(sha512Integrity(bytes), entry.integrity, 'sha512Integrity is not the integrity npm reports');
+    const files = tarFiles(bytes);
+    assert.deepEqual([...files.keys()].sort(), entry.files.map((f) => f.path).sort());
+    for (const [path, content] of files) assert.ok(Buffer.from(content).equals(readFileSync(join(pkgDir, path))), `${path} is not the file on disk`);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('installedContentProblems compares package.json as JSON, devDependencies set aside (#174)', () => {
+  const reordered = utf8(JSON.stringify({ devDependencies: { typescript: '^6.0.3' }, version: '0.9.1', name: RELEASED.name, files: RELEASED.files, dependencies: RELEASED.dependencies }));
+  const local = new Map([...tarballOf(RELEASED)].map(([p, b]) => [p, p === 'package.json' ? reordered : b]));
+  assert.deepEqual(installedContentProblems(tarballOf(RELEASED), local), [], 'key order or whitespace in package.json stopped the read-back');
+  const broken = new Map([...local].map(([p, b]) => [p, p === 'package.json' ? utf8('{') : b]));
+  assert.match(installedContentProblems(tarballOf(RELEASED), broken).join(), /does not parse/);
+  const noManifest = tarballOf(RELEASED);
+  noManifest.delete('package.json');
+  assert.match(installedContentProblems(tarballOf(RELEASED), noManifest).join(), /published tarball has files the local pack does not: package\.json/);
+});
+
+const TARBALL_DIST = (bytes) => ({ tarball: 'https://registry.npmjs.org/@typedstandards/produce-core/-/produce-core-0.9.1.tgz', integrity: sha512Integrity(bytes) });
+
+test('the published tarball is read with no-cache and a fresh ?t=, and checked against dist.integrity (#174)', async () => {
+  const bytes = tgzOf([{ path: 'package/package.json', body: '{}' }]);
+  const calls = [];
+  const fetchImpl = async (url, init) => {
+    calls.push({ url, init });
+    return { status: 200, ok: true, arrayBuffer: async () => bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) };
+  };
+  const got = await fetchPublishedTarball(TARBALL_DIST(bytes), { fetchImpl, now: () => 179000000123 });
+  assert.ok(Buffer.from(got).equals(bytes));
+  const u = new URL(calls[0].url);
+  assert.equal(u.origin + u.pathname, 'https://registry.npmjs.org/@typedstandards/produce-core/-/produce-core-0.9.1.tgz');
+  assert.equal(u.searchParams.get('t'), '179000000123');
+  assert.equal(new Headers(calls[0].init.headers).get('cache-control'), 'no-cache');
+  const other = tgzOf([{ path: 'package/package.json', body: '{"x":1}' }]);
+  await assert.rejects(fetchPublishedTarball(TARBALL_DIST(other), { fetchImpl }), /hashes to .*, not dist\.integrity/, 'bytes that are not dist.integrity passed');
+});
+
+test('the published tarball read fails closed: a URL off the registry, a bad integrity, or a non-OK answer (#174)', async () => {
+  const bytes = tgzOf([{ path: 'package/package.json', body: '{}' }]);
+  const ok = async () => ({ status: 200, ok: true, arrayBuffer: async () => bytes });
+  await assert.rejects(fetchPublishedTarball({ ...TARBALL_DIST(bytes), tarball: 'https://example.com/produce-core-0.9.1.tgz' }, { fetchImpl: ok }), /not on https:\/\/registry\.npmjs\.org/);
+  await assert.rejects(fetchPublishedTarball({ ...TARBALL_DIST(bytes), integrity: 'sha1-abc' }, { fetchImpl: ok }), /not one sha512/);
+  await assert.rejects(fetchPublishedTarball({ ...TARBALL_DIST(bytes), integrity: undefined }, { fetchImpl: ok }), /not one sha512/);
+  await assert.rejects(fetchPublishedTarball(undefined, { fetchImpl: ok }), /not on/);
+  await assert.rejects(fetchPublishedTarball(TARBALL_DIST(bytes), { fetchImpl: recordingFetch(404).fetchImpl }), /404/);
+  await assert.rejects(fetchPublishedTarball(TARBALL_DIST(bytes), { fetchImpl: async () => { throw new TypeError('fetch failed'); } }), /fetch failed/);
+});
+
+test('the script reads a published tarball only through fetchPublishedTarball (#174)', () => {
+  const script = readFileSync(join(ROOT, 'scripts', 'publish.mjs'), 'utf8');
+  assert.doesNotMatch(script, /\bfetch\s*\(/, 'publish.mjs calls fetch directly');
+  assert.match(script, /fetchPublishedTarball\(published\.dist\)/);
 });
