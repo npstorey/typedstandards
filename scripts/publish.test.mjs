@@ -318,3 +318,50 @@ test('the script states no fixed package count: its closing lines count PACKAGES
   assert.doesNotMatch(script, /\b(all|the) three\b/, 'a line still says "three"');
   assert.match(script, /PACKAGES\.length/);
 });
+
+// ---- #174: a version already on npm is read back as what a consumer installs ----
+
+const utf8 = (s) => new TextEncoder().encode(s);
+const pkgJsonBytes = (manifest) => utf8(`${JSON.stringify(manifest, null, 2)}\n`);
+/** A tarball's files, path → bytes, as the read-back compares them. */
+const tarballOf = (manifest, { index = 'export {};\n', extra = {} } = {}) =>
+  new Map([
+    ['package.json', pkgJsonBytes(manifest)],
+    ['dist/index.js', utf8(index)],
+    ['LICENSE', utf8('MIT\n')],
+    ...Object.entries(extra).map(([p, s]) => [p, utf8(s)]),
+  ]);
+const RELEASED = {
+  name: '@typedstandards/produce-core',
+  version: '0.9.1',
+  files: ['dist', 'LICENSE'],
+  dependencies: { '@typedstandards/verify-core': '^0.15.0' },
+  devDependencies: { typescript: '^5.9.3', '@typescript-eslint/parser': '^8.72.0' },
+};
+/** RELEASED after a devDependency-only bump on main. */
+const DEV_BUMPED = { ...RELEASED, devDependencies: { typescript: '^6.0.3', '@typescript-eslint/parser': '^8.72.1' } };
+const RELEASED_DOC = { version: '0.9.1', dependencies: RELEASED.dependencies, dist: { integrity: 'sha512-PUBLISHED' } };
+
+test('a devDependency-only drift on a version already on npm reads back clean (#174)', () => {
+  const contents = { published: tarballOf(RELEASED), local: tarballOf(DEV_BUMPED) };
+  assert.deepEqual(readBackProblems(RELEASED_DOC, DEV_BUMPED, 'sha512-LOCAL', contents), []);
+});
+
+test('a drift in a shipped file, in the file set, or in package.json beyond devDependencies still stops (#174)', () => {
+  const read = (local, opts) => readBackProblems(RELEASED_DOC, local, 'sha512-LOCAL', { published: tarballOf(RELEASED), local: tarballOf(local, opts) }).join('; ');
+  assert.match(read(DEV_BUMPED, { index: 'export const x = 1;\n' }), /dist\/index\.js/, 'a changed shipped file passed');
+  assert.match(read(DEV_BUMPED, { extra: { 'dist/new.js': 'export {};\n' } }), /dist\/new\.js/, 'a file only the local pack has passed');
+  const fewer = { published: tarballOf(RELEASED, { extra: { 'dist/old.js': '' } }), local: tarballOf(DEV_BUMPED) };
+  assert.match(readBackProblems(RELEASED_DOC, DEV_BUMPED, 'sha512-LOCAL', fewer).join(), /dist\/old\.js/, 'a file only the published tarball has passed');
+  assert.match(read({ ...DEV_BUMPED, files: ['dist'] }), /package\.json.*\bfiles\b/, 'a package.json change outside devDependencies passed');
+});
+
+test('a drift in a dependencies range still stops on a version already on npm (#174)', () => {
+  const local = { ...DEV_BUMPED, dependencies: { '@typedstandards/verify-core': '^0.16.0' } };
+  const problems = readBackProblems(RELEASED_DOC, local, 'sha512-LOCAL', { published: tarballOf(RELEASED), local: tarballOf(local) });
+  assert.match(problems.join('; '), /the published dependencies/);
+});
+
+test('without the tarballs, as for a version the run publishes, the integrity still decides (#174)', () => {
+  assert.match(readBackProblems(RELEASED_DOC, DEV_BUMPED, 'sha512-LOCAL').join(), /dist\.integrity sha512-PUBLISHED is not the local pack's sha512-LOCAL/);
+});
