@@ -82,8 +82,8 @@ export interface ProducerProfileSubtypeRow {
 
 /**
  * The subtype table, keyed by the full `producerProfile` value. The
- * `ai-assisted-analysis/civicaitools-v1` bundle is revision 3 (2026-11-07), as
- * hub ADR-0038's amendment of 2026-11-07 records its address and digest; a later
+ * `ai-assisted-analysis/civicaitools-v1` bundle is revision 4 (2026-11-12), as
+ * hub ADR-0038's amendment of 2026-11-12 records its address and digest; a later
  * revision moves the digest and this pin, and nothing else.
  */
 export const PRODUCER_PROFILE_SUBTYPES: Readonly<Record<string, ProducerProfileSubtypeRow>> = Object.freeze({
@@ -92,8 +92,8 @@ export const PRODUCER_PROFILE_SUBTYPES: Readonly<Record<string, ProducerProfileS
   'ai-assisted-analysis/civicaitools-v1': Object.freeze({
     admits: Object.freeze(['datHere', 'default']),
     bundle: Object.freeze({
-      url: 'https://raw.githubusercontent.com/npstorey/civic-ai-tools/v0.1.15-typed-standards-spec/docs/profiles/ai-assisted-analysis/civicaitools-v1/bundle.json',
-      sha256: 'db8175703601a5de9d785a2cda93db194eb05cdeeb222dcfd509ea8ab249f016',
+      url: 'https://raw.githubusercontent.com/npstorey/civic-ai-tools/v0.1.16-typed-standards-spec/docs/profiles/ai-assisted-analysis/civicaitools-v1/bundle.json',
+      sha256: '4c623892516dc1996e412c313c2208e0880d594e753ef0c9d2a1a3e4f4ce5c81',
     }),
   }),
 });
