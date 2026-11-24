@@ -38,6 +38,7 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import {
   ANALYTICS_SERVICES,
+  dashboardLabel,
   PLAUSIBLE_INIT,
   PLAUSIBLE_QUEUE,
   PLAUSIBLE_REDACT,
@@ -406,4 +407,85 @@ test('/privacy, set: the analytics section names the redaction and a way to obje
   assert.match(html, /href="https:\/\/plausible\.io\/docs\/excluding-localstorage"/);
   assert.match(html, /and the analytics described below, this site&#x27;s pages ask/);
   assert.doesNotMatch(html, new RegExp(TEST_ID), 'the page does not print the script key');
+});
+
+// --- The public dashboard link (ruling D7; the seat's amendment on #85, 7146352815)
+//
+// A third, optional variable holds the dashboard's address. It rides on the
+// tag's config: set alone it renders nothing, and unset the analytics section
+// is as it was without it. Synthetic address: example.org is reserved.
+
+const DASHBOARD = 'NEXT_PUBLIC_ANALYTICS_DASHBOARD_URL';
+const TEST_DASHBOARD = 'https://plausible.io/example.org';
+const ALL_THREE = { [SERVICE]: 'plausible', [ID]: TEST_ID, [DASHBOARD]: TEST_DASHBOARD };
+
+test('the dashboard address: kept only beside the tag, and only as an https: address', () => {
+  assert.deepEqual(resolveAnalytics(ALL_THREE), { ...TEST_CONFIG, dashboardUrl: TEST_DASHBOARD });
+  assert.deepEqual(resolveAnalytics({ ...ALL_THREE, [DASHBOARD]: `  ${TEST_DASHBOARD}  ` }), {
+    ...TEST_CONFIG,
+    dashboardUrl: TEST_DASHBOARD,
+  });
+  // Alone, or beside half of the pair, or beside an unknown service: nothing.
+  for (const env of [
+    { [DASHBOARD]: TEST_DASHBOARD },
+    { [SERVICE]: 'plausible', [DASHBOARD]: TEST_DASHBOARD },
+    { [ID]: TEST_ID, [DASHBOARD]: TEST_DASHBOARD },
+    { [SERVICE]: 'other', [ID]: TEST_ID, [DASHBOARD]: TEST_DASHBOARD },
+  ]) {
+    assert.equal(resolveAnalytics(env), null, JSON.stringify(env));
+  }
+  // Beside the tag, anything but an absolute https: address is dropped; the tag stays.
+  for (const value of ['', '   ', 'http://plausible.io/example.org', 'plausible.io/example.org', '/stats', 'javascript:alert(1)']) {
+    assert.deepEqual(resolveAnalytics({ ...ALL_THREE, [DASHBOARD]: value }), TEST_CONFIG, JSON.stringify(value));
+  }
+});
+
+test('dashboardLabel: host and path, without scheme, query or trailing slash', () => {
+  assert.equal(dashboardLabel(TEST_DASHBOARD), 'plausible.io/example.org');
+  assert.equal(dashboardLabel(`${TEST_DASHBOARD}/`), 'plausible.io/example.org');
+  assert.equal(dashboardLabel(`${TEST_DASHBOARD}?period=30d`), 'plausible.io/example.org');
+});
+
+test('the tag is the same with or without a dashboard address', () => {
+  const without = markup(createElement(AnalyticsTags, { config: resolveAnalytics({ [SERVICE]: 'plausible', [ID]: TEST_ID }) }));
+  const withDashboard = markup(createElement(AnalyticsTags, { config: resolveAnalytics(ALL_THREE) }));
+  assert.equal(withDashboard, without);
+  assert.equal(markup(createElement(AnalyticsTags, { config: resolveAnalytics({ [DASHBOARD]: TEST_DASHBOARD }) })), '');
+});
+
+test('the dashboard variable is read by its literal name and fixed at build like the other two', () => {
+  const site = fs.readFileSync(path.join(SRC, 'lib/site-analytics.ts'), 'utf8');
+  assert.match(site, /NEXT_PUBLIC_ANALYTICS_DASHBOARD_URL: process\.env\.NEXT_PUBLIC_ANALYTICS_DASHBOARD_URL,/);
+  const config = fs.readFileSync(path.join(SRC, '..', 'next.config.ts'), 'utf8');
+  const env = config.slice(config.indexOf('env: {'), config.indexOf('}', config.indexOf('env: {')));
+  assert.match(env, /NEXT_PUBLIC_ANALYTICS_DASHBOARD_URL: process\.env\.NEXT_PUBLIC_ANALYTICS_DASHBOARD_URL \?\? "",/);
+});
+
+test('/privacy, all three set: the analytics section links the public dashboard', () => {
+  const html = markup(createElement(PrivacyStatement, { analytics: resolveAnalytics(ALL_THREE) }));
+  const at = html.indexOf('data-statement="analytics-dashboard"');
+  assert.ok(at !== -1, 'the dashboard line renders');
+  assert.ok(at > html.indexOf('<section id="analytics"'), 'inside the analytics section');
+  const line = html.slice(at, html.indexOf('</p>', at));
+  assert.match(line, /are public/);
+  assert.match(line, /href="https:\/\/plausible\.io\/example\.org"[^>]*>plausible\.io\/example\.org<\/a>/);
+  assert.equal((html.match(/plausible\.io\/example\.org"/g) ?? []).length, 1, 'linked once');
+});
+
+test('/privacy, the tag set without a dashboard address: no dashboard line', () => {
+  const html = markup(createElement(PrivacyStatement, { analytics: resolveAnalytics({ [SERVICE]: 'plausible', [ID]: TEST_ID }) }));
+  assert.match(html, /<section id="analytics"/);
+  assert.doesNotMatch(html, /analytics-dashboard/);
+  assert.doesNotMatch(html, /example\.org"/);
+});
+
+test('/privacy, decoy: the dashboard variable alone renders no link and no section', () => {
+  for (const env of [{ [DASHBOARD]: TEST_DASHBOARD }, { [SERVICE]: 'plausible', [DASHBOARD]: TEST_DASHBOARD }]) {
+    const html = markup(createElement(PrivacyStatement, { analytics: resolveAnalytics(env) }));
+    assert.doesNotMatch(html, /plausible/i, JSON.stringify(env));
+    assert.doesNotMatch(html, /analytics-dashboard/);
+  }
+  const http = markup(createElement(PrivacyStatement, { analytics: resolveAnalytics({ ...ALL_THREE, [DASHBOARD]: 'http://plausible.io/example.org' }) }));
+  assert.match(http, /<section id="analytics"/);
+  assert.doesNotMatch(http, /analytics-dashboard/);
 });

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import type { AnalyticsConfig } from "@/lib/analytics";
+import { dashboardLabel, type AnalyticsConfig } from "@/lib/analytics";
 import { BARE_ID_ANCHOR } from "@/lib/host-directory";
 
 /**
@@ -7,7 +7,9 @@ import { BARE_ID_ANCHOR } from "@/lib/host-directory";
  * statement is measured from the code and cited in the pull request that
  * wrote it, not here. The analytics section, and the clause naming it in
  * "Other sites", render only when `analytics` is set; the page passes the
- * same `SITE_ANALYTICS` the root layout renders the tag from.
+ * same `SITE_ANALYTICS` the root layout renders the tag from. The section's
+ * dashboard line renders only when that config also carries a dashboard
+ * address (ruling D7; the seat's amendment on #85, 7146352815).
  */
 
 /** The date the vendor pages cited below were read. */
@@ -41,7 +43,7 @@ function External({ href, children }: { href: string; children: ReactNode }) {
   );
 }
 
-function PlausibleSection() {
+function PlausibleSection({ dashboardUrl }: { dashboardUrl: string | undefined }) {
   return (
     <Section id="analytics" title="Analytics">
       <p data-statement="analytics-what">
@@ -61,6 +63,12 @@ function PlausibleSection() {
         is shortened the same way when it is a verify page on this site. A click
         on a link from a verify page is sent without the link&apos;s address.
       </p>
+      {dashboardUrl && (
+        <p data-statement="analytics-dashboard">
+          Plausible&apos;s counts for this site are public: anyone can see them at{" "}
+          <External href={dashboardUrl}>{dashboardLabel(dashboardUrl)}</External>.
+        </p>
+      )}
       <p data-statement="analytics-vendor">
         Plausible says it sets no cookies and stores nothing in your browser. Each
         request carries your network address and your browser&apos;s user agent, as
@@ -164,7 +172,7 @@ export function PrivacyStatement({ analytics }: { analytics: AnalyticsConfig | n
         </p>
       </Section>
 
-      {plausible && <PlausibleSection />}
+      {plausible && <PlausibleSection dashboardUrl={analytics.dashboardUrl} />}
     </div>
   );
 }

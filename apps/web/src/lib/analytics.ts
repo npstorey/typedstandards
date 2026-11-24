@@ -25,6 +25,14 @@
  * vendor's site settings show (`pa-` followed by an id), which names the
  * script file.
  *
+ * A THIRD, OPTIONAL VARIABLE. `NEXT_PUBLIC_ANALYTICS_DASHBOARD_URL` is the
+ * address of the service's public dashboard for this site (ruling D7: the
+ * dashboard is linked from the privacy page; the seat's amendment on #85,
+ * 7146352815). It is read at build like the other two, rides on the tag's
+ * config, and so exists only when the tag renders: set alone, it renders
+ * nothing. An absolute `https:` address is kept; any other value is dropped,
+ * so the page links nowhere it cannot name.
+ *
  * WHAT THE TAG IS. The vendor's own snippet, read 2026-11-24 from the vendor's
  * open-source repository (plausible/analytics
  * `lib/plausible_web/live/installation/instructions.ex:178-183` at 0855e286):
@@ -39,11 +47,14 @@ export type AnalyticsService = (typeof ANALYTICS_SERVICES)[number];
 export interface AnalyticsEnv {
   NEXT_PUBLIC_ANALYTICS_SERVICE?: string;
   NEXT_PUBLIC_ANALYTICS_ID?: string;
+  NEXT_PUBLIC_ANALYTICS_DASHBOARD_URL?: string;
 }
 
 export interface AnalyticsConfig {
   service: AnalyticsService;
   id: string;
+  /** The service's public dashboard for this site, when one is set. */
+  dashboardUrl?: string;
 }
 
 /** A set value, trimmed; `null` for unset, empty, or whitespace alone. */
@@ -57,11 +68,29 @@ function isService(value: string): value is AnalyticsService {
   return (ANALYTICS_SERVICES as readonly string[]).includes(value);
 }
 
+/** An absolute `https:` address, normalized; `null` for anything else. */
+function httpsAddress(raw: string | null): string | null {
+  if (raw === null) return null;
+  try {
+    const url = new URL(raw);
+    return url.protocol === 'https:' ? url.href : null;
+  } catch {
+    return null;
+  }
+}
+
 export function resolveAnalytics(env: AnalyticsEnv): AnalyticsConfig | null {
   const service = present(env.NEXT_PUBLIC_ANALYTICS_SERVICE);
   const id = present(env.NEXT_PUBLIC_ANALYTICS_ID);
   if (service === null || id === null || !isService(service)) return null;
-  return { service, id };
+  const dashboardUrl = httpsAddress(present(env.NEXT_PUBLIC_ANALYTICS_DASHBOARD_URL));
+  return dashboardUrl === null ? { service, id } : { service, id, dashboardUrl };
+}
+
+/** A dashboard address as a reader reads it: host and path, no scheme, query or trailing slash. */
+export function dashboardLabel(dashboardUrl: string): string {
+  const url = new URL(dashboardUrl);
+  return url.host + url.pathname.replace(/\/+$/, '');
 }
 
 /** The vendor's script, for a site's script key. */
