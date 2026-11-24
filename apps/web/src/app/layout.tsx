@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Space_Grotesk, Noto_Sans } from "next/font/google";
 import Link from "next/link";
 import { EXPRESS_INTEREST_URL, SPONSOR_LINE } from "@/lib/site-config";
+import { SITE_ANALYTICS } from "@/lib/site-analytics";
+import { AnalyticsTags } from "@/components/AnalyticsTags";
 import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
@@ -123,6 +125,10 @@ export default function RootLayout({
                 )}
               </p>
               <p className="text-xs">
+                <Link href="/privacy" className="hover:text-accent">
+                  Privacy
+                </Link>
+                {" · "}
                 {/* Entry point reads from EXPRESS_INTEREST_URL — swap the
                     constant in src/lib/site-config.ts to re-route every
                     contact link. */}
@@ -138,6 +144,8 @@ export default function RootLayout({
             </div>
           </footer>
         </div>
+        {/* Nothing unless both analytics variables are set (typedstandards#85). */}
+        <AnalyticsTags config={SITE_ANALYTICS} />
       </body>
     </html>
   );
