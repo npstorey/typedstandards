@@ -26,6 +26,11 @@ const anchorHost = (() => {
 
 const LINK = "underline decoration-dotted hover:text-accent";
 
+/** The command-line tool, `packages/cli`, whose README states it "makes no
+ *  network request" (`packages/cli/README.md:12-13`; owner's request, the seat's
+ *  ruling on #85, 7168511887). */
+export const CLI_URL = "https://github.com/npstorey/typedstandards/tree/main/packages/cli";
+
 function Section({ id, title, children }: { id: string; title: string; children: ReactNode }) {
   return (
     <section id={id} className="mt-10">
@@ -154,6 +159,11 @@ export function PrivacyStatement({ analytics }: { analytics: AnalyticsConfig | n
           A link to a record on this site, such as{" "}
           <code className="font-mono">/verify/&lt;id&gt;</code>, is an address like
           any other: when you open it, it reaches this site&apos;s server.
+        </p>
+        <p data-statement="verify-locally">
+          You can also verify a record on your own computer: the{" "}
+          <External href={CLI_URL}>command-line tool</External> reads it from a file
+          and makes no network request.
         </p>
       </Section>
 

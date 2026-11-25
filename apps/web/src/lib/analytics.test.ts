@@ -489,3 +489,28 @@ test('/privacy, decoy: the dashboard variable alone renders no link and no secti
   assert.match(http, /<section id="analytics"/);
   assert.doesNotMatch(http, /analytics-dashboard/);
 });
+
+// --- Verifying locally (the owner's request; the seat's ruling on #85, 7168511887)
+//
+// One line under "When you verify a record": the command-line tool verifies a
+// record from a file and makes no network request. Both facts are the CLI
+// README's, read here so the page's line cannot outlive them.
+
+const { CLI_URL } = await import('@/components/PrivacyStatement');
+
+test('/privacy says the command-line tool verifies from a file with no network request, in every analytics state', () => {
+  const readme = fs.readFileSync(path.join(SRC, '..', '..', '..', 'packages', 'cli', 'README.md'), 'utf8');
+  assert.match(readme, /makes no\s+network request/);
+  assert.match(readme, /typedstandards verify --input <file\|->/);
+  assert.equal(CLI_URL, 'https://github.com/npstorey/typedstandards/tree/main/packages/cli');
+
+  for (const env of [{}, { [SERVICE]: 'plausible', [ID]: TEST_ID }, ALL_THREE]) {
+    const html = markup(createElement(PrivacyStatement, { analytics: resolveAnalytics(env) }));
+    const at = html.indexOf('data-statement="verify-locally"');
+    assert.ok(at !== -1, JSON.stringify(env));
+    assert.ok(at > html.indexOf('<section id="verify"') && at < html.indexOf('<section id="storage"'), 'under "When you verify a record"');
+    const line = html.slice(at, html.indexOf('</p>', at));
+    assert.match(line, /href="https:\/\/github\.com\/npstorey\/typedstandards\/tree\/main\/packages\/cli"[^>]*>command-line tool<\/a>/);
+    assert.match(line, /reads it from a file\s+and makes no network request\./);
+  }
+});
