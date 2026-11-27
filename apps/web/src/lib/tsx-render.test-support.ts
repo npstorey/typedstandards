@@ -19,7 +19,7 @@ registerHooks({
   resolve(specifier, context, nextResolve) {
     // `next` has no exports map, so Node's ESM resolver needs the file name of a
     // subpath the bundler resolves bare.
-    if (specifier === 'next/navigation') return nextResolve('next/navigation.js', context);
+    if (/^next\/[a-z-]+$/.test(specifier)) return nextResolve(`${specifier}.js`, context);
     if (specifier.startsWith('@/')) {
       const base = path.join(SRC, specifier.slice(2));
       for (const candidate of [base, `${base}.ts`, `${base}.tsx`]) {
