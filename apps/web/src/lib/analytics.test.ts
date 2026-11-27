@@ -28,6 +28,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
@@ -136,9 +137,18 @@ function shippedTransform(): Transform {
   return transform as Transform;
 }
 
+// The send gate (IMPL TS-143; the seat's ruling 7227111427, "the off stops the loader
+// and every send, ahead of the redaction"): transformRequest asks the page's analytics
+// script (`ANALYTICS_CHOICE_SCRIPT`, analytics-notice.ts) whether the reader turned
+// analytics off, and drops the event if so; otherwise it hands the payload to the
+// redaction, whose bytes are unchanged.
+const SEND_GATE =
+  'function(payload){var a=window.__typedstandardsAnalytics;if(a&&a.read().off)return null;' +
+  `return(${PLAUSIBLE_REDACT})(payload)}`;
+
 test("the initializer is the vendor's first line, then init with transformRequest", () => {
   assert.equal(PLAUSIBLE_QUEUE, VENDOR_QUEUE_LINE);
-  assert.equal(PLAUSIBLE_INIT, `${VENDOR_QUEUE_LINE}\nplausible.init({transformRequest:${PLAUSIBLE_REDACT}})`);
+  assert.equal(PLAUSIBLE_INIT as string, `${VENDOR_QUEUE_LINE}\nplausible.init({transformRequest:${SEND_GATE}})`);
   assert.ok(!PLAUSIBLE_INIT.includes('<'), 'nothing in it can close the script element');
 });
 
@@ -256,6 +266,13 @@ test('an address that does not parse: the page drops the event, the referrer is 
   assert.deepEqual(transform(pageview(`${SITE}/badge`, 'not a url')), pageview(`${SITE}/badge`, null));
 });
 
+// IMPL TS-143 (the seat's ruling 7227111427): the redaction stays byte for byte as
+// typedstandards#183 merged it (main a59453c1: 565 characters).
+test('the redaction is byte-pinned', () => {
+  const digest = createHash('sha256').update(PLAUSIBLE_REDACT).digest('hex');
+  assert.equal(digest, '59320550cbd064cfbef64d08a728bdd0bf637585b2ff1a8fc8527578d2809c54');
+});
+
 // --- The tag ----------------------------------------------------------------
 
 function markup(element: unknown): string {
@@ -272,10 +289,108 @@ test('set: the vendor script and the initializer carrying transformRequest', () 
   assert.equal(plausibleScriptSrc(TEST_ID), `https://plausible.io/js/${TEST_ID}.js`);
   assert.equal(
     html,
-    `<script async="" src="https://plausible.io/js/${TEST_ID}.js"></script>` +
-      `<script id="plausible-init">${PLAUSIBLE_INIT}</script>`,
+    `<script id="plausible-init">${PLAUSIBLE_INIT}</script>` +
+      `<script id="plausible-load">${loaderFor(`https://plausible.io/js/${TEST_ID}.js`)}</script>`,
   );
   assert.ok(html.includes('plausible.init({transformRequest:function(payload){'));
+});
+
+// --- The off: the loader and the send gate (IMPL TS-143) -----------------------
+//
+// The vendor's script is inserted by a loader, not by a static element, so a
+// reader who turned analytics off is not sent to plausible.io from the next
+// page they open (S60[1]); the gate above drops every event the moment the off
+// is kept, on the page in view and on pages opened without a reload.
+
+/** The loader the tag renders, for a script address (a literal copy: it pins the bytes). */
+function loaderFor(src: string): string {
+  return (
+    `(function(){var src=${JSON.stringify(src).replace(/</g, '\\u003c')};` +
+    'function load(){if(document.getElementById("plausible-script"))return;' +
+    'var s=document.createElement("script");s.id="plausible-script";s.async=true;s.src=src;' +
+    'document.head.appendChild(s)}' +
+    'window.__typedstandardsAnalyticsLoad=load;' +
+    'var a=window.__typedstandardsAnalytics;if(a&&a.read().off)return;load()})()'
+  );
+}
+
+/** The loader the tag renders, run in a page whose analytics script is `api`; the scripts it inserted. */
+function runLoader(config: AnalyticsConfig, api: unknown, times = 1): { id: string; async: boolean; src: string }[] {
+  const html = markup(createElement(AnalyticsTags, { config }));
+  const match = /<script id="plausible-load">([\s\S]*?)<\/script>/.exec(html);
+  assert.ok(match, 'the tag renders the loader');
+  const inserted: { id: string; async: boolean; src: string }[] = [];
+  const document = {
+    getElementById: (id: string) => inserted.find((s) => s.id === id) ?? null,
+    createElement: () => ({ id: '', async: false, src: '' }),
+    head: { appendChild: (s: { id: string; async: boolean; src: string }) => inserted.push(s) },
+  };
+  const sandbox: Record<string, unknown> = { document };
+  sandbox.window = sandbox;
+  if (api !== undefined) sandbox.__typedstandardsAnalytics = api;
+  const context = vm.createContext(sandbox);
+  vm.runInContext(match[1], context);
+  for (let i = 1; i < times; i++) vm.runInContext('window.__typedstandardsAnalyticsLoad()', context);
+  return inserted;
+}
+
+const offApi = { read: () => ({ usable: true, hidden: false, off: true }) };
+const onApi = { read: () => ({ usable: true, hidden: false, off: false }) };
+
+test('the loader inserts the vendor script, async, once, unless the reader turned analytics off', () => {
+  const script = { id: 'plausible-script', async: true, src: `https://plausible.io/js/${TEST_ID}.js` };
+  assert.deepEqual(runLoader(TEST_CONFIG, onApi), [script]);
+  assert.deepEqual(runLoader(TEST_CONFIG, undefined), [script], 'without the page script: as built');
+  assert.deepEqual(runLoader(TEST_CONFIG, onApi, 3), [script], 'loading again inserts nothing more');
+  assert.deepEqual(runLoader(TEST_CONFIG, offApi), [], 'off: no request to plausible.io');
+});
+
+test('the loader carries the script key as a string, whatever it holds', () => {
+  const id = 'pa-x"</script><script>alert(1)//';
+  const config = resolveAnalytics({ [SERVICE]: 'plausible', [ID]: id }) as AnalyticsConfig;
+  const html = markup(createElement(AnalyticsTags, { config }));
+  assert.ok(!html.includes('</script><script>alert'), 'the key cannot close the element');
+  assert.deepEqual(runLoader(config, onApi).map((s) => s.src), [`https://plausible.io/js/${id}.js`]);
+});
+
+/** The transformRequest the vendor's init receives, in a page whose analytics script is `api`. */
+function gatedTransform(api: unknown): Transform {
+  const received: unknown[] = [];
+  const sandbox: Record<string, unknown> = { URL, __init: (options: unknown) => received.push(options) };
+  sandbox.window = sandbox;
+  if (api !== undefined) sandbox.__typedstandardsAnalytics = api;
+  const context = vm.createContext(sandbox);
+  for (const script of [PLAUSIBLE_INIT, VENDOR_STARTUP]) vm.runInContext(script, context);
+  return (received[0] as { transformRequest: Transform }).transformRequest;
+}
+
+test('the gate: off, every event is dropped, from any page', () => {
+  const transform = gatedTransform(offApi);
+  for (const event of [
+    pageview(`${SITE}/`),
+    pageview(`${SITE}/verify/example.org/${HASH}`),
+    { n: 'engagement', v: 1, u: `${SITE}/badge`, d: 'typedstandards.org', r: null },
+  ]) {
+    assert.equal(transform(structuredClone(event)), null, JSON.stringify(event));
+  }
+});
+
+test('the gate: on, or without the page script, the event goes to the redaction unchanged', () => {
+  const redact = shippedTransform();
+  for (const api of [onApi, undefined]) {
+    const transform = gatedTransform(api);
+    for (const event of [pageview(`${SITE}/badge`), pageview(`${SITE}/verify?url=${COMMITMENT}`, `${SITE}/verify/${HASH}`)]) {
+      assert.deepEqual(transform(structuredClone(event)), redact(structuredClone(event)), JSON.stringify(event));
+    }
+  }
+});
+
+test('the gate reads the off at each event: turned off on the page in view, the next event is dropped', () => {
+  let off = false;
+  const transform = gatedTransform({ read: () => ({ usable: true, hidden: false, off }) });
+  assert.notEqual(transform(pageview(`${SITE}/`)), null);
+  off = true;
+  assert.equal(transform(pageview(`${SITE}/roadmap`)), null);
 });
 
 // --- Wiring: one constant, read by the layout and by /privacy ---------------
