@@ -186,11 +186,19 @@ export function PrivacyStatement({
           they use. It also serves two files other sites may read: the list of
           publishers it recognizes, and the verify badge image.
         </p>
-        <p data-statement="hosting">
-          Requests your browser sends to this site reach the service that hosts
-          it, as requests to any website do. This site&apos;s own code keeps no
-          record of them{lookupCount ? " beyond the daily count described below" : ""}.
-        </p>
+        {lookupCount ? (
+          <p data-statement="hosting">
+            Requests your browser sends to this site reach the service that hosts
+            it, as requests to any website do. This site&apos;s own code keeps no
+            record of them beyond the daily count described below.
+          </p>
+        ) : (
+          <p data-statement="hosting">
+            Requests your browser sends to this site reach the service that hosts
+            it, as requests to any website do. This site&apos;s own code keeps no
+            record of them.
+          </p>
+        )}
       </Section>
 
       <Section id="verify" title="When you verify a record">
