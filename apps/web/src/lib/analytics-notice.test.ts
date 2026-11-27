@@ -81,8 +81,8 @@ test('the notice says what the ruled rows say, for Plausible', async () => {
   assert.deepEqual(words.telling, [
     // S49[1]
     'Your browser sends the address of each page you visit on this site to Plausible, an analytics service.',
-    // S49's correction for this site (premises report, section 2): drafted, for the words check
-    "A verify page's address is sent without the record you verify.",
+    // S49's correction for this site (premises report, section 2), in the words check's rewrite
+    "A verify page's address is sent without what you verify.",
   ]);
   assert.equal(words.turnOff, 'Turn analytics off'); // S59[1]
   assert.equal(words.hide, 'Hide this message'); // S53[1]
@@ -90,7 +90,7 @@ test('the notice says what the ruled rows say, for Plausible', async () => {
   assert.deepEqual(words.off, [
     // S60[1]
     'Analytics is off in this browser. Nothing is sent to Plausible from the next page you open.',
-    // W1, in S58's place: drafted, for the words check
+    // W1, in S58's place: passed by the words check
     'You can change this on the privacy page.',
   ]);
 });
@@ -114,7 +114,7 @@ test('the notice: its heading names it, and it tells, with the off, the hide and
   assert.match(html, /<h2 id="analytics-notice-heading"[^>]*>Site analytics<\/h2>/);
   const on = html.slice(html.indexOf('analytics-when-on'), html.indexOf('analytics-when-off'));
   assert.match(on, /Your browser sends the address of each page you visit on this site to Plausible, an analytics service\./);
-  assert.match(on, /A verify page&#x27;s address is sent without the record you verify\./);
+  assert.match(on, /A verify page&#x27;s address is sent without what you verify\./);
   assert.match(html, /class="analytics-when-off"[^>]*>[\s\S]*Analytics is off in this browser\. Nothing is sent to Plausible from the next page you open\./);
   assert.match(html, /You can change this on the privacy page\./);
   // The two buttons, in one style, the off first (S59 "beside Hide this message and in its style").
@@ -124,7 +124,9 @@ test('the notice: its heading names it, and it tells, with the off, the hide and
   assert.equal(style(buttons[0][1]), style(buttons[1][1]), 'the same style');
   assert.match(buttons[0][1], /analytics-when-on/, 'the off shows only while analytics is on');
   assert.match(buttons[0][1], /analytics-needs-storage/, 'and only where the off can be kept');
-  assert.match(html, /<a href="\/privacy"[^>]*>Full privacy page<\/a>/);
+  assert.match(html, /<a href="\/privacy" class="[^"]*analytics-when-on"[^>]*>Full privacy page<\/a>/);
+  // After the off, the link opens the page at the control (the words check, note on W1).
+  assert.match(html, /<a href="\/privacy#analytics" class="[^"]*analytics-when-off"[^>]*>Full privacy page<\/a>/);
   assert.doesNotMatch(html, /cookie/i);
 });
 
@@ -429,9 +431,16 @@ test('/privacy with the tag: the storage statement says what is kept, where, and
   const statement = html.slice(at, html.indexOf('</p>', at));
   assert.match(
     statement,
-    /This site sets no cookies\. It remembers that you hid its message, and that you turned analytics off if you did\. It keeps both in your browser&#x27;s storage for this site, under the name <code class="font-mono">typedstandards-analytics<\/code>, for six months\./,
+    /This site sets no cookies\. It remembers that you hid its message, and that you turned analytics off if you did\. It keeps both in your browser&#x27;s storage for this site, under the name <code class="font-mono">typedstandards-analytics<\/code>, and uses them for\s+six months\./,
   );
   assert.doesNotMatch(statement, /stores nothing in your browser/);
+  assert.match(html, /data-statement="storage" class="analytics-with-storage"/);
+  // Where the browser keeps nothing (and without JavaScript), today's statement, which is true there.
+  const plain = html.indexOf('data-statement="storage-no-storage"');
+  assert.equal(
+    html.slice(plain, html.indexOf('</p>', plain)),
+    'data-statement="storage-no-storage" class="analytics-without-storage">This site sets no cookies, and its code stores nothing in your browser.',
+  );
 });
 
 test('/privacy without the tag: the storage statement is unchanged', () => {
@@ -446,10 +455,23 @@ test('/privacy without the tag: the storage statement is unchanged', () => {
 
 test('/privacy with the tag: the way back, after the way to object (W2, W3, W5)', async () => {
   const html = markup(createElement(PrivacyStatement, { analytics: PLAUSIBLE }));
+  // W5 in the words check's rewrite, two whole forms: the one naming the control shows only
+  // where the browser keeps the off (and so shows the control); the other, today's, elsewhere.
   const objection = html.slice(html.indexOf('data-statement="analytics-objection"'));
-  assert.match(objection, /^data-statement="analytics-objection">To object, turn analytics off on this page, or use an ad blocker or other content blocker that blocks/);
+  assert.match(
+    objection,
+    /^data-statement="analytics-objection" class="analytics-with-storage">To object, turn analytics off below\. You can also use an ad blocker or\s+other content blocker that blocks/,
+  );
+  const plain = html.slice(html.indexOf('data-statement="analytics-objection-no-storage"'));
+  assert.match(
+    plain,
+    /^data-statement="analytics-objection-no-storage" class="analytics-without-storage">To object, use an ad blocker or other content blocker that blocks/,
+  );
+  const css = source('app/globals.css');
+  assert.match(css, /\.analytics-with-storage,\s*html\[data-analytics-storage="kept"\] \.analytics-without-storage \{\s*display: none;/);
+  assert.match(css, /html\[data-analytics-storage="kept"\] \.analytics-with-storage \{\s*display: block;/);
   const choice = html.indexOf('data-statement="analytics-choice"');
-  assert.ok(choice > html.indexOf('data-statement="analytics-objection"'), 'after the way to object');
+  assert.ok(choice > html.indexOf('data-statement="analytics-objection-no-storage"'), 'after the way to object');
   const block = html.slice(choice, html.indexOf('</section>', choice));
   assert.match(block, /class="analytics-when-on"[^>]*>Analytics is on in this browser\./);
   assert.match(block, /class="analytics-when-off"[^>]*>Analytics is off in this browser\. Nothing is sent to Plausible from the next page you open\./);

@@ -142,3 +142,14 @@ html[data-analytics-storage="none"] .analytics-needs-storage {
 html[data-analytics-storage="kept"] .analytics-choice {
   display: block;
 }
+
+/* The privacy page's way to object, in two whole forms: the one that names the
+   control only where the control shows. */
+.analytics-with-storage,
+html[data-analytics-storage="kept"] .analytics-without-storage {
+  display: none;
+}
+
+html[data-analytics-storage="kept"] .analytics-with-storage {
+  display: block;
+}

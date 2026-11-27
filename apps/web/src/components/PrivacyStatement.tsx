@@ -91,9 +91,23 @@ function PlausibleSection({ dashboardUrl, holder }: { dashboardUrl: string | und
         <External href="https://plausible.io/data-policy">data policy</External>,
         read {PLAUSIBLE_READ_DATE}).
       </p>
-      <p data-statement="analytics-objection">
-        To object, turn analytics off on this page, or use an ad blocker or other
-        content blocker that blocks{" "}
+      {/* Two whole forms (the words check, string 5): where this browser can keep
+          the off, the control below is the first way to object; where it cannot,
+          and without JavaScript, the control is not shown and the sentence is the
+          one that is true in every browser. globals.css shows one. */}
+      <p data-statement="analytics-objection" className="analytics-with-storage">
+        To object, turn analytics off below. You can also use an ad blocker or
+        other content blocker that blocks{" "}
+        <code className="font-mono">plausible.io</code>, or set the browser flag
+        Plausible describes at{" "}
+        <External href="https://plausible.io/docs/excluding-localstorage">
+          plausible.io/docs/excluding-localstorage
+        </External>
+        . If your browser does not load Plausible&apos;s script, nothing is sent
+        to <code className="font-mono">plausible.io</code>.
+      </p>
+      <p data-statement="analytics-objection-no-storage" className="analytics-without-storage">
+        To object, use an ad blocker or other content blocker that blocks{" "}
         <code className="font-mono">plausible.io</code>, or set the browser flag
         Plausible describes at{" "}
         <External href="https://plausible.io/docs/excluding-localstorage">
@@ -107,19 +121,30 @@ function PlausibleSection({ dashboardUrl, holder }: { dashboardUrl: string | und
   );
 }
 
-/** W6 (IMPL TS-143; ND-M-2 B, ND-H-2 A): what the analytics notice keeps, where, and for how long. */
+/**
+ * W6 (IMPL TS-143; ND-M-2 B, ND-H-2 A): what the analytics notice keeps, where,
+ * and for how long, in the words check's rewrite. Two whole forms, as the way to
+ * object has: where the browser refuses storage, and without JavaScript, nothing
+ * is kept, and the statement is today's, which is true there.
+ */
 function StorageWithAnalytics() {
   return (
-    <p data-statement="storage">
-      This site sets no cookies. It remembers that you hid its message, and that
-      you turned analytics off if you did. It keeps both in your browser&apos;s
-      storage for this site, under the name{" "}
-      <code className="font-mono">{ANALYTICS_MEMORY_KEY}</code>, for six months.
-    </p>
+    <>
+      <p data-statement="storage" className="analytics-with-storage">
+        This site sets no cookies. It remembers that you hid its message, and that
+        you turned analytics off if you did. It keeps both in your browser&apos;s
+        storage for this site, under the name{" "}
+        <code className="font-mono">{ANALYTICS_MEMORY_KEY}</code>, and uses them for
+        six months.
+      </p>
+      <p data-statement="storage-no-storage" className="analytics-without-storage">
+        This site sets no cookies, and its code stores nothing in your browser.
+      </p>
+    </>
   );
 }
 
-/** A day counted, as a reader reads it: `2026-11-27` → "November 27, 2026". */
+/** A day counted, as a reader reads it: `2026-11-27` → "November 27, 2026" (UTC). */
 function longDay(day: string): string {
   return new Date(`${day}T00:00:00Z`).toLocaleDateString("en-US", {
     year: "numeric",
@@ -130,18 +155,20 @@ function longDay(day: string): string {
 }
 
 /**
- * S163[1] in its totals-only form (W7), under W9, with the totals (W8):
+ * S163[1] in its totals-only form (W7), under W9, with the total (W8):
  * typedstandards#143's note on the lookup count, which the footer and the
  * verify pages link (`#lookups`). Its third sentence is W7: this site's
- * publisher index (#142) does not exist yet, so only totals are published.
+ * publisher index (#142) does not exist yet, so only the total is published.
+ * W7, W8 and W9 are in the words check's rewrites; W8's last sentence is its
+ * definition of a lookup, and a single counted day reads "on" that day.
  */
 function LookupsSection({ totals }: { totals: LookupTotals | null }) {
   return (
-    <Section id="lookups" title="What this site counts">
+    <Section id="lookups" title="What this site's own code counts">
       <p data-statement="lookups">
         This site counts the website of each record you verify from a link you
         open, and the day. The count keeps no network address, no cookie, no
-        identifier, and never the record. This site publishes only the totals
+        identifier, and never the record. This site publishes only the total
         across all websites. To verify without being counted, drop in a saved
         bundle, or verify offline with the{" "}
         <External href={CLI_URL}>command-line tool</External>. When any verifier
@@ -150,8 +177,11 @@ function LookupsSection({ totals }: { totals: LookupTotals | null }) {
       </p>
       {totals && (
         <p data-statement="lookup-totals">
-          Lookups counted across all websites from {longDay(totals.firstDay)} to{" "}
-          {longDay(totals.lastDay)}: {totals.lookups.toLocaleString("en-US")}.
+          {totals.firstDay === totals.lastDay
+            ? `Lookups counted across all websites on ${longDay(totals.firstDay)}: `
+            : `Lookups counted across all websites from ${longDay(totals.firstDay)}, to ${longDay(totals.lastDay)}: `}
+          {totals.lookups.toLocaleString("en-US")}. A lookup is one opening of a
+          link to a record, whether or not it verifies.
         </p>
       )}
     </Section>

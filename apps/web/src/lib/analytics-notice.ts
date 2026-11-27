@@ -53,8 +53,9 @@ export function noticeWords(holder: string) {
       // S49[1]
       `Your browser sends the address of each page you visit on this site to ${holder}, an analytics service.`,
       // S49's correction on this site, where a verify page's address is redacted
-      // (premises report 7226900499, section 2). Drafted, for the words check.
-      "A verify page's address is sent without the record you verify.",
+      // (premises report 7226900499, section 2), in the words check's rewrite: the
+      // privacy page's own "what you verify", which the record's website is part of.
+      "A verify page's address is sent without what you verify.",
     ],
     turnOff: 'Turn analytics off', // S59[1]
     hide: 'Hide this message', // S53[1]

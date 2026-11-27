@@ -360,18 +360,33 @@ test('/privacy with the count: S160[1], S163[1] totals-only (W7) under W9, and t
     'This site counts, each day, the website of a record you verify from a link you open, and the count keeps nothing else.',
   );
   assert.ok(html.indexOf('data-statement="verify-count"') > html.indexOf('data-statement="verify-links"'), 'after verify-links');
-  assert.match(html, /<section id="lookups" class="mt-10"><h2[^>]*>What this site counts<\/h2>/);
+  assert.match(html, /<section id="lookups" class="mt-10"><h2[^>]*>What this site&#x27;s own code counts<\/h2>/);
   assert.equal(
     statement('lookups'),
     'This site counts the website of each record you verify from a link you open, and the day. ' +
       'The count keeps no network address, no cookie, no identifier, and never the record. ' +
-      'This site publishes only the totals across all websites. ' +
+      'This site publishes only the total across all websites. ' +
       'To verify without being counted, drop in a saved bundle, or verify offline with the command-line tool. ' +
       "When any verifier fetches a record, that record's own server sees the fetch. " +
       'Only verifying a saved bundle offline avoids that.',
   );
-  assert.equal(statement('lookup-totals'), 'Lookups counted across all websites from November 27, 2026 to December 2, 2026: 1,234.');
+  assert.equal(
+    statement('lookup-totals'),
+    'Lookups counted across all websites from November 27, 2026, to December 2, 2026: 1,234. ' +
+      'A lookup is one opening of a link to a record, whether or not it verifies.',
+  );
   assert.doesNotMatch(html, /publisher index/, 'the index does not exist yet (#142)');
+});
+
+test('/privacy with the count: one day counted reads "on" that day', () => {
+  const html = markup(
+    createElement(PrivacyStatement, { analytics: null, lookupCount: { totals: { firstDay: '2026-11-27', lastDay: '2026-11-27', lookups: 3 } } }),
+  );
+  const at = html.indexOf('data-statement="lookup-totals"');
+  assert.equal(
+    text(html.slice(html.indexOf('>', at) + 1, html.indexOf('</p>', at))),
+    'Lookups counted across all websites on November 27, 2026: 3. A lookup is one opening of a link to a record, whether or not it verifies.',
+  );
 });
 
 test('/privacy with the count and nothing counted yet: no totals line', () => {

@@ -33,6 +33,7 @@ function api(): AnalyticsApi | undefined {
 
 const BUTTON =
   "rounded-md border border-border bg-surface px-3 py-1.5 text-sm font-medium hover:border-accent hover:text-accent";
+const LINK = "mt-3 inline-block text-sm underline decoration-dotted hover:text-accent";
 
 export function AnalyticsNotice({ holder }: { holder: string }) {
   const words = noticeWords(holder);
@@ -88,7 +89,12 @@ export function AnalyticsNotice({ holder }: { holder: string }) {
             {words.hide}
           </button>
         </div>
-        <a href="/privacy" className="mt-3 inline-block text-sm underline decoration-dotted hover:text-accent">
+        {/* After the off, the link opens the privacy page at the control that turns
+            analytics back on (the words check, note on W1). */}
+        <a href="/privacy" className={`${LINK} analytics-when-on`}>
+          {words.privacyLink}
+        </a>
+        <a href="/privacy#analytics" className={`${LINK} analytics-when-off`}>
           {words.privacyLink}
         </a>
       </div>
