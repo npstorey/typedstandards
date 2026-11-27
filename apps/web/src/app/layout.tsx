@@ -4,6 +4,10 @@ import Link from "next/link";
 import { EXPRESS_INTEREST_URL, SPONSOR_LINE } from "@/lib/site-config";
 import { SITE_ANALYTICS } from "@/lib/site-analytics";
 import { AnalyticsTags } from "@/components/AnalyticsTags";
+import { AnalyticsNotice } from "@/components/AnalyticsNotice";
+import { ANALYTICS_CHOICE_SCRIPT, holderOf } from "@/lib/analytics-notice";
+import { SITE_LOOKUP_COUNT } from "@/lib/site-lookup-count";
+import { FooterLine } from "@/components/FooterLine";
 import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
@@ -45,7 +49,8 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
+    // The analytics script sets attributes on <html> before hydration (IMPL TS-143).
+    <html lang="en" suppressHydrationWarning>
       <body className={`${spaceGrotesk.variable} ${notoSans.variable} font-sans`}>
         <div className="flex min-h-dvh flex-col">
           <header className="border-b border-border">
@@ -89,14 +94,16 @@ export default function RootLayout({
             </div>
           </header>
 
-          <main className="flex-1">{children}</main>
+          <main className="flex-1">
+            {SITE_ANALYTICS && (
+              <AnalyticsNotice holder={holderOf(SITE_ANALYTICS)} />
+            )}
+            {children}
+          </main>
 
           <footer className="border-t border-border">
             <div className="mx-auto flex max-w-5xl flex-col items-center gap-2 px-6 py-8 text-center text-sm text-muted">
-              <p>
-                Typed Standards — signed records you can verify yourself. Verification
-                runs in your browser; nothing is uploaded.
-              </p>
+              <FooterLine lookupCount={SITE_LOOKUP_COUNT} />
               <p className="text-xs">
                 By{" "}
                 <a
@@ -144,6 +151,11 @@ export default function RootLayout({
             </div>
           </footer>
         </div>
+        {/* The analytics notice's memory and place, after the page so it sees every
+            control, before the tag whose loader and send gate call it (IMPL TS-143). */}
+        {SITE_ANALYTICS && (
+          <script id="analytics-choice" dangerouslySetInnerHTML={{ __html: ANALYTICS_CHOICE_SCRIPT }} />
+        )}
         {/* Nothing unless both analytics variables are set (typedstandards#85). */}
         <AnalyticsTags config={SITE_ANALYTICS} />
       </body>

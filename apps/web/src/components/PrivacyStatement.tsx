@@ -1,6 +1,9 @@
 import type { ReactNode } from "react";
 import { dashboardLabel, type AnalyticsConfig } from "@/lib/analytics";
+import { ANALYTICS_MEMORY_KEY, holderOf } from "@/lib/analytics-notice";
 import { BARE_ID_ANCHOR } from "@/lib/host-directory";
+import { AnalyticsChoice } from "@/components/AnalyticsChoice";
+import type { LookupTotals } from "@/lib/lookup-count";
 
 /**
  * The body of `/privacy` (typedstandards#85): what this site does today. Each
@@ -9,7 +12,9 @@ import { BARE_ID_ANCHOR } from "@/lib/host-directory";
  * "Other sites", render only when `analytics` is set; the page passes the
  * same `SITE_ANALYTICS` the root layout renders the tag from. The section's
  * dashboard line renders only when that config also carries a dashboard
- * address (ruling D7; the seat's amendment on #85, 7146352815).
+ * address (ruling D7; the seat's amendment on #85, 7146352815). With the tag,
+ * the storage statement says what the analytics notice keeps (W6), and the
+ * analytics section carries the way back, `AnalyticsChoice` (IMPL TS-143).
  */
 
 /** The date the vendor pages cited below were read. */
@@ -48,7 +53,7 @@ function External({ href, children }: { href: string; children: ReactNode }) {
   );
 }
 
-function PlausibleSection({ dashboardUrl }: { dashboardUrl: string | undefined }) {
+function PlausibleSection({ dashboardUrl, holder }: { dashboardUrl: string | undefined; holder: string }) {
   return (
     <Section id="analytics" title="Analytics">
       <p data-statement="analytics-what">
@@ -86,7 +91,22 @@ function PlausibleSection({ dashboardUrl }: { dashboardUrl: string | undefined }
         <External href="https://plausible.io/data-policy">data policy</External>,
         read {PLAUSIBLE_READ_DATE}).
       </p>
-      <p data-statement="analytics-objection">
+      {/* Two whole forms (the words check, string 5): where this browser can keep
+          the off, the control below is the first way to object; where it cannot,
+          and without JavaScript, the control is not shown and the sentence is the
+          one that is true in every browser. globals.css shows one. */}
+      <p data-statement="analytics-objection" className="analytics-with-storage">
+        To object, turn analytics off below. You can also use an ad blocker or
+        other content blocker that blocks{" "}
+        <code className="font-mono">plausible.io</code>, or set the browser flag
+        Plausible describes at{" "}
+        <External href="https://plausible.io/docs/excluding-localstorage">
+          plausible.io/docs/excluding-localstorage
+        </External>
+        . If your browser does not load Plausible&apos;s script, nothing is sent
+        to <code className="font-mono">plausible.io</code>.
+      </p>
+      <p data-statement="analytics-objection-no-storage" className="analytics-without-storage">
         To object, use an ad blocker or other content blocker that blocks{" "}
         <code className="font-mono">plausible.io</code>, or set the browser flag
         Plausible describes at{" "}
@@ -96,11 +116,86 @@ function PlausibleSection({ dashboardUrl }: { dashboardUrl: string | undefined }
         . If your browser does not load Plausible&apos;s script, nothing is sent
         to <code className="font-mono">plausible.io</code>.
       </p>
+      <AnalyticsChoice holder={holder} />
     </Section>
   );
 }
 
-export function PrivacyStatement({ analytics }: { analytics: AnalyticsConfig | null }) {
+/**
+ * W6 (IMPL TS-143; ND-M-2 B, ND-H-2 A): what the analytics notice keeps, where,
+ * and for how long, in the words check's rewrite. Two whole forms, as the way to
+ * object has: where the browser refuses storage, and without JavaScript, nothing
+ * is kept, and the statement is today's, which is true there.
+ */
+function StorageWithAnalytics() {
+  return (
+    <>
+      <p data-statement="storage" className="analytics-with-storage">
+        This site sets no cookies. It remembers that you hid its message, and that
+        you turned analytics off if you did. It keeps both in your browser&apos;s
+        storage for this site, under the name{" "}
+        <code className="font-mono">{ANALYTICS_MEMORY_KEY}</code>, and uses them for
+        six months.
+      </p>
+      <p data-statement="storage-no-storage" className="analytics-without-storage">
+        This site sets no cookies, and its code stores nothing in your browser.
+      </p>
+    </>
+  );
+}
+
+/** A day counted, as a reader reads it: `2026-11-27` → "November 27, 2026" (UTC). */
+function longDay(day: string): string {
+  return new Date(`${day}T00:00:00Z`).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+}
+
+/**
+ * S163[1] in its totals-only form (W7), under W9, with the total (W8):
+ * typedstandards#143's note on the lookup count, which the footer and the
+ * verify pages link (`#lookups`). Its third sentence is W7: this site's
+ * publisher index (#142) does not exist yet, so only the total is published.
+ * W7, W8 and W9 are in the words check's rewrites; W8's last sentence is its
+ * definition of a lookup, and a single counted day reads "on" that day.
+ */
+function LookupsSection({ totals }: { totals: LookupTotals | null }) {
+  return (
+    <Section id="lookups" title="What this site's own code counts">
+      <p data-statement="lookups">
+        This site counts the website of each record you verify from a link you
+        open, and the day. The count keeps no network address, no cookie, no
+        identifier, and never the record. This site publishes only the total
+        across all websites. To verify without being counted, drop in a saved
+        bundle, or verify offline with the{" "}
+        <External href={CLI_URL}>command-line tool</External>. When any verifier
+        fetches a record, that record&apos;s own server sees the fetch. Only
+        verifying a saved bundle offline avoids that.
+      </p>
+      {totals && (
+        <p data-statement="lookup-totals">
+          {totals.firstDay === totals.lastDay
+            ? `Lookups counted across all websites on ${longDay(totals.firstDay)}: `
+            : `Lookups counted across all websites from ${longDay(totals.firstDay)}, to ${longDay(totals.lastDay)}: `}
+          {totals.lookups.toLocaleString("en-US")}. A lookup is one opening of a
+          link to a record, whether or not it verifies.
+        </p>
+      )}
+    </Section>
+  );
+}
+
+export function PrivacyStatement({
+  analytics,
+  lookupCount = null,
+}: {
+  analytics: AnalyticsConfig | null;
+  /** The lookup count (typedstandards#143), when this build counts; its totals when any are counted. */
+  lookupCount?: { totals: LookupTotals | null } | null;
+}) {
   const plausible = analytics?.service === "plausible";
   return (
     <div className="mx-auto max-w-3xl px-6 py-16">
@@ -121,11 +216,19 @@ export function PrivacyStatement({ analytics }: { analytics: AnalyticsConfig | n
           they use. It also serves two files other sites may read: the list of
           publishers it recognizes, and the verify badge image.
         </p>
-        <p data-statement="hosting">
-          Requests your browser sends to this site reach the service that hosts
-          it, as requests to any website do. This site&apos;s own code keeps no
-          record of them.
-        </p>
+        {lookupCount ? (
+          <p data-statement="hosting">
+            Requests your browser sends to this site reach the service that hosts
+            it, as requests to any website do. This site&apos;s own code keeps no
+            record of them beyond the daily count described below.
+          </p>
+        ) : (
+          <p data-statement="hosting">
+            Requests your browser sends to this site reach the service that hosts
+            it, as requests to any website do. This site&apos;s own code keeps no
+            record of them.
+          </p>
+        )}
       </Section>
 
       <Section id="verify" title="When you verify a record">
@@ -160,6 +263,12 @@ export function PrivacyStatement({ analytics }: { analytics: AnalyticsConfig | n
           <code className="font-mono">/verify/&lt;id&gt;</code>, is an address like
           any other: when you open it, it reaches this site&apos;s server.
         </p>
+        {lookupCount && (
+          <p data-statement="verify-count">
+            This site counts, each day, the website of a record you verify from a
+            link you open, and the count keeps nothing else.
+          </p>
+        )}
         <p data-statement="verify-locally">
           You can also verify a record on your own computer: the{" "}
           <External href={CLI_URL}>command-line tool</External> reads it from a file
@@ -168,9 +277,13 @@ export function PrivacyStatement({ analytics }: { analytics: AnalyticsConfig | n
       </Section>
 
       <Section id="storage" title="Cookies and storage">
-        <p data-statement="storage">
-          This site sets no cookies, and its code stores nothing in your browser.
-        </p>
+        {plausible ? (
+          <StorageWithAnalytics />
+        ) : (
+          <p data-statement="storage">
+            This site sets no cookies, and its code stores nothing in your browser.
+          </p>
+        )}
       </Section>
 
       <Section id="other-sites" title="Other sites">
@@ -182,7 +295,9 @@ export function PrivacyStatement({ analytics }: { analytics: AnalyticsConfig | n
         </p>
       </Section>
 
-      {plausible && <PlausibleSection dashboardUrl={analytics.dashboardUrl} />}
+      {lookupCount && <LookupsSection totals={lookupCount.totals} />}
+
+      {plausible && <PlausibleSection dashboardUrl={analytics.dashboardUrl} holder={holderOf(analytics)} />}
     </div>
   );
 }
