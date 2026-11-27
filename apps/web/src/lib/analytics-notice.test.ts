@@ -258,7 +258,12 @@ async function page(opts: {
     get loads() {
       return state.loads;
     },
-    api: () => sandbox[ANALYTICS_API] as ReturnType<Page['api']>,
+    // `read()` returns an object of the script's realm; it is copied into this one so
+    // that `deepEqual`, which compares prototypes, reads only its values.
+    api: () => {
+      const api = sandbox[ANALYTICS_API] as ReturnType<Page['api']>;
+      return { ...api, read: () => ({ ...api.read() }) };
+    },
   };
 }
 

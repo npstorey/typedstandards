@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import { dashboardLabel, type AnalyticsConfig } from "@/lib/analytics";
+import { ANALYTICS_MEMORY_KEY, holderOf } from "@/lib/analytics-notice";
 import { BARE_ID_ANCHOR } from "@/lib/host-directory";
+import { AnalyticsChoice } from "@/components/AnalyticsChoice";
 
 /**
  * The body of `/privacy` (typedstandards#85): what this site does today. Each
@@ -9,7 +11,9 @@ import { BARE_ID_ANCHOR } from "@/lib/host-directory";
  * "Other sites", render only when `analytics` is set; the page passes the
  * same `SITE_ANALYTICS` the root layout renders the tag from. The section's
  * dashboard line renders only when that config also carries a dashboard
- * address (ruling D7; the seat's amendment on #85, 7146352815).
+ * address (ruling D7; the seat's amendment on #85, 7146352815). With the tag,
+ * the storage statement says what the analytics notice keeps (W6), and the
+ * analytics section carries the way back, `AnalyticsChoice` (IMPL TS-143).
  */
 
 /** The date the vendor pages cited below were read. */
@@ -48,7 +52,7 @@ function External({ href, children }: { href: string; children: ReactNode }) {
   );
 }
 
-function PlausibleSection({ dashboardUrl }: { dashboardUrl: string | undefined }) {
+function PlausibleSection({ dashboardUrl, holder }: { dashboardUrl: string | undefined; holder: string }) {
   return (
     <Section id="analytics" title="Analytics">
       <p data-statement="analytics-what">
@@ -87,7 +91,8 @@ function PlausibleSection({ dashboardUrl }: { dashboardUrl: string | undefined }
         read {PLAUSIBLE_READ_DATE}).
       </p>
       <p data-statement="analytics-objection">
-        To object, use an ad blocker or other content blocker that blocks{" "}
+        To object, turn analytics off on this page, or use an ad blocker or other
+        content blocker that blocks{" "}
         <code className="font-mono">plausible.io</code>, or set the browser flag
         Plausible describes at{" "}
         <External href="https://plausible.io/docs/excluding-localstorage">
@@ -96,7 +101,20 @@ function PlausibleSection({ dashboardUrl }: { dashboardUrl: string | undefined }
         . If your browser does not load Plausible&apos;s script, nothing is sent
         to <code className="font-mono">plausible.io</code>.
       </p>
+      <AnalyticsChoice holder={holder} />
     </Section>
+  );
+}
+
+/** W6 (IMPL TS-143; ND-M-2 B, ND-H-2 A): what the analytics notice keeps, where, and for how long. */
+function StorageWithAnalytics() {
+  return (
+    <p data-statement="storage">
+      This site sets no cookies. It remembers that you hid its message, and that
+      you turned analytics off if you did. It keeps both in your browser&apos;s
+      storage for this site, under the name{" "}
+      <code className="font-mono">{ANALYTICS_MEMORY_KEY}</code>, for six months.
+    </p>
   );
 }
 
@@ -168,9 +186,13 @@ export function PrivacyStatement({ analytics }: { analytics: AnalyticsConfig | n
       </Section>
 
       <Section id="storage" title="Cookies and storage">
-        <p data-statement="storage">
-          This site sets no cookies, and its code stores nothing in your browser.
-        </p>
+        {plausible ? (
+          <StorageWithAnalytics />
+        ) : (
+          <p data-statement="storage">
+            This site sets no cookies, and its code stores nothing in your browser.
+          </p>
+        )}
       </Section>
 
       <Section id="other-sites" title="Other sites">
@@ -182,7 +204,7 @@ export function PrivacyStatement({ analytics }: { analytics: AnalyticsConfig | n
         </p>
       </Section>
 
-      {plausible && <PlausibleSection dashboardUrl={analytics.dashboardUrl} />}
+      {plausible && <PlausibleSection dashboardUrl={analytics.dashboardUrl} holder={holderOf(analytics)} />}
     </div>
   );
 }

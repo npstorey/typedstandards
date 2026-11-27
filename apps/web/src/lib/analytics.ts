@@ -38,7 +38,10 @@
  * `lib/plausible_web/live/installation/instructions.ex:178-183` at 0855e286):
  * an `async` script from `https://plausible.io/js/<id>.js`, and an inline
  * initializer whose first line is the vendor's, unchanged. Its second line
- * passes `transformRequest` to `plausible.init`, below.
+ * passes `transformRequest` to `plausible.init`, below. Since IMPL TS-143 the
+ * `async` script is inserted by `plausibleLoader`, unless the reader turned
+ * analytics off, and `transformRequest` is `PLAUSIBLE_GATE` around the
+ * redaction.
  */
 
 export const ANALYTICS_SERVICES = ['plausible'] as const;
@@ -161,5 +164,40 @@ export const PLAUSIBLE_REDACT =
   '}' +
   'return payload}';
 
-/** The inline initializer: the vendor's first line, then `plausible.init` with the redaction. */
-export const PLAUSIBLE_INIT = `${PLAUSIBLE_QUEUE}\nplausible.init({transformRequest:${PLAUSIBLE_REDACT}})`;
+/**
+ * THE SEND GATE (IMPL TS-143). The `transformRequest` the initializer passes:
+ * it asks the page's analytics script (`ANALYTICS_CHOICE_SCRIPT`,
+ * `analytics-notice.ts`) whether the reader turned analytics off in this
+ * browser, at each event, and drops the event if so; otherwise it hands the
+ * payload to `PLAUSIBLE_REDACT`, whose bytes are unchanged. So an off stops
+ * every send at once: on the page in view, and on a page opened without a
+ * reload, where the vendor's script is already loaded. Without the page's
+ * script (a build with no notice) every event goes to the redaction, as built.
+ */
+export const PLAUSIBLE_GATE =
+  'function(payload){var a=window.__typedstandardsAnalytics;if(a&&a.read().off)return null;' +
+  `return(${PLAUSIBLE_REDACT})(payload)}`;
+
+/** The inline initializer: the vendor's first line, then `plausible.init` with the gate. */
+export const PLAUSIBLE_INIT = `${PLAUSIBLE_QUEUE}\nplausible.init({transformRequest:${PLAUSIBLE_GATE}})`;
+
+/**
+ * THE LOADER (IMPL TS-143). The vendor's script, inserted by an inline script
+ * in place of a static `<script async src>`, so that a reader who turned
+ * analytics off is not sent to plausible.io from the next page they open
+ * (S60[1]). It asks the page's analytics script whether the off is kept, and
+ * inserts the vendor's script, `async`, once, unless it is. It leaves itself at
+ * `window.__typedstandardsAnalyticsLoad`, which the privacy page's "Turn
+ * analytics on" calls. The address is written as a JSON string with `<`
+ * escaped, so no script key can close the element.
+ */
+export function plausibleLoader(id: string): string {
+  return (
+    `(function(){var src=${JSON.stringify(plausibleScriptSrc(id)).replace(/</g, '\\u003c')};` +
+    'function load(){if(document.getElementById("plausible-script"))return;' +
+    'var s=document.createElement("script");s.id="plausible-script";s.async=true;s.src=src;' +
+    'document.head.appendChild(s)}' +
+    'window.__typedstandardsAnalyticsLoad=load;' +
+    'var a=window.__typedstandardsAnalytics;if(a&&a.read().off)return;load()})()'
+  );
+}

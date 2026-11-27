@@ -53,3 +53,92 @@ body {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
+
+/* The analytics notice (IMPL TS-143; ND-2 A, typedstandards#85). The page's
+   analytics script (ANALYTICS_CHOICE_SCRIPT, src/lib/analytics-notice.ts) sets
+   its state and place on <html> before the page is first painted; nothing
+   shows before that, nor without it. Fixed at the lower left: 360 px wide and
+   24 px from the left and the foot from 640 px up, the window's width less
+   16 px gutters below. In the flow: at the top of <main>, the width of a page's
+   column. While it is fixed, the page keeps a foot margin and a scroll padding
+   as tall as the notice and its gutters, so the end of the page and a focused
+   control can always be scrolled clear of it. */
+:root {
+  --analytics-notice-gap: 16px;
+}
+
+@media (min-width: 640px) {
+  :root {
+    --analytics-notice-gap: 24px;
+  }
+}
+
+.analytics-notice {
+  display: none;
+}
+
+html[data-analytics-notice="measure"] .analytics-notice,
+html[data-analytics-notice="show"][data-analytics-place="fixed"] .analytics-notice {
+  display: block;
+  position: fixed;
+  z-index: 40;
+  left: var(--analytics-notice-gap);
+  right: var(--analytics-notice-gap);
+  bottom: var(--analytics-notice-gap);
+}
+
+@media (min-width: 640px) {
+  html[data-analytics-notice="measure"] .analytics-notice,
+  html[data-analytics-notice="show"][data-analytics-place="fixed"] .analytics-notice {
+    right: auto;
+    width: 360px;
+  }
+}
+
+html[data-analytics-notice="measure"] .analytics-notice {
+  visibility: hidden;
+}
+
+html[data-analytics-notice="show"][data-analytics-place="flow"] .analytics-notice {
+  display: block;
+  max-width: 48rem;
+  margin: 2rem auto 0;
+  padding: 0 1.5rem;
+}
+
+.analytics-notice-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--background);
+  padding: 20px;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+html[data-analytics-place="fixed"] .analytics-notice-card {
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.08);
+}
+
+html[data-analytics-notice="show"][data-analytics-place="fixed"] {
+  scroll-padding-bottom: calc(var(--analytics-notice-h) + 2 * var(--analytics-notice-gap));
+}
+
+html[data-analytics-notice="show"][data-analytics-place="fixed"] body {
+  padding-bottom: calc(var(--analytics-notice-h) + 2 * var(--analytics-notice-gap));
+}
+
+/* The two states, on the notice and on the privacy page's control; the off
+   only where the browser can keep it. */
+html[data-analytics-state="off"] .analytics-when-on,
+html:not([data-analytics-state="off"]) .analytics-when-off,
+html[data-analytics-storage="none"] .analytics-needs-storage {
+  display: none !important;
+}
+
+.analytics-choice {
+  display: none;
+}
+
+html[data-analytics-storage="kept"] .analytics-choice {
+  display: block;
+}
