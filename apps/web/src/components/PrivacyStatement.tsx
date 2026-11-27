@@ -3,6 +3,7 @@ import { dashboardLabel, type AnalyticsConfig } from "@/lib/analytics";
 import { ANALYTICS_MEMORY_KEY, holderOf } from "@/lib/analytics-notice";
 import { BARE_ID_ANCHOR } from "@/lib/host-directory";
 import { AnalyticsChoice } from "@/components/AnalyticsChoice";
+import type { LookupTotals } from "@/lib/lookup-count";
 
 /**
  * The body of `/privacy` (typedstandards#85): what this site does today. Each
@@ -118,7 +119,53 @@ function StorageWithAnalytics() {
   );
 }
 
-export function PrivacyStatement({ analytics }: { analytics: AnalyticsConfig | null }) {
+/** A day counted, as a reader reads it: `2026-11-27` → "November 27, 2026". */
+function longDay(day: string): string {
+  return new Date(`${day}T00:00:00Z`).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+}
+
+/**
+ * S163[1] in its totals-only form (W7), under W9, with the totals (W8):
+ * typedstandards#143's note on the lookup count, which the footer and the
+ * verify pages link (`#lookups`). Its third sentence is W7: this site's
+ * publisher index (#142) does not exist yet, so only totals are published.
+ */
+function LookupsSection({ totals }: { totals: LookupTotals | null }) {
+  return (
+    <Section id="lookups" title="What this site counts">
+      <p data-statement="lookups">
+        This site counts the website of each record you verify from a link you
+        open, and the day. The count keeps no network address, no cookie, no
+        identifier, and never the record. This site publishes only the totals
+        across all websites. To verify without being counted, drop in a saved
+        bundle, or verify offline with the{" "}
+        <External href={CLI_URL}>command-line tool</External>. When any verifier
+        fetches a record, that record&apos;s own server sees the fetch. Only
+        verifying a saved bundle offline avoids that.
+      </p>
+      {totals && (
+        <p data-statement="lookup-totals">
+          Lookups counted across all websites from {longDay(totals.firstDay)} to{" "}
+          {longDay(totals.lastDay)}: {totals.lookups.toLocaleString("en-US")}.
+        </p>
+      )}
+    </Section>
+  );
+}
+
+export function PrivacyStatement({
+  analytics,
+  lookupCount = null,
+}: {
+  analytics: AnalyticsConfig | null;
+  /** The lookup count (typedstandards#143), when this build counts; its totals when any are counted. */
+  lookupCount?: { totals: LookupTotals | null } | null;
+}) {
   const plausible = analytics?.service === "plausible";
   return (
     <div className="mx-auto max-w-3xl px-6 py-16">
@@ -142,7 +189,7 @@ export function PrivacyStatement({ analytics }: { analytics: AnalyticsConfig | n
         <p data-statement="hosting">
           Requests your browser sends to this site reach the service that hosts
           it, as requests to any website do. This site&apos;s own code keeps no
-          record of them.
+          record of them{lookupCount ? " beyond the daily count described below" : ""}.
         </p>
       </Section>
 
@@ -178,6 +225,12 @@ export function PrivacyStatement({ analytics }: { analytics: AnalyticsConfig | n
           <code className="font-mono">/verify/&lt;id&gt;</code>, is an address like
           any other: when you open it, it reaches this site&apos;s server.
         </p>
+        {lookupCount && (
+          <p data-statement="verify-count">
+            This site counts, each day, the website of a record you verify from a
+            link you open, and the count keeps nothing else.
+          </p>
+        )}
         <p data-statement="verify-locally">
           You can also verify a record on your own computer: the{" "}
           <External href={CLI_URL}>command-line tool</External> reads it from a file
@@ -203,6 +256,8 @@ export function PrivacyStatement({ analytics }: { analytics: AnalyticsConfig | n
           The fonts are served from this site, not from a font service.
         </p>
       </Section>
+
+      {lookupCount && <LookupsSection totals={lookupCount.totals} />}
 
       {plausible && <PlausibleSection dashboardUrl={analytics.dashboardUrl} holder={holderOf(analytics)} />}
     </div>

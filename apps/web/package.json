@@ -13,6 +13,7 @@
     "test": "node --test --experimental-strip-types \"src/**/*.test.ts\""
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.2.2",
     "@typedstandards/verify-core": "^0.15.0",
     "next": "16.4.5",
     "react": "19.3.1",

@@ -6,6 +6,8 @@ import { SITE_ANALYTICS } from "@/lib/site-analytics";
 import { AnalyticsTags } from "@/components/AnalyticsTags";
 import { AnalyticsNotice } from "@/components/AnalyticsNotice";
 import { ANALYTICS_CHOICE_SCRIPT, holderOf } from "@/lib/analytics-notice";
+import { SITE_LOOKUP_COUNT } from "@/lib/site-lookup-count";
+import { FooterLine } from "@/components/FooterLine";
 import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
@@ -101,10 +103,7 @@ export default function RootLayout({
 
           <footer className="border-t border-border">
             <div className="mx-auto flex max-w-5xl flex-col items-center gap-2 px-6 py-8 text-center text-sm text-muted">
-              <p>
-                Typed Standards — signed records you can verify yourself. Verification
-                runs in your browser; nothing is uploaded.
-              </p>
+              <FooterLine lookupCount={SITE_LOOKUP_COUNT} />
               <p className="text-xs">
                 By{" "}
                 <a

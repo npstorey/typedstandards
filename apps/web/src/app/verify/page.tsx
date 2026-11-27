@@ -3,6 +3,9 @@ import Link from "next/link";
 import verifyCorePkg from "@typedstandards/verify-core/package.json";
 import { DEFAULT_HOST, parseHostHint } from "@/lib/verify-flow";
 import { Verifier } from "@/components/Verifier";
+import { LookupCountLine } from "@/components/LookupCountLine";
+import { countLookup } from "@/lib/count-lookup";
+import { SITE_LOOKUP_COUNT } from "@/lib/site-lookup-count";
 
 export const metadata: Metadata = {
   title: "Verify",
@@ -47,6 +50,9 @@ export default async function VerifyPage({
   // origin of their own — a bare identifier, or a stored-package URL — which is the
   // same set the host picker already governs.
   const hintedHost = parseHostHint(first(sp.host) ?? "");
+  // The lookup count (typedstandards#143): this request's lookup, read as the
+  // Verifier below reads it, counted after the response.
+  await countLookup(initial, hintedHost);
 
   return (
     <div className="mx-auto max-w-3xl px-6 py-16">
@@ -65,6 +71,7 @@ export default async function VerifyPage({
         cryptography holds, and — separately — whether the publisher is one
         typedstandards.org recognizes.
       </p>
+      {SITE_LOOKUP_COUNT && <LookupCountLine />}
       <p className="mt-4 max-w-2xl text-sm leading-relaxed text-muted">
         A hash or slug carries no origin of its own, so it resolves against{" "}
         {anchorHost} by default. A link can point it at a different publisher in three

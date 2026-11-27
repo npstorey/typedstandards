@@ -12,6 +12,11 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_ANALYTICS_SERVICE: process.env.NEXT_PUBLIC_ANALYTICS_SERVICE ?? "",
     NEXT_PUBLIC_ANALYTICS_ID: process.env.NEXT_PUBLIC_ANALYTICS_ID ?? "",
     NEXT_PUBLIC_ANALYTICS_DASHBOARD_URL: process.env.NEXT_PUBLIC_ANALYTICS_DASHBOARD_URL ?? "",
+    // The lookup count (typedstandards#143; IMPL TS-143): "on" when its database's
+    // address is set at build. Only the word is inlined; the address itself is read
+    // on the server at run time (src/lib/site-lookup-count.ts) and is never written
+    // into a bundle.
+    TYPEDSTANDARDS_LOOKUP_COUNT: process.env.LOOKUP_COUNT_DATABASE_URL ? "on" : "",
   },
 };
 

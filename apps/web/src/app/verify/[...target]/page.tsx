@@ -3,6 +3,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { parseVerifyTarget } from "@/lib/verify-flow";
 import { Verifier } from "@/components/Verifier";
+import { LookupCountLine } from "@/components/LookupCountLine";
+import { countLookup } from "@/lib/count-lookup";
+import { SITE_LOOKUP_COUNT } from "@/lib/site-lookup-count";
 
 // The verifier's short-link route, at BOTH depths (#44 B7):
 //
@@ -41,6 +44,9 @@ export default async function VerifyTargetPage({ params }: { params: Params }) {
   if (!parsed) notFound();
 
   const { id, host } = parsed;
+  // The lookup count (typedstandards#143): this request's lookup, read as the
+  // Verifier below reads it, counted after the response.
+  await countLookup(id, host);
 
   return (
     <div className="mx-auto max-w-3xl px-6 py-16">
@@ -57,6 +63,7 @@ export default async function VerifyTargetPage({ params }: { params: Params }) {
         </Link>
         .
       </p>
+      {SITE_LOOKUP_COUNT && <LookupCountLine />}
 
       <div className="mt-8">
         <Verifier initialInput={id} initialHost={host} autoStart />
